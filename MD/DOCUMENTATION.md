@@ -2293,7 +2293,7 @@ toast('رسالة عادية', {
 - Size: `w-14 h-14` (56x56px)
 
 **Festival Logo:** `src/imports/Arebsalin-1.png`
-- الريبساليين logo
+- اريبصالين logo
 - Used in headers (center position)
 - Horizontal aspect ratio
 - Size: `h-14` (auto width)
@@ -3104,7 +3104,7 @@ Before launching to production:
 - **Version:** 1.0.0
 - **Developer:** Claude Code Assistant
 - **Church:** كنيسة الشهيد العظيم مارمينا العجايبي والقديس العظيم البابا كيرلس السادس - أسوان
-- **Festival:** الريبساليين Summer Festival
+- **Festival:** اريبصالين Summer Festival
 
 ---
 

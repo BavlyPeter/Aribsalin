@@ -309,7 +309,7 @@ Attribution for libraries, fonts, and resources used.
 
 ### Project Information
 - **Church:** St. Mina and Pope Kyrillos VI - Aswan
-- **Festival:** الريبساليين Summer Deacon School
+- **Festival:** اريبصالين Summer Deacon School
 - **Version:** 1.1.0
 - **Status:** Active Development
 
