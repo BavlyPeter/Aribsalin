@@ -4,17 +4,17 @@ import churchLogo from '../assets/images/new-church-logo.png';
 import festivalLogo from '../assets/images/Arebsalin-1.png';
 
 interface LoginPageProps {
-  onLogin: (email: string, password: string) => void;
+  onLogin: (teacherId: string, password: string) => void;
   onNavigateToSignup: () => void;
 }
 
 export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps) {
-  const [email, setEmail] = useState('');
+  const [teacherId, setTeacherId] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(email, password);
+    onLogin(teacherId, password);
   };
 
   return (
@@ -41,15 +41,15 @@ export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block mb-2 text-sm text-foreground">
-                  البريد الإلكتروني
+                  رقم الخادم
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="example@email.com"
+                  value={teacherId}
+                  onChange={(e) => setTeacherId(e.target.value.toUpperCase())}
+                  className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring uppercase"
+                  placeholder="مثال: T001"
                 />
               </div>
 

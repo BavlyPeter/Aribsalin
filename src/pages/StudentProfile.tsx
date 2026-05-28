@@ -1,27 +1,12 @@
 import { ArrowRight, Calendar, Phone, MapPin, Book, Award, CheckCircle2, User, School, Download, CreditCard } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { StudentData } from '../types';
+import { Participant } from '../types';
 import { useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import { IDCard } from '../components/shared/IDCard';
 
 interface StudentProfileProps {
-  student: {
-    id: string;
-    name: string;
-    points: number;
-    attended: boolean;
-    data: StudentData;
-    attendanceDays: string[];
-  };
-  participants?: Array<{
-    id: string;
-    name: string;
-    points: number;
-    attended: boolean;
-    data: StudentData;
-    attendanceDays: string[];
-  }>;
+  student: Participant;
   totalDays: number;
   onBack: () => void;
 }

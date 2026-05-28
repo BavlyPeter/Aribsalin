@@ -1,18 +1,7 @@
 import { useState } from 'react';
 import { ArrowRight, Users, Calendar, TrendingUp, Award, BarChart3 } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
-interface Participant {
-  id: string;
-  name: string;
-  points: number;
-  attended: boolean;
-  data: {
-    gender: 'male' | 'female';
-    educationStage: string;
-  };
-  attendanceDays: string[];
-}
+import { Participant } from '../types';
 
 interface StatisticsPageProps {
   onBack: () => void;

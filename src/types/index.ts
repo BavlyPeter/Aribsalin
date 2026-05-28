@@ -28,6 +28,15 @@ export interface ParticipantData {
   address: string;
 }
 
+export interface Participant {
+  id: string;
+  name: string;
+  points: number;
+  attended: boolean;
+  data: StudentData;
+  attendanceDays: string[];
+}
+
 export interface TeacherData {
   fullName: string;
   gender: 'male' | 'female' | '';
@@ -38,6 +47,11 @@ export interface TeacherData {
   collegeName?: string;
   jobTitle?: string;
   confessionFather: string;
+  // Authentication & RBAC
+  teacherId: string;
+  password: string;
+  role: 'normal' | 'supervisor' | 'admin' | '';
+  classStage: string;
   mobile: string;
   area: string;
   address: string;

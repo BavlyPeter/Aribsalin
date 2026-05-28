@@ -15,6 +15,15 @@ const educationStages = {
   'graduate': 'خريجين'
 };
 
+const servingStages = {
+  'kg': 'حضانة',
+  'primary': 'ابتدائي',
+  'preparatory': 'إعدادي',
+  'secondary': 'ثانوي',
+  'university': 'جامعي',
+  'graduate': 'خريجين'
+};
+
 const educationYears = {
   'secondary': [
     'الصف الأول الثانوي',
@@ -45,6 +54,10 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
     collegeName: '',
     jobTitle: '',
     confessionFather: '',
+    teacherId: '',
+    password: '',
+    role: '',
+    classStage: '',
     mobile: '',
     area: '',
     address: '',
@@ -348,6 +361,66 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
                 rows={3}
                 placeholder="المدينة، الحي، الشارع، رقم المنزل"
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Auth & Role Card */}
+        <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
+          <h3 className="mb-4 text-primary">بيانات الدخول والصلاحية</h3>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block mb-2 text-sm text-foreground">رقم الخادم (ID) *</label>
+              <input
+                type="text"
+                required
+                value={formData.teacherId}
+                onChange={(e) => updateField('teacherId', e.target.value)}
+                className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring uppercase"
+                placeholder="مثال: T001"
+              />
+            </div>
+
+            <div>
+              <label className="block mb-2 text-sm text-foreground">كلمة المرور *</label>
+              <input
+                type="password"
+                required
+                value={formData.password}
+                onChange={(e) => updateField('password', e.target.value)}
+                className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="كلمة المرور"
+              />
+            </div>
+
+            <div>
+              <label className="block mb-2 text-sm text-foreground">دور الخادم *</label>
+              <select
+                required
+                value={formData.role}
+                onChange={(e) => updateField('role', e.target.value)}
+                className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">اختر الدور</option>
+                <option value="normal">خادم</option>
+                <option value="supervisor">أمين فصل</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block mb-2 text-sm text-foreground">فصل الخدمة (المرحلة التي تخدم بها) *</label>
+              <select
+                required
+                value={formData.classStage}
+                onChange={(e) => updateField('classStage', e.target.value)}
+                className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">اختر المرحلة</option>
+                {Object.entries(servingStages).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>

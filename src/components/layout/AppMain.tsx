@@ -14,21 +14,12 @@ import { FinancePage } from '../../pages/FinancePage';
 import { StatisticsPage } from '../../pages/StatisticsPage';
 import { TeachersPage } from '../../pages/TeachersPage';
 import { StudentPortalLogin } from '../../pages/StudentPortalLogin';
-import { StudentData, TeacherData } from '../../types';
+import { Participant, StudentData, TeacherData } from '../../types';
 import { toast, Toaster } from 'sonner';
 
 type View       =  'roleSelection' | 'login' | 'signup' | 'studentPortal' | 'studentScanner' | 'dashboard' | 'registration' | 'scanner' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'finance' | 'statistics' | 'teachers';
 type ScanMode   =  'attendance' | 'market' | 'addPoints' | 'viewDetails';
 type ViewerRole =  'servant' | 'student';
-
-interface Participant {
-  id: string;
-  name: string;
-  points: number;
-  attended: boolean;
-  data: StudentData;
-  attendanceDays: string[];
-}
 
 export default function AppMain() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -671,7 +662,6 @@ export default function AppMain() {
         studyOrWorkPlace: 'حضانة السيدة العذراء',
         confessionFather: 'أبونا مكاريوس',
         personalMobile: '',
-        fatherMobile: '01056780123',
         motherMobile: '01167891234',
         address: 'الجيزة - بولاق الدكرور - شارع السودان',
         dateOfBirth: '2020-10-30'
@@ -779,7 +769,7 @@ export default function AppMain() {
     }
   }, [isAuthenticated]);
 
-  const handleLogin = (email: string, password: string) => {
+  const handleLogin = (teacherId: string, password: string) => {
     // In real app, validate credentials
     toast.success('تم تسجيل الدخول بنجاح');
     setIsAuthenticated(true);
@@ -1147,7 +1137,6 @@ export default function AppMain() {
           selectedParticipant ? (
             <StudentProfile
               student={selectedParticipant}
-              participants={participants as any}
               totalDays={totalDays}
               onBack={handleProfileBack}
             />
