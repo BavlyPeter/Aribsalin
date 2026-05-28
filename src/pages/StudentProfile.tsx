@@ -14,6 +14,14 @@ interface StudentProfileProps {
     data: StudentData;
     attendanceDays: string[];
   };
+  participants?: Array<{
+    id: string;
+    name: string;
+    points: number;
+    attended: boolean;
+    data: StudentData;
+    attendanceDays: string[];
+  }>;
   totalDays: number;
   onBack: () => void;
 }

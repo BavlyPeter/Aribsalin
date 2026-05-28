@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { RoleSelectionPage } from '../../pages/RoleSelectionPage';
 import { LoginPage } from '../../pages/LoginPage';
 import { SignupPage } from '../../pages/SignupPage';
 import { Dashboard } from '../../pages/Dashboard';
@@ -12,11 +13,13 @@ import { WelcomeScreen } from '../shared/WelcomeScreen';
 import { FinancePage } from '../../pages/FinancePage';
 import { StatisticsPage } from '../../pages/StatisticsPage';
 import { TeachersPage } from '../../pages/TeachersPage';
+import { StudentPortalLogin } from '../../pages/StudentPortalLogin';
 import { StudentData, TeacherData } from '../../types';
 import { toast, Toaster } from 'sonner';
 
-type View = 'login' | 'signup' | 'dashboard' | 'registration' | 'scanner' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'finance' | 'statistics' | 'teachers';
+type View = 'roleSelection' | 'login' | 'signup' | 'studentPortal' | 'studentScanner' | 'dashboard' | 'registration' | 'scanner' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'finance' | 'statistics' | 'teachers';
 type ScanMode = 'attendance' | 'market' | 'addPoints' | 'viewDetails';
+type ViewerRole = 'servant' | 'student';
 
 interface Participant {
   id: string;
@@ -30,9 +33,10 @@ interface Participant {
 export default function AppMain() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
-  const [currentView, setCurrentView] = useState<View>('login');
+  const [currentView, setCurrentView] = useState<View>('roleSelection');
   const [scanMode, setScanMode] = useState<ScanMode>('attendance');
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
+  const [viewerRole, setViewerRole] = useState<ViewerRole>('servant');
   const [totalDays] = useState(20); // Total festival days
 
   const [participants, setParticipants] = useState<Participant[]>([
@@ -756,6 +760,7 @@ export default function AppMain() {
       }
     }
   ]);
+  const mockParticipants = participants;
 
   const [todayAttendance, setTodayAttendance] = useState(25);
 
@@ -772,6 +777,7 @@ export default function AppMain() {
     // In real app, validate credentials
     toast.success('تم تسجيل الدخول بنجاح');
     setIsAuthenticated(true);
+    setViewerRole('servant');
     setCurrentView('dashboard');
   };
 
@@ -779,7 +785,41 @@ export default function AppMain() {
     // In real app, save to database
     toast.success('تم إنشاء الحساب بنجاح');
     setIsAuthenticated(true);
+    setViewerRole('servant');
     setCurrentView('dashboard');
+  };
+
+  const handleRoleSelect = (role: ViewerRole) => {
+    setViewerRole(role);
+
+    if (role === 'servant') {
+      setIsAuthenticated(false);
+      setCurrentView('login');
+    } else {
+      setCurrentView('studentPortal');
+    }
+  };
+
+  const handleStudentLoginById = (id: string) => {
+    const normalizedId = String(id).trim().toUpperCase();
+    const participant = mockParticipants.find(p => String(p.id).trim().toUpperCase() === normalizedId);
+
+    if (!participant) {
+      toast.error('لم يتم العثور على المشارك', {
+        description: `الرقم ${id} غير موجود`
+      });
+      return;
+    }
+
+    setViewerRole('student');
+    setSelectedParticipantId(participant.id);
+    setCurrentView('profile');
+  };
+
+  const handleOpenStudentScanner = () => {
+    setViewerRole('student');
+    setScanMode('viewDetails');
+    setCurrentView('studentScanner');
   };
 
   const handleNavigate = (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers') => {
@@ -937,6 +977,7 @@ export default function AppMain() {
   };
 
   const handleViewProfile = (participantId: string) => {
+    setViewerRole('servant');
     setSelectedParticipantId(participantId);
     setCurrentView('profile');
   };
@@ -947,10 +988,55 @@ export default function AppMain() {
   };
 
   const selectedParticipant = selectedParticipantId
-    ? participants.find(p => p.id === selectedParticipantId)
+    ? participants.find(p => String(p.id).trim().toUpperCase() === String(selectedParticipantId).trim().toUpperCase())
     : null;
 
-  if (!isAuthenticated) {
+  const handleProfileBack = () => {
+    if (viewerRole === 'student') {
+      setSelectedParticipantId(null);
+      setCurrentView('studentPortal');
+      return;
+    }
+
+    setCurrentView('dashboard');
+  };
+
+  if (currentView === 'roleSelection') {
+    return (
+      <>
+        <Toaster position="top-center" dir="rtl" />
+        <RoleSelectionPage onSelectRole={handleRoleSelect} />
+      </>
+    );
+  }
+
+  if (currentView === 'studentPortal') {
+    return (
+      <>
+        <Toaster position="top-center" dir="rtl" />
+        <StudentPortalLogin
+          onBack={() => setCurrentView('roleSelection')}
+          onLoginById={handleStudentLoginById}
+          onOpenScanner={handleOpenStudentScanner}
+        />
+      </>
+    );
+  }
+
+  if (currentView === 'studentScanner') {
+    return (
+      <>
+        <Toaster position="top-center" dir="rtl" />
+        <QRScanner
+          onBack={() => setCurrentView('studentPortal')}
+          onScanSuccess={handleScanSuccess}
+          mode="viewDetails"
+        />
+      </>
+    );
+  }
+
+  if (!isAuthenticated && viewerRole !== 'student') {
     return (
       <>
         <Toaster position="top-center" dir="rtl" />
@@ -1051,12 +1137,29 @@ export default function AppMain() {
           />
         )}
 
-        {currentView === 'profile' && selectedParticipant && (
-          <StudentProfile
-            student={selectedParticipant}
-            totalDays={totalDays}
-            onBack={() => setCurrentView('dashboard')}
-          />
+        {currentView === 'profile' && (
+          selectedParticipant ? (
+            <StudentProfile
+              student={selectedParticipant}
+              participants={participants}
+              totalDays={totalDays}
+              onBack={handleProfileBack}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center p-6 text-center">
+              <h2 className="text-lg font-semibold mb-4">حدث خطأ: لم يتم العثور على بيانات المشارك</h2>
+              <p className="mb-6">الرجاء المحاولة مرة أخرى أو العودة إلى بوابة الطلاب.</p>
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded"
+                onClick={() => {
+                  setSelectedParticipantId(null);
+                  setCurrentView('studentPortal');
+                }}
+              >
+                العودة
+              </button>
+            </div>
+          )
         )}
 
         {currentView === 'finance' && (
