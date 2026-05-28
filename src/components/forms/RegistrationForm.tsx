@@ -1,26 +1,10 @@
 import { ArrowRight, Save } from 'lucide-react';
 import { useState } from 'react';
+import { StudentData } from '../../types';
 
-interface EnhancedRegistrationFormProps {
+interface RegistrationFormProps {
   onBack: () => void;
   onSubmit: (data: StudentData) => void;
-}
-
-export interface StudentData {
-  fullName: string;
-  gender: 'male' | 'female' | '';
-  educationStage: string;
-  educationYear: string;
-  studyOrWorkPlace: string;
-  universityName?: string;
-  collegeName?: string;
-  jobTitle?: string;
-  confessionFather: string;
-  personalMobile: string;
-  fatherMobile: string;
-  motherMobile: string;
-  address: string;
-  dateOfBirth: string;
 }
 
 const educationStages = {
@@ -63,7 +47,7 @@ const educationYears = {
   ]
 };
 
-export function EnhancedRegistrationForm({ onBack, onSubmit }: EnhancedRegistrationFormProps) {
+export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
   const [formData, setFormData] = useState<StudentData>({
     fullName: '',
     gender: '',

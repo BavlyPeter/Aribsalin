@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { LogIn } from 'lucide-react';
-import churchLogo from '../../imports/new-church-logo.png';
-import festivalLogo from '../../imports/Arebsalin-1.png';
+import churchLogo from '../assets/images/new-church-logo.png';
+import festivalLogo from '../assets/images/Arebsalin-1.png';
 
 interface LoginPageProps {
   onLogin: (email: string, password: string) => void;

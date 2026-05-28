@@ -1,9 +1,9 @@
 import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, Settings, FileText, Wallet, BarChart3 } from 'lucide-react';
-import { ParticipantsList } from './ParticipantsList';
-import churchLogo from '../../imports/new-church-logo.png';
-import festivalLogo from '../../imports/Arebsalin-1.png';
+import { ParticipantsList } from '../components/shared/ParticipantsList';
+import churchLogo from '../assets/images/new-church-logo.png';
+import festivalLogo from '../assets/images/Arebsalin-1.png';
 
-interface EnhancedDashboardProps {
+interface DashboardProps {
   onNavigate: (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers') => void;
   onViewProfile: (participantId: string) => void;
   totalParticipants: number;
@@ -11,13 +11,13 @@ interface EnhancedDashboardProps {
   participants?: Array<{ id: string; name: string; points: number; attended: boolean }>;
 }
 
-export function EnhancedDashboard({
+export function Dashboard({
   onNavigate,
   onViewProfile,
   totalParticipants,
   todayAttendance,
   participants = []
-}: EnhancedDashboardProps) {
+}: DashboardProps) {
   return (
     <div className="min-h-screen bg-background pb-8">
       {/* Header with Logos */}

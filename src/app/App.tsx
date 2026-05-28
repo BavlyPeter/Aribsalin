@@ -1,4 +1,4 @@
-import AppMain from './components/AppMain';
+import AppMain from '../components/layout/AppMain';
 
 export default function App() {
   return <AppMain />;

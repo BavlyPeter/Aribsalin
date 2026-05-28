@@ -1,9 +1,9 @@
 import { ArrowRight, Calendar, Phone, MapPin, Book, Award, CheckCircle2, User, School, Download, CreditCard } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { StudentData } from './EnhancedRegistrationForm';
+import { StudentData } from '../types';
 import { useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
-import { IDCard } from './IDCard';
+import { IDCard } from '../components/shared/IDCard';
 
 interface StudentProfileProps {
   student: {

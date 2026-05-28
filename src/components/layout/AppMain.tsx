@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
-import { LoginPage } from './LoginPage';
-import { SignupPage, TeacherData } from './SignupPage';
-import { EnhancedDashboard } from './EnhancedDashboard';
-import { EnhancedRegistrationForm, StudentData } from './EnhancedRegistrationForm';
-import { QRScanner } from './QRScanner';
-import { MarketModal } from './MarketModal';
-import { AddPointsModal } from './AddPointsModal';
-import { ManualPointsModal } from './ManualPointsModal';
-import { StudentProfile } from './StudentProfile';
-import { WelcomeScreen } from './WelcomeScreen';
-import { FinancePage } from './FinancePage';
-import { StatisticsPage } from './StatisticsPage';
-import { TeachersPage } from './TeachersPage';
+import { LoginPage } from '../../pages/LoginPage';
+import { SignupPage } from '../../pages/SignupPage';
+import { Dashboard } from '../../pages/Dashboard';
+import { RegistrationForm } from '../forms/RegistrationForm';
+import { QRScanner } from '../shared/QRScanner';
+import { MarketModal } from '../modals/MarketModal';
+import { AddPointsModal } from '../modals/AddPointsModal';
+import { ManualPointsModal } from '../modals/ManualPointsModal';
+import { StudentProfile } from '../../pages/StudentProfile';
+import { WelcomeScreen } from '../shared/WelcomeScreen';
+import { FinancePage } from '../../pages/FinancePage';
+import { StatisticsPage } from '../../pages/StatisticsPage';
+import { TeachersPage } from '../../pages/TeachersPage';
+import { StudentData, TeacherData } from '../../types';
 import { toast, Toaster } from 'sonner';
 
 type View = 'login' | 'signup' | 'dashboard' | 'registration' | 'scanner' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'finance' | 'statistics' | 'teachers';
@@ -985,7 +986,7 @@ export default function AppMain() {
 
       <div className="size-full">
         {currentView === 'dashboard' && (
-          <EnhancedDashboard
+          <Dashboard
             onNavigate={handleNavigate}
             onViewProfile={handleViewProfile}
             totalParticipants={participants.length}
@@ -1000,7 +1001,7 @@ export default function AppMain() {
         )}
 
         {currentView === 'registration' && (
-          <EnhancedRegistrationForm
+          <RegistrationForm
             onBack={() => setCurrentView('dashboard')}
             onSubmit={handleRegistrationSubmit}
           />

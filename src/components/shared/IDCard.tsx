@@ -1,15 +1,16 @@
 import { QRCodeSVG } from 'qrcode.react';
-import churchLogo from '../../imports/new-church-logo.png';
-import festivalLogo from '../../imports/Arebsalin-1.png';
+import churchLogo from '../../assets/images/new-church-logo.png';
+import festivalLogo from '../../assets/images/Arebsalin-1.png';
+import { StudentData } from '../../types';
 
 interface IDCardProps {
   student: {
     id: string;
     name: string;
     data: {
-      educationStage: string;
-      educationYear: string;
-      gender: 'male' | 'female' | '';
+      educationStage: StudentData['educationStage'];
+      educationYear: StudentData['educationYear'];
+      gender: StudentData['gender'];
     };
   };
 }

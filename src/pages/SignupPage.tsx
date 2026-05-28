@@ -1,26 +1,12 @@
 import { useState } from 'react';
 import { ArrowRight, Save } from 'lucide-react';
-import churchLogo from '../../imports/new-church-logo.png';
-import festivalLogo from '../../imports/Arebsalin-1.png';
+import churchLogo from '../assets/images/new-church-logo.png';
+import festivalLogo from '../assets/images/Arebsalin-1.png';
+import { TeacherData } from '../types';
 
 interface SignupPageProps {
   onSignup: (data: TeacherData) => void;
   onBack: () => void;
-}
-
-export interface TeacherData {
-  fullName: string;
-  gender: 'male' | 'female' | '';
-  educationStage: string;
-  educationYear: string;
-  studyOrWorkPlace: string;
-  universityName?: string;
-  collegeName?: string;
-  jobTitle?: string;
-  confessionFather: string;
-  mobile: string;
-  address: string;
-  dateOfBirth: string;
 }
 
 const educationStages = {
