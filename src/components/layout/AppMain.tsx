@@ -17,9 +17,9 @@ import { StudentPortalLogin } from '../../pages/StudentPortalLogin';
 import { StudentData, TeacherData } from '../../types';
 import { toast, Toaster } from 'sonner';
 
-type View = 'roleSelection' | 'login' | 'signup' | 'studentPortal' | 'studentScanner' | 'dashboard' | 'registration' | 'scanner' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'finance' | 'statistics' | 'teachers';
-type ScanMode = 'attendance' | 'market' | 'addPoints' | 'viewDetails';
-type ViewerRole = 'servant' | 'student';
+type View       =  'roleSelection' | 'login' | 'signup' | 'studentPortal' | 'studentScanner' | 'dashboard' | 'registration' | 'scanner' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'finance' | 'statistics' | 'teachers';
+type ScanMode   =  'attendance' | 'market' | 'addPoints' | 'viewDetails';
+type ViewerRole =  'servant' | 'student';
 
 interface Participant {
   id: string;

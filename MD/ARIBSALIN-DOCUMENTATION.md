@@ -1,8 +1,8 @@
 # اريبصالين - Summer Festival Management System
 ## Complete Technical Documentation
 
-**Current Version:** 1.1.0 (ID Card Feature Update)  
-**Last Updated:** May 24, 2026
+**Current Version:** 1.2.0 (Architecture & Portal Update)  
+**Last Updated:** May 28, 2026
 
 ---
 
@@ -36,7 +36,7 @@ This is the main technical documentation file. For specific topics, see:
 **Technologies:** React 18.3.1 + TypeScript + Tailwind CSS v4  
 **Language:** Arabic (RTL)  
 **Platform:** Mobile-First Web Application  
-**Current Version:** 1.1.0 (ID Card Feature - May 24, 2026)
+**Current Version:** 1.2.0 (Architecture & Portal Update - May 28, 2026)
 
 ---
 
@@ -82,32 +82,21 @@ Complete file tree with detailed component descriptions:
 
 ```
 src/
-├── app/
-│   ├── App.tsx                    # Main entry point
-│   ├── AppMain.tsx               # Main application router component
-│   └── components/
-│       ├── LoginPage.tsx         # Teacher login page
-│       ├── SignupPage.tsx        # Teacher registration/signup page
-│       ├── EnhancedDashboard.tsx # Main dashboard with navigation
-│       ├── EnhancedRegistrationForm.tsx  # Student registration form
-│       ├── StudentProfile.tsx    # Participant profile page with QR
-│       ├── QRScanner.tsx         # QR code scanner component
-│       ├── MarketModal.tsx       # Market point deduction modal
-│       ├── AddPointsModal.tsx    # Add points modal (via QR scan)
-│       ├── ManualPointsModal.tsx # Manual points management (no scan)
-│       ├── FinancePage.tsx       # Financial management page
-│       ├── StatisticsPage.tsx    # Statistics and analytics page
-│       ├── TeachersPage.tsx      # Teachers management page
-│       ├── WelcomeScreen.tsx     # Welcome screen (shown once)
-│       ├── ParticipantsList.tsx  # Searchable participants list
-│       └── TestQRCode.tsx        # QR code generator for testing
-├── imports/
-│   ├── new-church-logo.png            # Church logo
-│   └── Arebsalin-1.png          # Festival logo
+├── assets/
+│   └── images/                   # Logos and media
+├── components/
+│   ├── forms/                    # e.g., RegistrationForm.tsx - Participant registration
+│   ├── layout/                   # e.g., AppMain.tsx - Main router & auth gate
+│   ├── modals/                   # AddPointsModal.tsx, MarketModal.tsx, ManualPointsModal.tsx
+│   ├── shared/                   # IDCard.tsx, QRScanner.tsx, ParticipantsList.tsx, WelcomeScreen.tsx, TestQRCode.tsx
+│   └── ui/                       # shadcn UI primitives and wrappers
+├── pages/                        # Top-level pages (Dashboard, FinancePage, LoginPage, SignupPage, StatisticsPage, StudentProfile, TeachersPage, RoleSelectionPage, StudentPortalLogin)
+├── types/                        # index.ts - Centralized interfaces
+├── lib/                          # supabase.ts - Database client initialization
 └── styles/
-    ├── theme.css                # Color system and CSS variables
-    ├── fonts.css                # Arabic fonts import
-    └── globals.css              # Global styles and resets
+  ├── theme.css                # Color system and CSS variables
+  ├── fonts.css                # Arabic fonts import
+  └── globals.css              # Global styles and resets
 ```
 
 ---
@@ -199,7 +188,8 @@ Submit Button: bg-primary, text-primary-foreground, rounded-xl, py-3, active:sca
 - **Mobile Number** (رقم الموبايل) * - Tel input, required (single number only)
 
 #### Address (العنوان)
-- **Detailed Address** (العنوان بالتفصيل) * - Textarea (3 rows), required
+- **Area (الحي / المنطقة)** - Dropdown select (قائمة مناطق أسوان، مثل: خور-النيل، المنشية، كرنك...) - required
+- **Detailed Address (العنوان بالتفصيل)** * - Textarea (3 rows), required
 
 **Education Stages for Teachers:**
 ```typescript
@@ -246,6 +236,38 @@ export interface TeacherData {
 - Sticky header with back button
 
 ---
+
+### RoleSelectionPage
+
+**File Path:** `src/pages/RoleSelectionPage.tsx`
+
+**Purpose:** Initial landing page that asks the user to choose their role: `Servant` (خادم) or `Student` (طالب). This determines the next step in the flow (teacher login/signup vs student portal).
+
+**Behavior:**
+- Two large buttons: `خادم` and `طالب`.
+- Choosing `خادم` navigates to the existing `LoginPage` (teacher login).
+- Choosing `طالب` navigates to `StudentPortalLogin` (student ID entry / scanner).
+
+---
+
+### StudentPortalLogin
+
+**File Path:** `src/pages/StudentPortalLogin.tsx`
+
+**Purpose:** Lightweight student entry point that allows students to access their profile using a numeric/printed ID or by scanning a QR code.
+
+**UI Components:**
+- Text input for Student ID (supports loose formatting; IDs are normalized on lookup)
+- Button to submit ID and view profile
+- Optional QR scanner button that opens `QRScanner` in quick-scan mode
+
+**Behavior:**
+- Normalizes the entered ID (trim + toUpperCase) before searching participants.
+- If a matching participant is found, navigates to the `StudentProfile` view.
+- If no match, shows a friendly Arabic fallback message and a back button.
+
+---
+
 
 ### 3. EnhancedDashboard Component
 
@@ -340,7 +362,8 @@ interface EnhancedDashboardProps {
 - **Mother's Mobile** (رقم موبايل الأم) * - Tel input, required
 
 #### Address (العنوان)
-- **Detailed Address** (العنوان بالتفصيل) * - Textarea (3 rows), required
+- **Area (الحي / المنطقة)** - Dropdown select (قائمة مناطق أسوان) - required
+- **Detailed Address (العنوان بالتفصيل)** * - Textarea (3 rows), required
 
 **Education Stages for Students:**
 ```typescript
@@ -1047,6 +1070,11 @@ type View = 'login' | 'signup' | 'dashboard' | 'registration' |
 - `statistics` - Statistics and analytics page
 - `teachers` - Teachers management page
 
+**Initial Entry & Role Gate:**
+- The application now starts at `RoleSelectionPage` which asks the user to choose `Servant` or `Student`.
+- When `Student` is selected the app navigates to `StudentPortalLogin` and students may view their profile without passing the servant authentication gate.
+- The main auth gate in `AppMain.tsx` now explicitly allows student flows: `if (!isAuthenticated && viewerRole !== 'student') { /* block */ }`.
+
 ### Scanner Mode System
 
 The QR scanner component supports multiple operational modes:
@@ -1235,6 +1263,7 @@ Complete participant/student record with points and attendance tracking:
 interface Participant {
   id: string;                  // Unique ID (format: 'P001', 'P002', etc.)
   name: string;                // Full name (duplicated from data.fullName for quick access)
+  area: string;                // Participant's area/region (kept for quick access)
   points: number;              // Current points balance (integer, ≥ 0)
   attended: boolean;           // Attended today flag (boolean)
   attendanceDays: string[];    // Array of attendance dates (format: 'YYYY-MM-DD')
@@ -1276,9 +1305,12 @@ export interface StudentData {
   personalMobile: string;      // Student's mobile number
   fatherMobile: string;        // Father's mobile - required
   motherMobile: string;        // Mother's mobile - required
+
+  // Location
+  area: string;                // Selected area/region (e.g., Aswan neighborhoods)
   
   // Address
-  address: string;             // Complete address - required
+  address: string;             // Detailed address (street, building, additional notes) - required
 }
 ```
 
@@ -1312,8 +1344,12 @@ export interface TeacherData {
   // Contact Information
   mobile: string;              // Single mobile number - required
   
+  // Location
+  area: string;                // Selected area/region (e.g., Aswan neighborhoods)
+  
   // Address
-  address: string;             // Complete address (single field) - required
+  address: string;             // Detailed address (street, building, additional notes) - required
+  
 }
 ```
 
@@ -3157,6 +3193,13 @@ import festivalLogo from '../../imports/Arebsalin-1.png';
 ---
 
 ## 📝 Version History
+-
+### v1.2.0 - Architecture & Student Portal Update (May 28, 2026)
+- ✨ NEW: RoleSelectionPage and StudentPortalLogin (student portal)
+- ✨ NEW: Centralized `src/types/index.ts` and `area` field added to participant types
+- ♻️ REFACTOR: Reorganized `src/components` and `src/pages` layout; updated imports
+- 🔧 FIX: Student ID normalization and profile fallback UI (fix blank-profile issue)
+- 🧭 CHANGE: Auth gate adjusted to allow student profile access without servant auth
 
 ### v1.1.0 - ID Card Feature (May 24, 2026)
 - ✨ NEW: IDCard component with professional design
@@ -3190,8 +3233,8 @@ This project includes multiple documentation files:
 
 **End of Documentation**
 
-**Last Updated:** May 24, 2026  
-**Current Version:** 1.1.0  
+**Last Updated:** May 28, 2026  
+**Current Version:** 1.2.0  
 **Church:** كنيسة الشهيد العظيم مارمينا العجايبي والقديس العظيم البابا كيرلس السادس - أسوان
 
 
