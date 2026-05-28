@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { LogIn } from 'lucide-react';
-import churchLogo from '../../imports/meni_Logo.png';
+import churchLogo from '../../imports/new-church-logo.png';
 import festivalLogo from '../../imports/Arebsalin-1.png';
 
 interface LoginPageProps {

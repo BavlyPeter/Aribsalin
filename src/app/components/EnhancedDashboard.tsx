@@ -1,6 +1,6 @@
 import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, Settings, FileText, Wallet, BarChart3 } from 'lucide-react';
 import { ParticipantsList } from './ParticipantsList';
-import churchLogo from '../../imports/meni_Logo.png';
+import churchLogo from '../../imports/new-church-logo.png';
 import festivalLogo from '../../imports/Arebsalin-1.png';
 
 interface EnhancedDashboardProps {

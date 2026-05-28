@@ -102,7 +102,7 @@ src/
 │       ├── ParticipantsList.tsx  # Searchable participants list
 │       └── TestQRCode.tsx        # QR code generator for testing
 ├── imports/
-│   ├── meni_Logo.png            # Church logo
+│   ├── new-church-logo.png            # Church logo
 │   └── Arebsalin-1.png          # Festival logo
 └── styles/
     ├── theme.css                # Color system and CSS variables
@@ -146,7 +146,7 @@ font-family: 'Tajawal', 'Cairo', sans-serif;
 
 **UI Components:**
 - **Simple Header with Logos:**
-  - Church logo (positioned right) - `meni_Logo.png`
+  - Church logo (positioned right) - `new-church-logo.png`
   - Festival logo (positioned center) - `Arebsalin-1.png`
   - Spacer div for perfect centering
 - **Login Form Card:**
@@ -2286,7 +2286,7 @@ toast('رسالة عادية', {
 
 ### Logos
 
-**Church Logo:** `src/imports/meni_Logo.png`
+**Church Logo:** `src/imports/new-church-logo.png`
 - مارمينا logo (St. Mina)
 - Used in headers (right position)
 - Square aspect ratio
@@ -3149,7 +3149,7 @@ A new **IDCard** component (`/src/app/components/IDCard.tsx`) has been added tha
 
 ```typescript
 // ✅ CORRECT (Now implemented)
-import churchLogo from '../../imports/meni_Logo.png';
+import churchLogo from '../../imports/new-church-logo.png';
 import festivalLogo from '../../imports/Arebsalin-1.png';
 <img src={churchLogo} alt="Church Logo" />
 ```
