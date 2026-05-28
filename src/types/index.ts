@@ -11,6 +11,7 @@ export interface StudentData {
   personalMobile: string;
   fatherMobile: string;
   motherMobile: string;
+  area: string;
   address: string;
   dateOfBirth: string;
 }
@@ -23,6 +24,7 @@ export interface ParticipantData {
   personalMobile: string;
   fatherMobile: string;
   motherMobile: string;
+  area: string;
   address: string;
 }
 
@@ -37,6 +39,7 @@ export interface TeacherData {
   jobTitle?: string;
   confessionFather: string;
   mobile: string;
+  area: string;
   address: string;
   dateOfBirth: string;
 }

@@ -39,7 +39,7 @@ export default function AppMain() {
   const [viewerRole, setViewerRole] = useState<ViewerRole>('servant');
   const [totalDays] = useState(20); // Total festival days
 
-  const [participants, setParticipants] = useState<Participant[]>([
+  const [participants, setParticipants] = useState<Participant[]>(([
     {
       id: 'P001',
       name: 'مارك جرجس عبد المسيح',
@@ -759,7 +759,13 @@ export default function AppMain() {
         dateOfBirth: '2011-09-17'
       }
     }
-  ]);
+  ] as Participant[]).map((participant) => ({
+    ...participant,
+    data: {
+      ...participant.data,
+      area: 'غير محدد'
+    }
+  })));
   const mockParticipants = participants;
 
   const [todayAttendance, setTodayAttendance] = useState(25);
@@ -1141,7 +1147,7 @@ export default function AppMain() {
           selectedParticipant ? (
             <StudentProfile
               student={selectedParticipant}
-              participants={participants}
+              participants={participants as any}
               totalDays={totalDays}
               onBack={handleProfileBack}
             />

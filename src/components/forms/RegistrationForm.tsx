@@ -47,6 +47,8 @@ const educationYears = {
   ]
 };
 
+const ASWAN_AREAS = ['السيل', 'كيما', 'الصداقة', 'المحمودية', 'أطلس', 'العقاد', 'الكورنيش', 'الكرور', 'الشيخ هارون', 'أخرى'];
+
 export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
   const [formData, setFormData] = useState<StudentData>({
     fullName: '',
@@ -61,6 +63,7 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
     personalMobile: '',
     fatherMobile: '',
     motherMobile: '',
+    area: '',
     address: '',
     dateOfBirth: ''
   });
@@ -359,16 +362,33 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
         <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
           <h3 className="mb-4 text-primary">العنوان</h3>
 
-          <div>
-            <label className="block mb-2 text-sm text-foreground">العنوان بالتفصيل *</label>
-            <textarea
-              required
-              value={formData.address}
-              onChange={(e) => updateField('address', e.target.value)}
-              className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-              rows={3}
-              placeholder="المدينة، الحي، الشارع، رقم المنزل"
-            />
+          <div className="space-y-4">
+            <div>
+              <label className="block mb-2 text-sm text-foreground">المنطقة *</label>
+              <select
+                required
+                value={formData.area}
+                onChange={(e) => updateField('area', e.target.value)}
+                className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">اختر المنطقة</option>
+                {ASWAN_AREAS.map((area) => (
+                  <option key={area} value={area}>{area}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block mb-2 text-sm text-foreground">العنوان بالتفصيل *</label>
+              <textarea
+                required
+                value={formData.address}
+                onChange={(e) => updateField('address', e.target.value)}
+                className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+                rows={3}
+                placeholder="المدينة، الحي، الشارع، رقم المنزل"
+              />
+            </div>
           </div>
         </div>
       </form>

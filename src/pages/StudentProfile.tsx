@@ -401,7 +401,7 @@ export function StudentProfile({ student, totalDays, onBack }: StudentProfilePro
               <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
               <div className="flex-1">
                 <div className="text-sm text-muted-foreground">العنوان</div>
-                <div className="font-medium">{student.data.address}</div>
+                <div className="font-medium">{student.data.area} - {student.data.address}</div>
               </div>
             </div>
           </div>
