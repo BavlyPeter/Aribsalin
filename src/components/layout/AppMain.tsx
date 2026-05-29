@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 import { RoleSelectionPage } from '../../pages/RoleSelectionPage';
 import { LoginPage } from '../../pages/LoginPage';
 import { SignupPage } from '../../pages/SignupPage';
@@ -770,12 +771,54 @@ export default function AppMain() {
     }
   }, [isAuthenticated]);
 
-  const handleLogin = (teacherId: string, password: string) => {
-    // In real app, validate credentials
-    toast.success('تم تسجيل الدخول بنجاح');
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        const { data: servantData, error } = await supabase
+          .from('servants')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!error && servantData) {
+          setCurrentServant(servantData);
+          setIsAuthenticated(true);
+          setViewerRole('servant');
+          setCurrentView('dashboard');
+        }
+      }
+    };
+
+    checkExistingSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === 'SIGNED_OUT') {
+        setIsAuthenticated(false);
+        setCurrentServant(null);
+        setViewerRole('servant');
+        setCurrentView('login');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogin = (servantData: any) => {
     setIsAuthenticated(true);
     setViewerRole('servant');
+    setCurrentServant(servantData);
     setCurrentView('dashboard');
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setIsAuthenticated(false);
+    setCurrentServant(null);
+    setViewerRole('servant');
+    setCurrentView('login');
+    toast.success('تم تسجيل الخروج بنجاح');
   };
 
   const handleSignup = (data: TeacherData) => {
@@ -863,21 +906,111 @@ export default function AppMain() {
   };
 
   const handleScanSuccess = (decodedText: string) => {
-    const participant = participants.find(p => p.id === decodedText || p.name.includes(decodedText));
-    const targetParticipant = participant || participants[0]; // Use first for demo
+    (async () => {
+      const scanned = String(decodedText).trim();
 
-    if (scanMode === 'attendance') {
-      handleAttendanceScan(targetParticipant);
-    } else if (scanMode === 'market') {
-      setSelectedParticipantId(targetParticipant.id);
-      setCurrentView('market');
-    } else if (scanMode === 'addPoints') {
-      setSelectedParticipantId(targetParticipant.id);
-      setCurrentView('addPoints');
-    } else if (scanMode === 'viewDetails') {
-      setSelectedParticipantId(targetParticipant.id);
-      setCurrentView('profile');
-    }
+      if (scanMode === 'attendance') {
+        if (!currentServant || !currentServant.id) {
+          toast.error('يجب تسجيل الدخول كخادم قبل تسجيل الحضور');
+          return;
+        }
+
+        try {
+          // 1. Verify participant by Smart ID (participant_id)
+          const { data: participant, error: fetchError } = await supabase
+            .from('participants')
+            .select('*')
+            .eq('participant_id', scanned)
+            .single();
+
+          if (fetchError || !participant) {
+            toast.error('هذا الكود غير مسجل في النظام');
+            return;
+          }
+
+          const participantUuid = participant.id as string;
+
+          // 2. Log attendance (will fail on unique_daily_attendance constraint if already attended today)
+          const { error: attendError } = await supabase
+            .from('attendance_logs')
+            .insert([
+              {
+                participant_id: participantUuid,
+                servant_id: currentServant.id
+              }
+            ]);
+
+          if (attendError) {
+            // Unique violation or other DB error
+            console.warn('attendance insert error', attendError);
+            toast.info('تم تسجيل حضور هذا المشارك مسبقاً اليوم');
+            return;
+          }
+
+          // 3. Add points (+10)
+          const currentPoints = Number(participant.points_balance || 0);
+          const newPoints = currentPoints + 10;
+
+          const { error: updateError } = await supabase
+            .from('participants')
+            .update({ points_balance: newPoints })
+            .eq('id', participantUuid);
+
+          if (updateError) {
+            console.error('Failed to update points:', updateError);
+            toast.error('حدث خطأ عند تحديث النقاط');
+            return;
+          }
+
+          // 4. Record transaction
+          const { error: txError } = await supabase.from('points_transactions').insert([
+            {
+              participant_id: participantUuid,
+              servant_id: currentServant.id,
+              transaction_type: 'attendance_bonus',
+              points_amount: 10,
+              description: 'مكافأة حضور اليوم'
+            }
+          ]);
+
+          if (txError) {
+            console.error('Failed to insert points transaction:', txError);
+            // Not fatal to user flow
+          }
+
+          // Update local state for immediate UI feedback
+          setParticipants(prev =>
+            prev.map(p =>
+              (String(p.id) === String(participant.participant_id) || String(p.id) === String(participantUuid))
+                ? { ...p, points: newPoints, attended: true, attendanceDays: [...p.attendanceDays, new Date().toISOString().split('T')[0]] }
+                : p
+            )
+          );
+
+          toast.success('تم تسجيل الحضور بنجاح وإضافة 10 نقاط');
+          setCurrentView('dashboard');
+        } catch (err) {
+          console.error('Attendance handling error', err);
+          toast.error('حدث خطأ أثناء تسجيل الحضور');
+        }
+
+      } else {
+        // non-attendance flows: keep existing demo behavior
+        const participant = participants.find(p => p.id === scanned || p.name.includes(scanned));
+        const targetParticipant = participant || participants[0]; // Use first for demo
+
+        if (scanMode === 'market') {
+          setSelectedParticipantId(targetParticipant.id);
+          setCurrentView('market');
+        } else if (scanMode === 'addPoints') {
+          setSelectedParticipantId(targetParticipant.id);
+          setCurrentView('addPoints');
+        } else if (scanMode === 'viewDetails') {
+          setSelectedParticipantId(targetParticipant.id);
+          setCurrentView('profile');
+        }
+      }
+    })();
   };
 
   const handleAttendanceScan = (participant: Participant) => {
@@ -907,49 +1040,137 @@ export default function AppMain() {
     }
     setCurrentView('dashboard');
   };
+  const [isProcessingMarket, setIsProcessingMarket] = useState(false);
+  const [isProcessingAddPoints, setIsProcessingAddPoints] = useState(false);
 
-  const handleMarketConfirm = (pointsToDeduct: number) => {
-    if (!selectedParticipantId) return;
+  const resolveParticipantUuid = async (identifier: string) => {
+    // Try to resolve whether identifier is UUID (has hyphens) or Smart ID
+    if (!identifier) return null;
 
-    const participant = participants.find(p => p.id === selectedParticipantId);
-    if (!participant) return;
+    // If it looks like a UUID, try to fetch by id
+    const maybeUuid = identifier.includes('-');
 
-    setParticipants(prev =>
-      prev.map(p =>
-        p.id === selectedParticipantId
-          ? { ...p, points: p.points - pointsToDeduct }
-          : p
-      )
-    );
+    if (maybeUuid) {
+      const { data, error } = await supabase.from('participants').select('id, participant_id, points_balance').eq('id', identifier).single();
+      if (!error && data) return data;
+    }
 
-    toast.success('تم خصم النقاط بنجاح!', {
-      description: `${participant.name} - خصم ${pointsToDeduct} نقطة`
-    });
+    // Otherwise or fallback, try by participant_id (Smart ID)
+    const { data, error } = await supabase.from('participants').select('id, participant_id, points_balance').eq('participant_id', identifier).single();
+    if (!error && data) return data;
 
-    setSelectedParticipantId(null);
-    setCurrentView('dashboard');
+    return null;
   };
 
-  const handleAddPointsConfirm = (pointsToAdd: number) => {
+  const handleMarketConfirm = async (pointsToDeduct: number) => {
     if (!selectedParticipantId) return;
+    if (!currentServant || !currentServant.id) {
+      toast.error('يجب تسجيل الدخول كخادم قبل تنفيذ العملية');
+      return;
+    }
 
-    const participant = participants.find(p => p.id === selectedParticipantId);
-    if (!participant) return;
+    setIsProcessingMarket(true);
 
-    setParticipants(prev =>
-      prev.map(p =>
-        p.id === selectedParticipantId
-          ? { ...p, points: p.points + pointsToAdd }
-          : p
-      )
-    );
+    try {
+      const participantRow: any = await resolveParticipantUuid(selectedParticipantId);
+      if (!participantRow) {
+        toast.error('المشارك غير موجود في النظام');
+        return;
+      }
 
-    toast.success('تم إضافة النقاط بنجاح!', {
-      description: `${participant.name} - إضافة ${pointsToAdd} نقطة`
-    });
+      const participantUuid = participantRow.id;
+      const currentPoints = Number(participantRow.points_balance || 0);
+      const deduct = Math.abs(Math.floor(pointsToDeduct));
+      const newPoints = Math.max(0, currentPoints - deduct);
 
-    setSelectedParticipantId(null);
-    setCurrentView('dashboard');
+      const { error: updateError } = await supabase.from('participants').update({ points_balance: newPoints }).eq('id', participantUuid);
+      if (updateError) {
+        console.error('Failed updating participant points', updateError);
+        toast.error('حدث خطأ أثناء تحديث النقاط');
+        return;
+      }
+
+      const { error: txError } = await supabase.from('points_transactions').insert([
+        {
+          participant_id: participantUuid,
+          servant_id: currentServant.id,
+          transaction_type: 'market_deduct',
+          points_amount: -Math.abs(deduct),
+          description: 'خصم من السوق'
+        }
+      ]);
+      if (txError) {
+        console.error('Failed inserting transaction', txError);
+        // Not fatal
+      }
+
+      // Update UI
+      setParticipants(prev => prev.map(p => p.id === selectedParticipantId || p.id === participantUuid ? { ...p, points: newPoints } : p));
+
+      toast.success('تم خصم النقاط بنجاح');
+      setSelectedParticipantId(null);
+      setCurrentView('dashboard');
+    } catch (err) {
+      console.error('Market confirm error', err);
+      toast.error('حدث خطأ أثناء خصم النقاط');
+    } finally {
+      setIsProcessingMarket(false);
+    }
+  };
+
+  const handleAddPointsConfirm = async (pointsToAdd: number) => {
+    if (!selectedParticipantId) return;
+    if (!currentServant || !currentServant.id) {
+      toast.error('يجب تسجيل الدخول كخادم قبل تنفيذ العملية');
+      return;
+    }
+
+    setIsProcessingAddPoints(true);
+
+    try {
+      const participantRow: any = await resolveParticipantUuid(selectedParticipantId);
+      if (!participantRow) {
+        toast.error('المشارك غير موجود في النظام');
+        return;
+      }
+
+      const participantUuid = participantRow.id;
+      const currentPoints = Number(participantRow.points_balance || 0);
+      const add = Math.abs(Math.floor(pointsToAdd));
+      const newPoints = currentPoints + add;
+
+      const { error: updateError } = await supabase.from('participants').update({ points_balance: newPoints }).eq('id', participantUuid);
+      if (updateError) {
+        console.error('Failed updating participant points', updateError);
+        toast.error('حدث خطأ أثناء تحديث النقاط');
+        return;
+      }
+
+      const { error: txError } = await supabase.from('points_transactions').insert([
+        {
+          participant_id: participantUuid,
+          servant_id: currentServant.id,
+          transaction_type: 'bonus_add',
+          points_amount: Math.abs(add),
+          description: 'إضافة نقاط إضافية'
+        }
+      ]);
+      if (txError) {
+        console.error('Failed inserting transaction', txError);
+      }
+
+      // Update UI
+      setParticipants(prev => prev.map(p => p.id === selectedParticipantId || p.id === participantUuid ? { ...p, points: newPoints } : p));
+
+      toast.success('تم إضافة النقاط بنجاح');
+      setSelectedParticipantId(null);
+      setCurrentView('dashboard');
+    } catch (err) {
+      console.error('Add points error', err);
+      toast.error('حدث خطأ أثناء إضافة النقاط');
+    } finally {
+      setIsProcessingAddPoints(false);
+    }
   };
 
   const handleManualPointsConfirm = (participantId: string, points: number, action: 'add' | 'subtract') => {
@@ -1073,6 +1294,7 @@ export default function AppMain() {
           <Dashboard
             onNavigate={handleNavigate}
             onViewProfile={handleViewProfile}
+            onLogout={handleLogout}
             currentServant={currentServant}
             participants={participants.map(p => ({
               id: p.id,

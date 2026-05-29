@@ -58,6 +58,7 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
     collegeName: '',
     jobTitle: '',
     confessionFather: '',
+    teacherId: '',
     password: '',
     role: '',
     classStage: '',
@@ -69,18 +70,27 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const generateSmartId = async (role: string, stage: string) => {
-    const roleChar = role === 'normal' ? 'N' : role === 'supervisor' ? 'S' : 'A';
+    let prefix = '';
+    let sliceIndex = 0;
 
-    let stageChars = 'X0';
-    if (stage === 'kg') stageChars = 'K0';
-    else if (stage === 'primary_12') stageChars = 'P1';
-    else if (stage === 'primary_34') stageChars = 'P3';
-    else if (stage === 'primary_56') stageChars = 'P5';
-    else if (stage === 'preparatory') stageChars = 'Y0';
-    else if (stage === 'secondary') stageChars = 'S0';
-    else if (stage === 'university_graduate') stageChars = 'G0';
+    if (role === 'admin') {
+      prefix = 'A';
+      sliceIndex = 1;
+    } else {
+      const roleChar = role === 'supervisor' ? 'S' : 'N';
 
-    const prefix = `${roleChar}${stageChars}`;
+      let stageChars = 'X0';
+      if (stage === 'kg') stageChars = 'K0';
+      else if (stage === 'primary_12') stageChars = 'P1';
+      else if (stage === 'primary_34') stageChars = 'P3';
+      else if (stage === 'primary_56') stageChars = 'P5';
+      else if (stage === 'preparatory') stageChars = 'Y0';
+      else if (stage === 'secondary') stageChars = 'S0';
+      else if (stage === 'university_graduate') stageChars = 'G0';
+
+      prefix = `${roleChar}${stageChars}`;
+      sliceIndex = 3;
+    }
 
     const { data, error } = await supabase
       .from('servants')
@@ -92,7 +102,7 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
     let nextNum = 1;
     if (data && data.length > 0) {
       const existingNums = data
-        .map(d => parseInt(d.teacher_id.slice(4)))
+        .map(d => parseInt(d.teacher_id.slice(sliceIndex)))
         .filter(n => !isNaN(n));
       if (existingNums.length > 0) {
         nextNum = Math.max(...existingNums) + 1;
@@ -133,7 +143,7 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
           address_area: formData.area,
           address_details: formData.address,
           role: formData.role,
-          class_stage: formData.classStage
+          class_stage: formData.role === 'admin' ? null : formData.classStage
         }]);
 
         if (dbError) throw dbError;
@@ -478,23 +488,26 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
                 <option value="">اختر الدور</option>
                 <option value="normal">خادم</option>
                 <option value="supervisor">أمين فصل</option>
+                <option value="admin">أمين الخدمة</option>
               </select>
             </div>
 
-            <div>
-              <label className="block mb-2 text-sm text-foreground">فصل الخدمة (المرحلة التي تخدم بها) *</label>
-              <select
-                required
-                value={formData.classStage}
-                onChange={(e) => updateField('classStage', e.target.value)}
-                className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">اختر المرحلة</option>
-                {Object.entries(servingStages).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
-                ))}
-              </select>
-            </div>
+            {formData.role !== 'admin' && (
+              <div>
+                <label className="block mb-2 text-sm text-foreground">فصل الخدمة (المرحلة التي تخدم بها) *</label>
+                <select
+                  required
+                  value={formData.classStage}
+                  onChange={(e) => updateField('classStage', e.target.value)}
+                  className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">اختر المرحلة</option>
+                  {Object.entries(servingStages).map(([key, label]) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
       </form>

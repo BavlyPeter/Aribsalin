@@ -1,20 +1,56 @@
-import { useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { LogIn } from 'lucide-react';
 import churchLogo from '../assets/images/new-church-logo.png';
 import festivalLogo from '../assets/images/Arebsalin-1.png';
+import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
 
 interface LoginPageProps {
-  onLogin: (teacherId: string, password: string) => void;
+  onLogin: (servantData: any) => void;
   onNavigateToSignup: () => void;
 }
 
 export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps) {
   const [teacherId, setTeacherId] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    onLogin(teacherId, password);
+    setIsLoading(true);
+
+    try {
+      const email = `${teacherId.trim().toLowerCase()}@aribsalin.com`;
+
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (authError || !authData.user) {
+        toast.error('رقم الدخول أو كلمة المرور غير صحيحة');
+        return;
+      }
+
+      const { data: servantData, error: dbError } = await supabase
+        .from('servants')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (dbError || !servantData) {
+        toast.error('تعذر تحميل بيانات الخادم');
+        return;
+      }
+
+      onLogin(servantData);
+      toast.success('تم تسجيل الدخول بنجاح');
+    } catch (error) {
+      console.error(error);
+      toast.error('رقم الدخول أو كلمة المرور غير صحيحة');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -41,7 +77,7 @@ export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block mb-2 text-sm text-foreground">
-                  رقم الخادم
+                  رقم الدخول (ID)
                 </label>
                 <input
                   type="text"
@@ -69,10 +105,11 @@ export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps) {
 
               <button
                 type="submit"
+                disabled={isLoading}
                 className="w-full bg-primary text-primary-foreground rounded-xl py-4 shadow-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
               >
                 <LogIn className="w-5 h-5" />
-                <span className="text-lg">دخول</span>
+                <span className="text-lg">{isLoading ? 'جاري تسجيل الدخول...' : 'دخول'}</span>
               </button>
             </form>
 

@@ -6,6 +6,7 @@ import festivalLogo from '../assets/images/Arebsalin-1.png';
 interface DashboardProps {
   onNavigate: (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers') => void;
   onViewProfile: (participantId: string) => void;
+  onLogout: () => void | Promise<void>;
   currentServant: any;
   participants?: Array<{ id: string; name: string; points: number; attended: boolean }>;
 }
@@ -13,6 +14,7 @@ interface DashboardProps {
 export function Dashboard({
   onNavigate,
   onViewProfile,
+  onLogout,
   currentServant,
   participants = []
 }: DashboardProps) {
@@ -34,6 +36,10 @@ export function Dashboard({
 
   const servant = currentServant || { full_name: 'خادم تجريبي', gender: 'male', role: 'supervisor', class_stage: 'primary_34' };
   const title = servant.gender === 'male' ? 'باصون' : 'تاسوني';
+  const servantRole = servant?.role || 'normal';
+  const roleText = roleLabels[servantRole] || 'خادم';
+  const stageKey = servant?.class_stage || servant?.classStage;
+  const stageText = stageKey ? (stageLabels[stageKey] || stageKey) : '';
 
   return (
     <div className="min-h-screen bg-background pb-8">
@@ -53,7 +59,12 @@ export function Dashboard({
             مرحباً {title} {servant.full_name || servant.fullName}
           </h2>
           <p className="text-sm text-muted-foreground font-medium">
-            {roleLabels[servant.role] || 'خادم'} {servant.role !== 'admin' && servant.class_stage ? ` - ${stageLabels[servant.class_stage] || servant.class_stage}` : ''}
+            {servantRole === 'admin'
+              ? roleText
+              : stageText
+                ? `${roleText} - ${stageText}`
+                : roleText
+            }
           </p>
         </div>
 
@@ -156,6 +167,15 @@ export function Dashboard({
             <div className="flex items-center justify-center gap-3">
               <Users className="w-5 h-5 text-primary" />
               <span>إدارة الخدام</span>
+            </div>
+          </button>
+
+          <button
+            onClick={() => void onLogout()}
+            className="w-full rounded-xl p-4 shadow-sm border border-red-200 bg-red-50 text-red-700 active:scale-[0.98] transition-transform"
+          >
+            <div className="flex items-center justify-center gap-3">
+              <span>تسجيل الخروج</span>
             </div>
           </button>
         </div>
