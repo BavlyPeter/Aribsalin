@@ -1,10 +1,12 @@
 import { ArrowRight, Save } from 'lucide-react';
 import { useState } from 'react';
 import { StudentData } from '../../types';
+import { supabase } from '../../lib/supabase';
+import { toast } from 'sonner';
 
 interface RegistrationFormProps {
   onBack: () => void;
-  onSubmit: (data: StudentData) => void;
+  onSubmit: (data: StudentData, participantId?: string) => void;
 }
 
 const educationStages = {
@@ -50,6 +52,7 @@ const educationYears = {
 const ASWAN_AREAS = ['السيل', 'كيما', 'الصداقة', 'المحمودية', 'أطلس', 'العقاد', 'الكورنيش', 'الكرور', 'الشيخ هارون', 'أخرى'];
 
 export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<StudentData>({
     fullName: '',
     gender: '',
@@ -68,9 +71,112 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
     dateOfBirth: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const generateParticipantSmartId = async (stage: string, year: string) => {
+    let stageChar = 'X';
+    if (stage === 'kg') stageChar = 'K';
+    else if (stage === 'primary') stageChar = 'P';
+    else if (stage === 'preparatory') stageChar = 'Y';
+    else if (stage === 'secondary') stageChar = 'S';
+    else if (stage === 'university' || stage === 'graduate') stageChar = 'G';
+
+    let yearChar = '0';
+    if (stage === 'kg') {
+      if (year === 'Baby Class') yearChar = '0';
+      else if (year === 'KG1') yearChar = '1';
+      else if (year === 'KG2') yearChar = '2';
+    } else if (stage === 'primary') {
+      if (year === 'الصف الأول الابتدائي') yearChar = '1';
+      else if (year === 'الصف الثاني الابتدائي') yearChar = '2';
+      else if (year === 'الصف الثالث الابتدائي') yearChar = '3';
+      else if (year === 'الصف الرابع الابتدائي') yearChar = '4';
+      else if (year === 'الصف الخامس الابتدائي') yearChar = '5';
+      else if (year === 'الصف السادس الابتدائي') yearChar = '6';
+    } else if (stage === 'preparatory') {
+      if (year === 'الصف الأول الإعدادي') yearChar = '1';
+      else if (year === 'الصف الثاني الإعدادي') yearChar = '2';
+      else if (year === 'الصف الثالث الإعدادي') yearChar = '3';
+    } else if (stage === 'secondary') {
+      if (year === 'الصف الأول الثانوي') yearChar = '1';
+      else if (year === 'الصف الثاني الثانوي') yearChar = '2';
+      else if (year === 'الصف الثالث الثانوي') yearChar = '3';
+    } else if (stage === 'university') {
+      if (year === 'الفرقة الأولى') yearChar = '1';
+      else if (year === 'الفرقة الثانية') yearChar = '2';
+      else if (year === 'الفرقة الثالثة') yearChar = '3';
+      else if (year === 'الفرقة الرابعة') yearChar = '4';
+      else if (year === 'الفرقة الخامسة') yearChar = '5';
+      else if (year === 'الفرقة السادسة') yearChar = '6';
+      else if (year === 'الفرقة السابعة') yearChar = '7';
+    } else if (stage === 'graduate') {
+      yearChar = '0';
+    }
+
+    const prefix = `${stageChar}${yearChar}`;
+
+    const { data, error } = await supabase
+      .from('participants')
+      .select('participant_id')
+      .ilike('participant_id', `${prefix}%`);
+
+    if (error) {
+      throw error;
+    }
+
+    let nextNum = 1;
+    if (data && data.length > 0) {
+      const existingNums = data
+        .map((item) => parseInt(item.participant_id.slice(2), 10))
+        .filter((num) => !Number.isNaN(num));
+
+      if (existingNums.length > 0) {
+        nextNum = Math.max(...existingNums) + 1;
+      }
+    }
+
+    return `${prefix}${String(nextNum).padStart(2, '0')}`;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    setIsLoading(true);
+
+    try {
+      const generatedSmartId = await generateParticipantSmartId(formData.educationStage, formData.educationYear);
+
+      const { error: dbError } = await supabase.from('participants').insert([{
+        participant_id: generatedSmartId,
+        full_name: formData.fullName,
+        gender: formData.gender,
+        educational_stage: formData.educationStage,
+        academic_year: formData.educationYear || null,
+        class_or_job: formData.studyOrWorkPlace || null,
+        birth_date: formData.dateOfBirth || null,
+        father_of_confession: formData.confessionFather,
+        mobile_personal: formData.personalMobile || null,
+        mobile_father: formData.fatherMobile,
+        mobile_mother: formData.motherMobile,
+        address_area: formData.area,
+        address_details: formData.address,
+        points_balance: 0
+      }]);
+
+      if (dbError) {
+        throw dbError;
+      }
+
+      toast.success(`تم تسجيل المخدوم بنجاح! رقم المخدوم هو: ${generatedSmartId}`, {
+        duration: 15000,
+        description: 'هذا هو الرقم الذي سيطبع على كارت الـ QR الخاص به.'
+      });
+
+      onSubmit(formData, generatedSmartId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'حدث خطأ غير متوقع';
+      console.error(error);
+      toast.error(`حدث خطأ أثناء التسجيل: ${message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const updateField = (field: keyof StudentData, value: string) => {
@@ -113,7 +219,7 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
   };
 
   const isStudyPlaceRequired = () => {
-    return formData.educationStage && formData.educationStage !== 'graduate';
+    return !!formData.educationStage && formData.educationStage !== 'graduate';
   };
 
   return (
@@ -132,7 +238,7 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="p-4 space-y-4 pb-24">
+      <form id="registration-form" onSubmit={handleSubmit} className="p-4 space-y-4 pb-24">
         {/* Basic Information Card */}
         <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
           <h3 className="mb-4 text-primary">البيانات الأساسية</h3>
@@ -396,11 +502,13 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
       {/* Fixed Submit Button */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border">
         <button
-          onClick={handleSubmit}
+          type="submit"
+          form="registration-form"
+          disabled={isLoading}
           className="w-full bg-primary text-primary-foreground rounded-xl py-4 shadow-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
         >
           <Save className="w-5 h-5" />
-          <span className="text-lg">حفظ البيانات</span>
+          <span className="text-lg">{isLoading ? 'جاري التسجيل...' : 'حفظ البيانات'}</span>
         </button>
       </div>
     </div>

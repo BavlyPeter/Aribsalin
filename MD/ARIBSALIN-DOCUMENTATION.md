@@ -28,6 +28,37 @@ This is the main technical documentation file. For specific topics, see:
 
 ---
 
+## 🆕 What's New in v1.2.0 (May 28, 2026)
+
+This release focuses on architecture improvements, new entry flows (servant vs student), tighter TypeScript types, and an initial Supabase integration to support automatic Smart ID generation for servants.
+
+- **Role selection & student portal:** Added a role gate and lightweight student entry flow so students can view profiles without passing the servant auth gate. New pages: `RoleSelectionPage` and `StudentPortalLogin`.
+- **Centralized TypeScript types:** Moved shared interfaces to `src/types/index.ts` and added `area: string` to address data. This resolved duplicate `Participant` type issues and unified `StudentData`/`TeacherData` shapes.
+- **Address split:** Address data now uses two fields: `area` (select) and `address` (detailed text). Forms and profile displays updated accordingly.
+- **Smart ID generation & Supabase signup (teachers/servants):** `SignupPage` now generates an auto `teacher_id` (Smart ID) during signup, uses `supabase.auth.signUp` for auth, and inserts the servant record into the `servants` table. Supabase client is created at `src/lib/supabase.ts` and environment keys are expected via `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (see `src/vite-env.d.ts`).
+- **Auth model change (email → teacherId):** Login and app gate switched to use `teacherId` (generated Smart ID) instead of email for servant authentication flows.
+- **StudentProfile fix & ID normalization:** Student lookup normalizes input IDs (`trim().toUpperCase()`) to avoid blank-screen mismatches and improves fallback messaging when a profile is not found.
+- **Dashboard personalization:** Replaced the top metrics cards with a personalized servant welcome banner; `AppMain` now tracks `currentServant` and the banner shows role/stage-aware greeting.
+- **Forms & UI:** `RegistrationForm`, `SignupPage`, and other forms updated to use the split address fields, the `area` select, and the new types. Submit flows include loading states and toasts for user feedback.
+- **Build & verification:** Project builds successfully with `pnpm build` after these changes; Supabase runtime requires environment variables to function in production.
+
+Files touched in this release (not exhaustive):
+- `src/types/index.ts` — centralized types and `area` addition
+- `src/app/components/layout/AppMain.tsx` — view gating, `viewerRole`, `currentServant`, login/signup wiring
+- `src/pages/SignupPage.tsx` — Smart ID generation, Supabase signup and DB insert
+- `src/lib/supabase.ts` — Supabase client creation
+- `src/vite-env.d.ts` — Vite env typings for Supabase keys
+- `src/pages/LoginPage.tsx` — switched to `teacherId` login flow
+- `src/pages/StudentPortalLogin.tsx` — student portal entry page
+- `src/pages/StudentProfile.tsx` — area + address display and Participant typing
+- `src/pages/Dashboard.tsx` — welcome banner and `currentServant` prop
+- `MD/ARIBSALIN-DOCUMENTATION.md` — this file updated with release notes
+
+Notes & next steps:
+- To test the Smart ID signup flow end-to-end, supply the Supabase environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) and validate the `servants` table schema includes `teacher_id`.
+- Consider adding server-side RLS/RBAC rules for the `servants` table before production use.
+
+
 ## 📋 Project Overview
 
 **Project Name:** اريبصالين (Arribsalin)  

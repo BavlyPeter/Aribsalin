@@ -6,18 +6,35 @@ import festivalLogo from '../assets/images/Arebsalin-1.png';
 interface DashboardProps {
   onNavigate: (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers') => void;
   onViewProfile: (participantId: string) => void;
-  totalParticipants: number;
-  todayAttendance: number;
+  currentServant: any;
   participants?: Array<{ id: string; name: string; points: number; attended: boolean }>;
 }
 
 export function Dashboard({
   onNavigate,
   onViewProfile,
-  totalParticipants,
-  todayAttendance,
+  currentServant,
   participants = []
 }: DashboardProps) {
+  const roleLabels: Record<string, string> = {
+    'normal': 'خادم',
+    'supervisor': 'أمين فصل',
+    'admin': 'أمين الخدمة'
+  };
+
+  const stageLabels: Record<string, string> = {
+    'kg': 'حضانة',
+    'primary_12': 'ابتدائي (الصف الأول والثاني)',
+    'primary_34': 'ابتدائي (الصف الثالث والرابع)',
+    'primary_56': 'ابتدائي (الصف الخامس والسادس)',
+    'preparatory': 'إعدادي',
+    'secondary': 'ثانوي',
+    'university_graduate': 'جامعيين وخريجين'
+  };
+
+  const servant = currentServant || { full_name: 'خادم تجريبي', gender: 'male', role: 'supervisor', class_stage: 'primary_34' };
+  const title = servant.gender === 'male' ? 'باصون' : 'تاسوني';
+
   return (
     <div className="min-h-screen bg-background pb-8">
       {/* Header with Logos */}
@@ -30,31 +47,14 @@ export function Dashboard({
       </div>
 
       <div className="p-4">
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-card rounded-lg p-5 shadow-sm border border-border">
-            <div className="flex items-center justify-center mb-3">
-              <div className="w-12 h-12 bg-secondary/20 rounded-full flex items-center justify-center">
-                <Users className="w-6 h-6" style={{ color: 'var(--secondary)' }} />
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl mb-1" style={{ color: 'var(--primary)' }}>{totalParticipants}</div>
-              <div className="text-sm text-muted-foreground">إجمالي المشاركين</div>
-            </div>
-          </div>
-
-          <div className="bg-card rounded-lg p-5 shadow-sm border border-border">
-            <div className="flex items-center justify-center mb-3">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                <CheckSquare className="w-6 h-6 text-primary" />
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl mb-1" style={{ color: 'var(--primary)' }}>{todayAttendance}</div>
-              <div className="text-sm text-muted-foreground">الحضور اليوم</div>
-            </div>
-          </div>
+        {/* Welcome Banner */}
+        <div className="bg-card rounded-xl p-6 shadow-sm border border-border text-right mb-6">
+          <h2 className="text-2xl font-bold text-foreground mb-1">
+            مرحباً {title} {servant.full_name || servant.fullName}
+          </h2>
+          <p className="text-sm text-muted-foreground font-medium">
+            {roleLabels[servant.role] || 'خادم'} {servant.role !== 'admin' && servant.class_stage ? ` - ${stageLabels[servant.class_stage] || servant.class_stage}` : ''}
+          </p>
         </div>
 
         {/* Main Action Buttons */}

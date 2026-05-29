@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { ArrowRight, Save } from 'lucide-react';
-import churchLogo from '../assets/images/new-church-logo.png';
-import festivalLogo from '../assets/images/Arebsalin-1.png';
 import { TeacherData } from '../types';
+import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
+
+const churchLogo = new URL('../assets/images/new-church-logo.png', import.meta.url).href;
+const festivalLogo = new URL('../assets/images/Arebsalin-1.png', import.meta.url).href;
 
 interface SignupPageProps {
   onSignup: (data: TeacherData) => void;
@@ -17,11 +20,12 @@ const educationStages = {
 
 const servingStages = {
   'kg': 'حضانة',
-  'primary': 'ابتدائي',
+  'primary_12': 'ابتدائي (الأول والثاني)',
+  'primary_34': 'ابتدائي (الثالث والرابع)',
+  'primary_56': 'ابتدائي (الخامس والسادس)',
   'preparatory': 'إعدادي',
   'secondary': 'ثانوي',
-  'university': 'جامعي',
-  'graduate': 'خريجين'
+  'university_graduate': 'جامعي وخريجين'
 };
 
 const educationYears = {
@@ -54,7 +58,6 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
     collegeName: '',
     jobTitle: '',
     confessionFather: '',
-    teacherId: '',
     password: '',
     role: '',
     classStage: '',
@@ -63,10 +66,91 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
     address: '',
     dateOfBirth: ''
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const generateSmartId = async (role: string, stage: string) => {
+    const roleChar = role === 'normal' ? 'N' : role === 'supervisor' ? 'S' : 'A';
+
+    let stageChars = 'X0';
+    if (stage === 'kg') stageChars = 'K0';
+    else if (stage === 'primary_12') stageChars = 'P1';
+    else if (stage === 'primary_34') stageChars = 'P3';
+    else if (stage === 'primary_56') stageChars = 'P5';
+    else if (stage === 'preparatory') stageChars = 'Y0';
+    else if (stage === 'secondary') stageChars = 'S0';
+    else if (stage === 'university_graduate') stageChars = 'G0';
+
+    const prefix = `${roleChar}${stageChars}`;
+
+    const { data, error } = await supabase
+      .from('servants')
+      .select('teacher_id')
+      .ilike('teacher_id', `${prefix}%`);
+
+    if (error) throw error;
+
+    let nextNum = 1;
+    if (data && data.length > 0) {
+      const existingNums = data
+        .map(d => parseInt(d.teacher_id.slice(4)))
+        .filter(n => !isNaN(n));
+      if (existingNums.length > 0) {
+        nextNum = Math.max(...existingNums) + 1;
+      }
+    }
+
+    return `${prefix}${String(nextNum).padStart(2, '0')}`;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSignup(formData);
+
+    setIsLoading(true);
+
+    try {
+      const generatedTeacherId = await generateSmartId(formData.role, formData.classStage);
+      const email = `${generatedTeacherId.toLowerCase()}@aribsalin.com`;
+
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password: formData.password,
+      });
+
+      if (authError) throw authError;
+
+      if (authData.user) {
+        const { error: dbError } = await supabase.from('servants').insert([{
+          id: authData.user.id,
+          teacher_id: generatedTeacherId,
+          full_name: formData.fullName,
+          gender: formData.gender,
+          educational_stage: formData.educationStage,
+          academic_year: formData.educationYear,
+          class_or_job: formData.studyOrWorkPlace,
+          birth_date: formData.dateOfBirth || null,
+          father_of_confession: formData.confessionFather,
+          mobile_personal: formData.mobile,
+          address_area: formData.area,
+          address_details: formData.address,
+          role: formData.role,
+          class_stage: formData.classStage
+        }]);
+
+        if (dbError) throw dbError;
+
+        toast.success(`تم إنشاء الحساب بنجاح! رقم الدخول الخاص بك هو: ${generatedTeacherId}`, {
+          duration: 15000,
+          description: 'يرجى الاحتفاظ بهذا الرقم لتسجيل الدخول لاحقاً'
+        });
+
+        onSignup({ ...formData, teacherId: generatedTeacherId });
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.error('حدث خطأ أثناء التسجيل: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const updateField = (field: keyof TeacherData, value: string) => {
@@ -371,26 +455,15 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
 
           <div className="space-y-4">
             <div>
-              <label className="block mb-2 text-sm text-foreground">رقم الخادم (ID) *</label>
-              <input
-                type="text"
-                required
-                value={formData.teacherId}
-                onChange={(e) => updateField('teacherId', e.target.value)}
-                className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring uppercase"
-                placeholder="مثال: T001"
-              />
-            </div>
-
-            <div>
               <label className="block mb-2 text-sm text-foreground">كلمة المرور *</label>
               <input
                 type="password"
                 required
+                minLength={4}
                 value={formData.password}
                 onChange={(e) => updateField('password', e.target.value)}
                 className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="كلمة المرور"
+                placeholder="كلمة المرور (يجب ان تكون اكثر من 4 حروف او ارقام)"
               />
             </div>
 
@@ -429,11 +502,13 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
       {/* Fixed Submit Button */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border">
         <button
+          type="button"
+          disabled={isLoading}
           onClick={handleSubmit}
-          className="w-full bg-primary text-primary-foreground rounded-xl py-4 shadow-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          className="w-full bg-primary text-primary-foreground rounded-xl py-4 shadow-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-70"
         >
           <Save className="w-5 h-5" />
-          <span className="text-lg">حفظ البيانات</span>
+          <span className="text-lg">{isLoading ? 'جاري الحفظ...' : 'حفظ البيانات'}</span>
         </button>
       </div>
     </div>

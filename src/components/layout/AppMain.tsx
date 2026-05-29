@@ -28,6 +28,7 @@ export default function AppMain() {
   const [scanMode, setScanMode] = useState<ScanMode>('attendance');
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [viewerRole, setViewerRole] = useState<ViewerRole>('servant');
+  const [currentServant, setCurrentServant] = useState<any>(null);
   const [totalDays] = useState(20); // Total festival days
 
   const [participants, setParticipants] = useState<Participant[]>(([
@@ -782,6 +783,7 @@ export default function AppMain() {
     toast.success('تم إنشاء الحساب بنجاح');
     setIsAuthenticated(true);
     setViewerRole('servant');
+    setCurrentServant(data);
     setCurrentView('dashboard');
   };
 
@@ -842,8 +844,8 @@ export default function AppMain() {
     }
   };
 
-  const handleRegistrationSubmit = (data: StudentData) => {
-    const newId = `P${String(participants.length + 1).padStart(3, '0')}`;
+  const handleRegistrationSubmit = (data: StudentData, participantId?: string) => {
+    const newId = participantId || `P${String(participants.length + 1).padStart(3, '0')}`;
     const newParticipant: Participant = {
       id: newId,
       name: data.fullName,
@@ -1071,8 +1073,7 @@ export default function AppMain() {
           <Dashboard
             onNavigate={handleNavigate}
             onViewProfile={handleViewProfile}
-            totalParticipants={participants.length}
-            todayAttendance={todayAttendance}
+            currentServant={currentServant}
             participants={participants.map(p => ({
               id: p.id,
               name: p.name,
