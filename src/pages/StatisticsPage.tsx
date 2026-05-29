@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowRight, Users, Calendar, TrendingUp, Award, BarChart3 } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Participant } from '../types';
+import { stageLabels, getParticipantClassStage } from '../app/utils/stageHelpers';
 
 interface StatisticsPageProps {
   onBack: () => void;
@@ -9,14 +10,7 @@ interface StatisticsPageProps {
   totalDays: number;
 }
 
-const educationStageLabels: Record<string, string> = {
-  'kg': 'حضانة',
-  'primary': 'ابتدائي',
-  'preparatory': 'إعدادي',
-  'secondary': 'ثانوي',
-  'university': 'جامعي',
-  'graduate': 'خريجين'
-};
+const educationStageLabels = stageLabels;
 
 export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPageProps) {
   // Total Statistics
@@ -51,7 +45,7 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
 
   // Students by Education Stage
   const stageData = Object.entries(educationStageLabels).map(([key, label]) => {
-    const stageParticipants = participants.filter(p => p.data.educationStage === key);
+    const stageParticipants = participants.filter(p => getParticipantClassStage(p.data.educationStage, p.data.educationYear) === key);
     const males = stageParticipants.filter(p => p.data.gender === 'male').length;
     const females = stageParticipants.filter(p => p.data.gender === 'female').length;
 
@@ -299,7 +293,7 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
 
         {/* Points Statistics by Class */}
         {Object.entries(educationStageLabels).map(([stageKey, stageLabel]) => {
-          const stageParticipants = participants.filter(p => p.data.educationStage === stageKey);
+          const stageParticipants = participants.filter(p => getParticipantClassStage(p.data.educationStage, p.data.educationYear) === stageKey);
 
           if (stageParticipants.length === 0) return null;
 

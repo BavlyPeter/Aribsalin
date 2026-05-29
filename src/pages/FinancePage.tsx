@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowRight, Plus, TrendingUp, TrendingDown, DollarSign, Calendar, User, FileText } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { stageLabels } from '../app/utils/stageHelpers';
 
 interface Transaction {
   id: string;
@@ -19,12 +20,8 @@ interface FinancePageProps {
 
 const educationStages = [
   { value: 'all', label: 'جميع المراحل' },
-  { value: 'kg', label: 'حضانة' },
-  { value: 'primary', label: 'ابتدائي' },
-  { value: 'preparatory', label: 'إعدادي' },
-  { value: 'secondary', label: 'ثانوي' },
-  { value: 'university', label: 'جامعي' },
-  { value: 'graduate', label: 'خريجين' }
+  // expand stageLabels (includes primary_12 / primary_34 / primary_56)
+  ...Object.entries(stageLabels).map(([value, label]) => ({ value, label }))
 ];
 
 export function FinancePage({ onBack }: FinancePageProps) {
@@ -89,7 +86,7 @@ export function FinancePage({ onBack }: FinancePageProps) {
   // Filter transactions
   const filteredTransactions = transactions.filter(t => {
     const typeMatch = filterType === 'all' || t.type === filterType;
-    const stageMatch = filterStage === 'all' || t.educationStage === filterStage || t.educationStage === 'all';
+    const stageMatch = filterStage === 'all' || t.educationStage === filterStage || t.educationStage === 'all' || (t.educationStage === 'primary' && filterStage.startsWith('primary_'));
     return typeMatch && stageMatch;
   });
 
@@ -104,11 +101,10 @@ export function FinancePage({ onBack }: FinancePageProps) {
     .filter(s => s.value !== 'all')
     .map(stage => {
       const stageExpense = transactions
-        .filter(t => t.type === 'expense' && (t.educationStage === stage.value || t.educationStage === 'all'))
+        .filter(t => t.type === 'expense' && (t.educationStage === stage.value || t.educationStage === 'all' || (t.educationStage === 'primary' && stage.value.startsWith('primary_'))))
         .reduce((sum, t) => sum + t.amount, 0);
-
       const stageRevenue = transactions
-        .filter(t => t.type === 'revenue' && (t.educationStage === stage.value || t.educationStage === 'all'))
+        .filter(t => t.type === 'revenue' && (t.educationStage === stage.value || t.educationStage === 'all' || (t.educationStage === 'primary' && stage.value.startsWith('primary_'))))
         .reduce((sum, t) => sum + t.amount, 0);
 
       return {

@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Search, Plus, Minus, User } from 'lucide-react';
 
 interface Participant {
   id: string;
+  participant_id?: string;
+  dbId?: string;
   name: string;
   points: number;
 }
@@ -11,13 +13,23 @@ interface ManualPointsModalProps {
   participants: Participant[];
   onConfirm: (participantId: string, points: number, action: 'add' | 'subtract') => void;
   onCancel: () => void;
+  initialParticipant?: Participant | null;
 }
 
-export function ManualPointsModal({ participants, onConfirm, onCancel }: ManualPointsModalProps) {
+export function ManualPointsModal({ participants, onConfirm, onCancel, initialParticipant }: ManualPointsModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
+  const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(initialParticipant ?? null);
   const [points, setPoints] = useState('');
   const [action, setAction] = useState<'add' | 'subtract'>('add');
+
+  useEffect(() => {
+    if (initialParticipant) {
+      setSelectedParticipant(initialParticipant);
+      setSearchQuery('');
+      setPoints('');
+      setAction('add');
+    }
+  }, [initialParticipant]);
 
   const filteredParticipants = participants.filter(p =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -64,50 +76,54 @@ export function ManualPointsModal({ participants, onConfirm, onCancel }: ManualP
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {!selectedParticipant ? (
             <>
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="ابحث عن مشارك..."
-                  className="w-full pr-11 pl-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-                  autoFocus
-                />
-              </div>
-
-              {/* Participants List */}
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {filteredParticipants.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>لا توجد نتائج</p>
+              {!initialParticipant && (
+                <>
+                  {/* Search */}
+                  <div className="relative">
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="ابحث عن مشارك..."
+                      className="w-full pr-11 pl-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+                      autoFocus
+                    />
                   </div>
-                ) : (
-                  filteredParticipants.map(participant => (
-                    <button
-                      key={participant.id}
-                      onClick={() => setSelectedParticipant(participant)}
-                      className="w-full bg-muted/30 hover:bg-muted/50 rounded-lg p-4 border border-border active:scale-[0.98] transition-all text-right"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                            <User className="w-5 h-5 text-primary" />
-                          </div>
-                          <div>
-                            <div className="font-medium">{participant.name}</div>
-                            <div className="text-xs text-muted-foreground">{participant.id}</div>
-                          </div>
-                        </div>
-                        <div className="text-sm font-medium" style={{ color: 'var(--secondary)' }}>
-                          {participant.points} نقطة
-                        </div>
+
+                  {/* Participants List */}
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {filteredParticipants.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p>لا توجد نتائج</p>
                       </div>
-                    </button>
-                  ))
-                )}
-              </div>
+                    ) : (
+                      filteredParticipants.map(participant => (
+                        <button
+                          key={participant.id}
+                          onClick={() => setSelectedParticipant(participant)}
+                          className="w-full bg-muted/30 hover:bg-muted/50 rounded-lg p-4 border border-border active:scale-[0.98] transition-all text-right"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                                <User className="w-5 h-5 text-primary" />
+                              </div>
+                              <div>
+                                <div className="font-medium">{participant.name}</div>
+                                <div className="text-xs text-muted-foreground">{participant.id}</div>
+                              </div>
+                            </div>
+                            <div className="text-sm font-medium" style={{ color: 'var(--secondary)' }}>
+                              {participant.points} نقطة
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
             </>
           ) : (
             <>
@@ -123,15 +139,17 @@ export function ManualPointsModal({ participants, onConfirm, onCancel }: ManualP
                       <div className="text-xs text-muted-foreground">{selectedParticipant.id}</div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      setSelectedParticipant(null);
-                      setPoints('');
-                    }}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    تغيير
-                  </button>
+                  {!initialParticipant && (
+                    <button
+                      onClick={() => {
+                        setSelectedParticipant(null);
+                        setPoints('');
+                      }}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      تغيير
+                    </button>
+                  )}
                 </div>
                 <div className="text-center pt-3 border-t border-border">
                   <div className="text-sm text-muted-foreground">الرصيد الحالي</div>

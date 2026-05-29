@@ -142,33 +142,7 @@ export function StudentProfile({ student, totalDays, onBack }: StudentProfilePro
           )}
         </div>
 
-        {/* QR Code Card */}
-        <div className="bg-card rounded-xl p-6 shadow-sm border border-border">
-          <h3 className="mb-4 text-center text-primary">كود QR الخاص بالمشارك</h3>
-          <div ref={qrRef} className="bg-white p-6 rounded-xl mx-auto w-fit">
-            <QRCodeSVG value={student.id} size={200} />
-          </div>
-          <p className="text-center text-xs text-muted-foreground mt-4 mb-4">
-            استخدم هذا الكود لتسجيل الحضور أو خصم النقاط
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={downloadQRCode}
-              className="bg-secondary text-secondary-foreground rounded-xl py-3 shadow-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
-            >
-              <Download className="w-5 h-5" />
-              <span>تحميل QR</span>
-            </button>
-            <button
-              onClick={downloadIDCard}
-              disabled={isDownloadingCard}
-              className="bg-primary text-primary-foreground rounded-xl py-3 shadow-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <CreditCard className="w-5 h-5" />
-              <span>{isDownloadingCard ? 'جاري التحميل...' : 'تحميل الكارت'}</span>
-            </button>
-          </div>
-        </div>
+        {/* ID Card Preview */}
 
         {/* ID Card Preview */}
         <div className="bg-card rounded-xl p-6 shadow-sm border border-border">
@@ -178,6 +152,28 @@ export function StudentProfile({ student, totalDays, onBack }: StudentProfilePro
               <IDCard student={student} />
             </div>
           </div>
+        </div>
+
+        {/* Action buttons under ID card: Download ID card and Download QR (hidden) */}
+        <div className="flex gap-3 justify-center">
+          <button
+            onClick={downloadIDCard}
+            disabled={isDownloadingCard}
+            className="bg-primary text-primary-foreground rounded-xl py-3 px-5 shadow-sm active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center gap-2"
+            title="تحميل الكارنيه"
+          >
+            <CreditCard className="w-5 h-5" />
+            <span>{isDownloadingCard ? 'جاري التحميل...' : 'تحميل الكارنيه'}</span>
+          </button>
+
+          <button
+            onClick={downloadQRCode}
+            className="bg-secondary text-secondary-foreground rounded-xl py-3 px-5 shadow-sm active:scale-[0.98] transition-transform flex items-center gap-2"
+            title="تحميل كود QR"
+          >
+            <Download className="w-5 h-5" />
+            <span>تحميل كود QR</span>
+          </button>
         </div>
 
         {/* Statistics Cards */}
@@ -404,6 +400,19 @@ export function StudentProfile({ student, totalDays, onBack }: StudentProfilePro
           }}
         >
           <IDCard student={student} />
+        </div>
+        {/* Hidden QR for download only */}
+        <div
+          ref={qrRef}
+          style={{
+            position: 'fixed',
+            left: '-9999px',
+            top: '-9999px',
+            opacity: 0,
+            pointerEvents: 'none'
+          }}
+        >
+          <QRCodeSVG value={student.id} size={600} />
         </div>
       </div>
     </div>

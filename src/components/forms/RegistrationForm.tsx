@@ -1,5 +1,5 @@
 import { ArrowRight, Save } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StudentData } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 interface RegistrationFormProps {
   onBack: () => void;
   onSubmit: (data: StudentData, participantId?: string) => void;
+  editData?: any | null;
+  clearEdit?: () => void;
 }
 
 const educationStages = {
@@ -51,7 +53,7 @@ const educationYears = {
 
 const ASWAN_AREAS = ['السيل', 'كيما', 'الصداقة', 'المحمودية', 'أطلس', 'العقاد', 'الكورنيش', 'الكرور', 'الشيخ هارون', 'أخرى'];
 
-export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
+export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: RegistrationFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<StudentData>({
     fullName: '',
@@ -70,6 +72,57 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
     address: '',
     dateOfBirth: ''
   });
+
+  // Fetch full data for editing from Supabase to ensure all fields populate
+  useEffect(() => {
+    const fetchFullParticipantData = async () => {
+      if (!editData || !editData.id) return;
+
+      try {
+        setIsLoading(true);
+        // Regex to check if the ID is a valid UUID or a Smart ID like P01
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(editData.id);
+
+        let query = supabase.from('participants').select('*');
+        if (isUuid) {
+          query = query.eq('id', editData.id);
+        } else {
+          query = query.eq('participant_id', editData.id);
+        }
+
+        const { data: source, error } = await query.single();
+
+        if (error) throw error;
+
+        if (source) {
+          setFormData({
+            fullName: source.full_name || '',
+            gender: source.gender || '',
+            educationStage: source.educational_stage || '',
+            educationYear: source.academic_year || '',
+            studyOrWorkPlace: source.educational_stage === 'graduate' ? (source.class_or_job || '') : (source.class_or_job && !source.class_or_job.includes(' - ') ? source.class_or_job : ''),
+            universityName: source.educational_stage === 'university' && source.class_or_job?.includes(' - ') ? source.class_or_job.split(' - ')[0] : '',
+            collegeName: source.educational_stage === 'university' && source.class_or_job?.includes(' - ') ? source.class_or_job.split(' - ')[1] : (source.educational_stage === 'university' ? source.class_or_job || '' : ''),
+            jobTitle: source.job_title || '',
+            confessionFather: source.father_of_confession || '',
+            personalMobile: source.mobile_personal || '',
+            fatherMobile: source.mobile_father || '',
+            motherMobile: source.mobile_mother || '',
+            area: source.address_area || '',
+            address: source.address_details || '',
+            dateOfBirth: source.birth_date || ''
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching full participant edit data:', err);
+        toast.error('فشل في جلب بيانات المشارك كاملة للتعديل');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFullParticipantData();
+  }, [editData]);
 
   const generateParticipantSmartId = async (stage: string, year: string) => {
     let stageChar = 'X';
@@ -152,7 +205,6 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
         }
       }
 
-      const generatedSmartId = await generateParticipantSmartId(formData.educationStage, formData.educationYear);
 
       let formattedClassOrJob = formData.studyOrWorkPlace || null;
       if (formData.educationStage === 'university' || formData.educationStage === 'جامعي') {
@@ -165,33 +217,69 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
         }
       }
 
-      const { error: dbError } = await supabase.from('participants').insert([{
-        participant_id: generatedSmartId,
-        full_name: formData.fullName,
-        gender: formData.gender,
-        educational_stage: formData.educationStage,
-        academic_year: formData.educationYear || null,
-        class_or_job: formattedClassOrJob,
-        birth_date: formData.dateOfBirth || null,
-        father_of_confession: formData.confessionFather,
-        mobile_personal: formData.personalMobile || null,
-        mobile_father: formData.fatherMobile,
-        mobile_mother: formData.motherMobile,
-        address_area: formData.area,
-        address_details: formData.address,
-        points_balance: 0
-      }]);
+      // If we have editData, perform update instead of insert
+      if (editData && editData.id) {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(editData.id);
 
-      if (dbError) {
-        throw dbError;
+        let updateQuery = supabase.from('participants').update({
+          full_name: formData.fullName,
+          gender: formData.gender,
+          educational_stage: formData.educationStage,
+          academic_year: formData.educationYear || null,
+          class_or_job: formattedClassOrJob,
+          birth_date: formData.dateOfBirth || null,
+          father_of_confession: formData.confessionFather,
+          mobile_personal: formData.personalMobile || null,
+          mobile_father: formData.fatherMobile,
+          mobile_mother: formData.motherMobile,
+          address_area: formData.area,
+          address_details: formData.address
+        });
+
+        if (isUuid) {
+          updateQuery = updateQuery.eq('id', editData.id);
+        } else {
+          updateQuery = updateQuery.eq('participant_id', editData.id);
+        }
+
+        const { error: updateError } = await updateQuery;
+
+        if (updateError) throw updateError;
+
+        toast.success('تم تحديث بيانات المشارك بنجاح');
+        onSubmit(formData, editData.id);
+        clearEdit?.();
+      } else {
+        const generatedSmartId = await generateParticipantSmartId(formData.educationStage, formData.educationYear);
+
+        const { error: dbError } = await supabase.from('participants').insert([{
+          participant_id: generatedSmartId,
+          full_name: formData.fullName,
+          gender: formData.gender,
+          educational_stage: formData.educationStage,
+          academic_year: formData.educationYear || null,
+          class_or_job: formattedClassOrJob,
+          birth_date: formData.dateOfBirth || null,
+          father_of_confession: formData.confessionFather,
+          mobile_personal: formData.personalMobile || null,
+          mobile_father: formData.fatherMobile,
+          mobile_mother: formData.motherMobile,
+          address_area: formData.area,
+          address_details: formData.address,
+          points_balance: 0
+        }]);
+
+        if (dbError) {
+          throw dbError;
+        }
+
+        toast.success(`تم تسجيل المخدوم بنجاح! رقم المخدوم هو: ${generatedSmartId}`, {
+          duration: 15000,
+          description: 'هذا هو الرقم الذي سيطبع على كارت الـ QR الخاص به.'
+        });
+
+        onSubmit(formData, generatedSmartId);
       }
-
-      toast.success(`تم تسجيل المخدوم بنجاح! رقم المخدوم هو: ${generatedSmartId}`, {
-        duration: 15000,
-        description: 'هذا هو الرقم الذي سيطبع على كارت الـ QR الخاص به.'
-      });
-
-      onSubmit(formData, generatedSmartId);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'حدث خطأ غير متوقع';
       console.error(error);
@@ -255,7 +343,7 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
           >
             <ArrowRight className="w-6 h-6" />
           </button>
-          <h2 className="text-xl">تسجيل مشارك جديد</h2>
+          <h2 className="text-xl">{editData ? 'تعديل بيانات المشارك' : 'تسجيل مشارك جديد'}</h2>
         </div>
       </div>
 
@@ -535,7 +623,7 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
           className="w-full bg-primary text-primary-foreground rounded-xl py-4 shadow-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
         >
           <Save className="w-5 h-5" />
-          <span className="text-lg">{isLoading ? 'جاري التسجيل...' : 'حفظ البيانات'}</span>
+          <span className="text-lg">{isLoading ? (editData ? 'جاري التحديث...' : 'جاري التسجيل...') : (editData ? 'تحديث البيانات' : 'حفظ البيانات')}</span>
         </button>
       </div>
     </div>

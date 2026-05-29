@@ -1,4 +1,4 @@
-import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, Settings, FileText, Wallet, BarChart3 } from 'lucide-react';
+import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, Settings, FileText, Wallet, BarChart3, LogOut } from 'lucide-react';
 import { ParticipantsList } from '../components/shared/ParticipantsList';
 import churchLogo from '../assets/images/new-church-logo.png';
 import festivalLogo from '../assets/images/Arebsalin-1.png';
@@ -8,7 +8,10 @@ interface DashboardProps {
   onViewProfile: (participantId: string) => void;
   onLogout: () => void | Promise<void>;
   currentServant: any;
-  participants?: Array<{ id: string; name: string; points: number; attended: boolean }>;
+  participants?: Array<{ id: string; participant_id?: string; dbId?: string; name: string; points: number; attended: boolean }>;
+  onEditRequest?: (rec: any) => void;
+  onManagePoints?: (rec: any) => void;
+  onDeleteParticipant?: (id: string) => void;
 }
 
 export function Dashboard({
@@ -16,7 +19,10 @@ export function Dashboard({
   onViewProfile,
   onLogout,
   currentServant,
-  participants = []
+  participants = [],
+  onEditRequest,
+  onManagePoints,
+  onDeleteParticipant
 }: DashboardProps) {
   const roleLabels: Record<string, string> = {
     'normal': 'خادم',
@@ -53,19 +59,46 @@ export function Dashboard({
       </div>
 
       <div className="p-4">
-        {/* Welcome Banner */}
-        <div className="bg-card rounded-xl p-6 shadow-sm border border-border text-right mb-6">
-          <h2 className="text-2xl font-bold text-foreground mb-1">
-            مرحباً {title} {servant.full_name || servant.fullName}
-          </h2>
-          <p className="text-sm text-muted-foreground font-medium">
-            {servantRole === 'admin'
-              ? roleText
-              : stageText
-                ? `${roleText} - ${stageText}`
-                : roleText
-            }
-          </p>
+        {/* Servant Info Card */}
+        <div className="bg-card rounded-xl p-4 sm:p-6 shadow-sm border border-border mb-6">
+          <div className="flex w-full items-center justify-between gap-3 sm:gap-4">
+            {/* Part 1 (Starts Left): Avatar and Name Info (grouped together) */}
+            <div className="flex items-center gap-3 text-right min-w-0 flex-1">
+              {/* Avatar Icon */}
+              <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
+                {(currentServant.name || currentServant.full_name || 'خ').charAt(0)}
+              </div>
+
+              {/* Name and Role Details */}
+              <div className="min-w-0">
+                <h2 className="text-lg sm:text-2xl font-bold text-foreground truncate mb-1">
+                  مرحباً بك، {currentServant.name || currentServant.full_name}
+                </h2>
+                <p className="text-xs sm:text-sm text-muted-foreground font-medium truncate">
+                  {servantRole === 'admin' 
+                    ? roleText 
+                    : stageText 
+                      ? `${roleText} - ${stageText}` 
+                      : roleText
+                  }
+                </p>
+              </div>
+            </div>
+
+            {/* Part 2 (Pushed Right): Small Logout Button directly across from the name */}
+            <button
+              onClick={() => {
+                if (window.confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+                  void onLogout();
+                }
+              }}
+              className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors flex items-center gap-1.5 text-xs font-medium active:scale-95 shrink-0"
+              title="تسجيل الخروج"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>خروج</span>
+            </button>
+          </div>
         </div>
 
         {/* Main Action Buttons */}
@@ -170,14 +203,6 @@ export function Dashboard({
             </div>
           </button>
 
-          <button
-            onClick={() => void onLogout()}
-            className="w-full rounded-xl p-4 shadow-sm border border-red-200 bg-red-50 text-red-700 active:scale-[0.98] transition-transform"
-          >
-            <div className="flex items-center justify-center gap-3">
-              <span>تسجيل الخروج</span>
-            </div>
-          </button>
         </div>
 
         {/* Participants List */}
@@ -188,6 +213,9 @@ export function Dashboard({
                 ...p,
                 onClick: () => onViewProfile(p.id)
               }))}
+              onEdit={(p) => onEditRequest?.(p)}
+              onManagePoints={(p) => onManagePoints?.(p)}
+              onDelete={(id) => onDeleteParticipant?.(id)}
             />
           </div>
         )}

@@ -54,6 +54,60 @@ Files touched in this release (not exhaustive):
 - `src/pages/Dashboard.tsx` — welcome banner and `currentServant` prop
 - `MD/ARIBSALIN-DOCUMENTATION.md` — this file updated with release notes
 
+---
+
+## 🔧 Detailed Change Log (Full list of code updates applied in this cycle)
+
+This section enumerates concrete code changes, file-by-file, made during the recent development session so the repo history is easy to review.
+
+- `src/types/index.ts`: Extracted and unified shared interfaces (`StudentData`, `TeacherData`, `Participant`), added `area: string` for split address fields and added `teacherId` to teacher shape.
+- `src/lib/supabase.ts`: Added and exported a Supabase client initialized from `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+- `src/app/components/layout/AppMain.tsx`: Centralized router/auth hub changes:
+  - Implemented session persistence using `supabase.auth.getSession()` on mount and `supabase.auth.onAuthStateChange` subscription.
+  - Added `handleLogout` calling `supabase.auth.signOut()` and clearing local auth state.
+  - Rewrote QR attendance handler (`handleScanSuccess`) to be DB-backed: verify participant by `participant_id`, insert into `attendance_logs`, update `participants.points_balance`, insert `points_transactions`, and update local participants state.
+  - Wired DB-backed implementations for market and add-points flows (deduct/add points and record transactions).
+
+- `src/pages/SignupPage.tsx`:
+  - Implemented Smart ID generation logic including admin prefixes (A01/A02 pattern) and existing-role logic.
+  - Uses `supabase.auth.signUp` for servant signup and inserts servant record into `servants` with `class_stage` set to `null` for admin roles.
+  - Added password visibility toggle and real-time phone input sanitization (`onChange` strips non-digits) with `maxLength={11}`.
+  - Hid class-stage selector when `role === 'admin'` and ensured initial `formData` includes `teacherId` to satisfy types.
+
+- `src/pages/LoginPage.tsx`: Updated login to use `teacherId` as credential (email synthesized as `teacherId@aribsalin.com`), signs in via `supabase.auth.signInWithPassword`, then fetches servant profile and calls `onLogin`.
+
+- `src/pages/Dashboard.tsx`: Replaced metrics with a personalized welcome banner; safe role/stage rendering using `roleLabels` and `stageLabels`; logout button wired to `onLogout`.
+
+- `src/components/forms/RegistrationForm.tsx`:
+  - Implemented `generateParticipantSmartId` and used it on registration.
+  - Sanitized phone inputs on typing (`replace(/\D/g, '')`) and set `maxLength={11}`.
+  - Made parents' mobile fields optional and removed required asterisks, made address details optional where requested.
+  - `handleSubmit` validates 11-digit phone numbers, formats `class_or_job` from `universityName`/`collegeName` when needed, and inserts participant record into `participants` table.
+
+- `src/app/components/QRScanner.tsx`: Multi-mode scanner supports `attendance`, `market`, `addPoints`, `viewDetails` flows; camera permission fallback UI preserved.
+
+- `src/app/components/EnhancedDashboard.tsx` and `src/app/components/EnhancedRegistrationForm.tsx`: UI wiring to open scanner modes and registration flow; adjusted to new types and to call DB-backed handlers in `AppMain`.
+
+- `src/app/components/MarketModal.tsx`, `AddPointsModal.tsx`, `ManualPointsModal.tsx`:
+  - Inputs validate positive integers only (block `-`, `.`, `e`, `E` keys), preview remaining balance, and call DB-backed handlers that update `participants.points_balance` and add `points_transactions` rows.
+
+- `src/pages/StudentPortalLogin.tsx`: Normalizes entered IDs (`trim().toUpperCase()`) and routes to `StudentProfile` on success.
+
+- `src/pages/StudentProfile.tsx`: Shows `area` + `address` fields, QR download helper, and attendance/points stats.
+
+- `MD/ARIBSALIN-DOCUMENTATION.md`: This file updated (you are reading it) — added this detailed change log and release notes.
+
+Additional notes about behavior and verification:
+- Real-time phone UX: all mobile inputs now strip non-numeric characters while typing and limit entry to 11 digits (`maxLength={11}`), plus `handleSubmit` still enforces 11-digit validation.
+- Parents' mobile fields in the participant form were made optional per the latest UX request.
+- All DB writes that affect points create a `points_transactions` record and update `participants.points_balance`.
+- Build & checks: modified files were validated with TypeScript checks and production build runs (`pnpm build`) during the session; builds succeeded (some large-chunk warnings only).
+
+If you want, I can also:
+- Produce a compact `CHANGELOG.md` with the same entries formatted as release notes.
+- Create Git-friendly commit messages for each logical change to help review.
+
+
 Notes & next steps:
 - To test the Smart ID signup flow end-to-end, supply the Supabase environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) and validate the `servants` table schema includes `teacher_id`.
 - Consider adding server-side RLS/RBAC rules for the `servants` table before production use.

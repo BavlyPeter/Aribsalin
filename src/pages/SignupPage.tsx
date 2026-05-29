@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowRight, Eye, EyeOff, Save } from 'lucide-react';
 import { TeacherData } from '../types';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
-
-const churchLogo = new URL('../assets/images/new-church-logo.png', import.meta.url).href;
-const festivalLogo = new URL('../assets/images/Arebsalin-1.png', import.meta.url).href;
+import churchLogo from '../assets/images/new-church-logo.png';
+import festivalLogo from '../assets/images/Arebsalin-1.png';
 
 interface SignupPageProps {
   onSignup: (data: TeacherData) => void;
   onBack: () => void;
+}
+
+interface SignupPageWithEditProps extends SignupPageProps {
+  editData?: any | null;
+  clearEdit?: () => void;
 }
 
 const educationStages = {
@@ -47,7 +51,7 @@ const educationYears = {
 
 const ASWAN_AREAS = ['السيل', 'كيما', 'الصداقة', 'المحمودية', 'أطلس', 'العقاد', 'الكورنيش', 'الكرور', 'الشيخ هارون', 'أخرى'];
 
-export function SignupPage({ onSignup, onBack }: SignupPageProps) {
+export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPageWithEditProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState<TeacherData>({
     fullName: '',
@@ -68,6 +72,59 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
     address: '',
     dateOfBirth: ''
   });
+
+  // Fetch full data for editing from Supabase to ensure all fields populate
+  useEffect(() => {
+    const fetchFullServantData = async () => {
+      if (!editData || !editData.id) return;
+
+      try {
+        setIsLoading(true);
+        // Regex to check if the ID is a valid UUID or a Smart ID like T01
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(editData.id);
+
+        let query = supabase.from('servants').select('*');
+        if (isUuid) {
+          query = query.eq('id', editData.id);
+        } else {
+          query = query.eq('teacher_id', editData.id);
+        }
+
+        const { data: source, error } = await query.single();
+
+        if (error) throw error;
+
+        if (source) {
+          setFormData({
+            role: source.role || '',
+            classStage: source.class_stage || '',
+            fullName: source.full_name || '',
+            gender: source.gender || '',
+            educationStage: source.educational_stage || '',
+            educationYear: source.academic_year || '',
+            studyOrWorkPlace: source.educational_stage === 'graduate' ? (source.class_or_job || '') : (source.class_or_job && !source.class_or_job.includes(' - ') ? source.class_or_job : ''),
+            universityName: source.educational_stage === 'university' && source.class_or_job?.includes(' - ') ? source.class_or_job.split(' - ')[0] : '',
+            collegeName: source.educational_stage === 'university' && source.class_or_job?.includes(' - ') ? source.class_or_job.split(' - ')[1] : (source.educational_stage === 'university' ? source.class_or_job || '' : ''),
+            jobTitle: source.job_title || '',
+            confessionFather: source.father_of_confession || '',
+            mobile: source.mobile_personal || '',
+            area: source.address_area || '',
+            address: source.address_details || '',
+            dateOfBirth: source.birth_date || '',
+            teacherId: source.teacher_id || '',
+            password: '',
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching full servant edit data:', err);
+        toast.error('فشل في جلب بيانات الخادم كاملة للتعديل');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFullServantData();
+  }, [editData]);
   const [isLoading, setIsLoading] = useState(false);
 
   const generateSmartId = async (role: string, stage: string) => {
@@ -130,35 +187,17 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
         }
       }
 
-      const generatedTeacherId = await generateSmartId(formData.role, formData.classStage);
-      const email = `${generatedTeacherId.toLowerCase()}@aribsalin.com`;
+      // If editData exists, update servant record instead of creating new
+      if (editData && editData.id) {
+        const formattedClassOrJob = formData.studyOrWorkPlace || null;
 
-      let formattedClassOrJob = formData.studyOrWorkPlace || null;
-      if (formData.educationStage === 'university' || formData.educationStage === 'جامعي') {
-        const uni = formData.universityName?.trim();
-        const col = formData.collegeName?.trim();
-        if (uni && col) {
-          formattedClassOrJob = `${uni} - ${col}`;
-        } else if (uni || col) {
-          formattedClassOrJob = uni || col || null;
-        }
-      }
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(editData.id);
 
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password: formData.password,
-      });
-
-      if (authError) throw authError;
-
-      if (authData.user) {
-        const { error: dbError } = await supabase.from('servants').insert([{
-          id: authData.user.id,
-          teacher_id: generatedTeacherId,
+        let updateQuery = supabase.from('servants').update({
           full_name: formData.fullName,
           gender: formData.gender,
           educational_stage: formData.educationStage,
-          academic_year: formData.educationYear,
+          academic_year: formData.educationYear || null,
           class_or_job: formattedClassOrJob,
           birth_date: formData.dateOfBirth || null,
           father_of_confession: formData.confessionFather,
@@ -167,16 +206,70 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
           address_details: formData.address,
           role: formData.role,
           class_stage: formData.role === 'admin' ? null : formData.classStage
-        }]);
-
-        if (dbError) throw dbError;
-
-        toast.success(`تم إنشاء الحساب بنجاح! رقم الدخول الخاص بك هو: ${generatedTeacherId}`, {
-          duration: 15000,
-          description: 'يرجى الاحتفاظ بهذا الرقم لتسجيل الدخول لاحقاً'
         });
 
-        onSignup({ ...formData, teacherId: generatedTeacherId });
+        if (isUuid) {
+          updateQuery = updateQuery.eq('id', editData.id);
+        } else {
+          updateQuery = updateQuery.eq('teacher_id', editData.id);
+        }
+
+        const { error: updateError } = await updateQuery;
+
+        if (updateError) throw updateError;
+
+        toast.success('تم تحديث بيانات الخادم بنجاح');
+        onSignup({ ...formData, teacherId: editData.teacher_id || editData.teacherId });
+        clearEdit?.();
+      } else {
+        const generatedTeacherId = await generateSmartId(formData.role, formData.classStage);
+        const email = `${generatedTeacherId.toLowerCase()}@aribsalin.com`;
+
+        let formattedClassOrJob = formData.studyOrWorkPlace || null;
+        if (formData.educationStage === 'university' || formData.educationStage === 'جامعي') {
+          const uni = formData.universityName?.trim();
+          const col = formData.collegeName?.trim();
+          if (uni && col) {
+            formattedClassOrJob = `${uni} - ${col}`;
+          } else if (uni || col) {
+            formattedClassOrJob = uni || col || null;
+          }
+        }
+
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email,
+          password: formData.password,
+        });
+
+        if (authError) throw authError;
+
+        if (authData.user) {
+          const { error: dbError } = await supabase.from('servants').insert([{
+            id: authData.user.id,
+            teacher_id: generatedTeacherId,
+            full_name: formData.fullName,
+            gender: formData.gender,
+            educational_stage: formData.educationStage,
+            academic_year: formData.educationYear,
+            class_or_job: formattedClassOrJob,
+            birth_date: formData.dateOfBirth || null,
+            father_of_confession: formData.confessionFather,
+            mobile_personal: formData.mobile,
+            address_area: formData.area,
+            address_details: formData.address,
+            role: formData.role,
+            class_stage: formData.role === 'admin' ? null : formData.classStage
+          }]);
+
+          if (dbError) throw dbError;
+
+          toast.success(`تم إنشاء الحساب بنجاح! رقم الدخول الخاص بك هو: ${generatedTeacherId}`, {
+            duration: 15000,
+            description: 'يرجى الاحتفاظ بهذا الرقم لتسجيل الدخول لاحقاً'
+          });
+
+          onSignup({ ...formData, teacherId: generatedTeacherId });
+        }
       }
     } catch (error: any) {
       console.error(error);
@@ -240,13 +333,9 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
           >
             <ArrowRight className="w-6 h-6" />
           </button>
-          <h2 className="text-xl">تسجيل خادم جديد</h2>
         </div>
       </div>
-
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="p-4 space-y-4 pb-24">
-        {/* Basic Information Card */}
+        <form onSubmit={handleSubmit}>
         <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
           <h3 className="mb-4 text-primary">البيانات الأساسية</h3>
 
@@ -542,20 +631,19 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
             )}
           </div>
         </div>
-      </form>
 
       {/* Fixed Submit Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border">
         <button
-          type="button"
+          type="submit"
           disabled={isLoading}
-          onClick={handleSubmit}
           className="w-full bg-primary text-primary-foreground rounded-xl py-4 shadow-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-70"
         >
           <Save className="w-5 h-5" />
-          <span className="text-lg">{isLoading ? 'جاري الحفظ...' : 'حفظ البيانات'}</span>
+          <span className="text-lg">{isLoading ? (editData ? 'جاري التحديث...' : 'جاري الحفظ...') : (editData ? 'تحديث البيانات' : 'حفظ البيانات')}</span>
         </button>
       </div>
+    </form>
     </div>
   );
 }
