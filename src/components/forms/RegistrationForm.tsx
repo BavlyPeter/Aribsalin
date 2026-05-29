@@ -449,32 +449,42 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
               <label className="block mb-2 text-sm text-foreground">رقم الموبايل الشخصي</label>
               <input
                 type="tel"
+                maxLength={11}
                 value={formData.personalMobile}
-                onChange={(e) => updateField('personalMobile', e.target.value)}
+                onChange={(e) => {
+                  const onlyNumbers = e.target.value.replace(/\D/g, '');
+                  updateField('personalMobile', onlyNumbers);
+                }}
                 className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
                 placeholder="01XXXXXXXXX"
               />
             </div>
 
             <div>
-              <label className="block mb-2 text-sm text-foreground">رقم موبايل الأب *</label>
+              <label className="block mb-2 text-sm text-foreground">رقم موبايل الأب</label>
               <input
                 type="tel"
-                required
+                maxLength={11}
                 value={formData.fatherMobile}
-                onChange={(e) => updateField('fatherMobile', e.target.value)}
+                onChange={(e) => {
+                  const onlyNumbers = e.target.value.replace(/\D/g, '');
+                  updateField('fatherMobile', onlyNumbers);
+                }}
                 className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
                 placeholder="01XXXXXXXXX"
               />
             </div>
 
             <div>
-              <label className="block mb-2 text-sm text-foreground">رقم موبايل الأم *</label>
+              <label className="block mb-2 text-sm text-foreground">رقم موبايل الأم</label>
               <input
                 type="tel"
-                required
+                maxLength={11}
                 value={formData.motherMobile}
-                onChange={(e) => updateField('motherMobile', e.target.value)}
+                onChange={(e) => {
+                  const onlyNumbers = e.target.value.replace(/\D/g, '');
+                  updateField('motherMobile', onlyNumbers);
+                }}
                 className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
                 placeholder="01XXXXXXXXX"
               />

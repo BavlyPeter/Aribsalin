@@ -435,8 +435,12 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
               <input
                 type="tel"
                 required
+                maxLength={11}
                 value={formData.mobile}
-                onChange={(e) => updateField('mobile', e.target.value)}
+                onChange={(e) => {
+                  const onlyNumbers = e.target.value.replace(/\D/g, '');
+                  updateField('mobile', onlyNumbers);
+                }}
                 className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
                 placeholder="01XXXXXXXXX"
               />
