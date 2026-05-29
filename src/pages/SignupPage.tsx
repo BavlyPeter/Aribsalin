@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, Save } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Save } from 'lucide-react';
 import { TeacherData } from '../types';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
@@ -48,6 +48,7 @@ const educationYears = {
 const ASWAN_AREAS = ['السيل', 'كيما', 'الصداقة', 'المحمودية', 'أطلس', 'العقاد', 'الكورنيش', 'الكرور', 'الشيخ هارون', 'أخرى'];
 
 export function SignupPage({ onSignup, onBack }: SignupPageProps) {
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState<TeacherData>({
     fullName: '',
     gender: '',
@@ -118,8 +119,30 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
     setIsLoading(true);
 
     try {
+      const phoneRegex = /^[0-9]{11}$/;
+      const phonesToCheck = [formData.mobile].filter(Boolean);
+
+      for (const phone of phonesToCheck) {
+        if (!phoneRegex.test(phone)) {
+          toast.error('رقم الهاتف يجب أن يتكون من 11 رقم');
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const generatedTeacherId = await generateSmartId(formData.role, formData.classStage);
       const email = `${generatedTeacherId.toLowerCase()}@aribsalin.com`;
+
+      let formattedClassOrJob = formData.studyOrWorkPlace || null;
+      if (formData.educationStage === 'university' || formData.educationStage === 'جامعي') {
+        const uni = formData.universityName?.trim();
+        const col = formData.collegeName?.trim();
+        if (uni && col) {
+          formattedClassOrJob = `${uni} - ${col}`;
+        } else if (uni || col) {
+          formattedClassOrJob = uni || col || null;
+        }
+      }
 
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -136,7 +159,7 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
           gender: formData.gender,
           educational_stage: formData.educationStage,
           academic_year: formData.educationYear,
-          class_or_job: formData.studyOrWorkPlace,
+          class_or_job: formattedClassOrJob,
           birth_date: formData.dateOfBirth || null,
           father_of_confession: formData.confessionFather,
           mobile_personal: formData.mobile,
@@ -195,7 +218,7 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
     if (!formData.educationStage) return '';
 
     if (formData.educationStage === 'secondary') {
-      return 'المدرسة *';
+      return 'المدرسة';
     } else if (formData.educationStage === 'graduate') {
       return 'مكان العمل';
     }
@@ -280,10 +303,9 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
             </div>
 
             <div>
-              <label className="block mb-2 text-sm text-foreground">أب الإعتراف *</label>
+              <label className="block mb-2 text-sm text-foreground">أب الإعتراف</label>
               <input
                 type="text"
-                required
                 value={formData.confessionFather}
                 onChange={(e) => updateField('confessionFather', e.target.value)}
                 className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
@@ -349,10 +371,9 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
             {formData.educationStage && formData.educationStage === 'university' && (
               <div className="space-y-4">
                 <div>
-                  <label className="block mb-2 text-sm text-foreground">اسم الجامعة *</label>
+                  <label className="block mb-2 text-sm text-foreground">اسم الجامعة</label>
                   <input
                     type="text"
-                    required
                     value={formData.universityName || ''}
                     onChange={(e) => updateField('universityName', e.target.value)}
                     className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
@@ -361,10 +382,9 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
                 </div>
 
                 <div>
-                  <label className="block mb-2 text-sm text-foreground">الكلية *</label>
+                  <label className="block mb-2 text-sm text-foreground">الكلية</label>
                   <input
                     type="text"
-                    required
                     value={formData.collegeName || ''}
                     onChange={(e) => updateField('collegeName', e.target.value)}
                     className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
@@ -381,7 +401,6 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
                 </label>
                 <input
                   type="text"
-                  required={isStudyPlaceRequired()}
                   value={formData.studyOrWorkPlace}
                   onChange={(e) => updateField('studyOrWorkPlace', e.target.value)}
                   className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
@@ -446,9 +465,8 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
             </div>
 
             <div>
-              <label className="block mb-2 text-sm text-foreground">العنوان بالتفصيل *</label>
+              <label className="block mb-2 text-sm text-foreground">العنوان بالتفصيل</label>
               <textarea
-                required
                 value={formData.address}
                 onChange={(e) => updateField('address', e.target.value)}
                 className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
@@ -466,15 +484,25 @@ export function SignupPage({ onSignup, onBack }: SignupPageProps) {
           <div className="space-y-4">
             <div>
               <label className="block mb-2 text-sm text-foreground">كلمة المرور *</label>
-              <input
-                type="password"
-                required
-                minLength={4}
-                value={formData.password}
-                onChange={(e) => updateField('password', e.target.value)}
-                className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="كلمة المرور (يجب ان تكون اكثر من 4 حروف او ارقام)"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={4}
+                  value={formData.password}
+                  onChange={(e) => updateField('password', e.target.value)}
+                  className="w-full px-4 py-3 pl-12 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder="كلمة المرور (يجب ان تكون اكثر من 4 حروف او ارقام)"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
 
             <div>

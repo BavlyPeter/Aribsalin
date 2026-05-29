@@ -141,7 +141,29 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
     setIsLoading(true);
 
     try {
+      const phoneRegex = /^[0-9]{11}$/;
+      const phonesToCheck = [formData.personalMobile, formData.fatherMobile, formData.motherMobile].filter(Boolean);
+
+      for (const phone of phonesToCheck) {
+        if (!phoneRegex.test(phone)) {
+          toast.error('رقم الهاتف يجب أن يتكون من 11 رقم');
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const generatedSmartId = await generateParticipantSmartId(formData.educationStage, formData.educationYear);
+
+      let formattedClassOrJob = formData.studyOrWorkPlace || null;
+      if (formData.educationStage === 'university' || formData.educationStage === 'جامعي') {
+        const uni = formData.universityName?.trim();
+        const col = formData.collegeName?.trim();
+        if (uni && col) {
+          formattedClassOrJob = `${uni} - ${col}`;
+        } else if (uni || col) {
+          formattedClassOrJob = uni || col || null;
+        }
+      }
 
       const { error: dbError } = await supabase.from('participants').insert([{
         participant_id: generatedSmartId,
@@ -149,7 +171,7 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
         gender: formData.gender,
         educational_stage: formData.educationStage,
         academic_year: formData.educationYear || null,
-        class_or_job: formData.studyOrWorkPlace || null,
+        class_or_job: formattedClassOrJob,
         birth_date: formData.dateOfBirth || null,
         father_of_confession: formData.confessionFather,
         mobile_personal: formData.personalMobile || null,
@@ -211,7 +233,7 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
     if (!formData.educationStage) return '';
 
     if (['kg', 'primary', 'preparatory', 'secondary'].includes(formData.educationStage)) {
-      return 'المدرسة *';
+      return 'المدرسة';
     } else if (formData.educationStage === 'graduate') {
       return 'مكان العمل';
     }
@@ -296,10 +318,9 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
             </div>
 
             <div>
-              <label className="block mb-2 text-sm text-foreground">أب الإعتراف *</label>
+              <label className="block mb-2 text-sm text-foreground">أب الإعتراف</label>
               <input
                 type="text"
-                required
                 value={formData.confessionFather}
                 onChange={(e) => updateField('confessionFather', e.target.value)}
                 className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
@@ -365,10 +386,9 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
             {formData.educationStage && formData.educationStage === 'university' && (
               <div className="space-y-4">
                 <div>
-                  <label className="block mb-2 text-sm text-foreground">اسم الجامعة *</label>
+                  <label className="block mb-2 text-sm text-foreground">اسم الجامعة</label>
                   <input
                     type="text"
-                    required
                     value={formData.universityName || ''}
                     onChange={(e) => updateField('universityName', e.target.value)}
                     className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
@@ -377,10 +397,9 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
                 </div>
 
                 <div>
-                  <label className="block mb-2 text-sm text-foreground">الكلية *</label>
+                  <label className="block mb-2 text-sm text-foreground">الكلية</label>
                   <input
                     type="text"
-                    required
                     value={formData.collegeName || ''}
                     onChange={(e) => updateField('collegeName', e.target.value)}
                     className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
@@ -397,7 +416,6 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
                 </label>
                 <input
                   type="text"
-                  required={isStudyPlaceRequired()}
                   value={formData.studyOrWorkPlace}
                   onChange={(e) => updateField('studyOrWorkPlace', e.target.value)}
                   className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
@@ -485,9 +503,8 @@ export function RegistrationForm({ onBack, onSubmit }: RegistrationFormProps) {
             </div>
 
             <div>
-              <label className="block mb-2 text-sm text-foreground">العنوان بالتفصيل *</label>
+              <label className="block mb-2 text-sm text-foreground">العنوان بالتفصيل</label>
               <textarea
-                required
                 value={formData.address}
                 onChange={(e) => updateField('address', e.target.value)}
                 className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
