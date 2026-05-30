@@ -30,6 +30,7 @@ export interface ParticipantData {
 
 export interface Participant {
   id: string;
+  participant_id?: string | number;
   name: string;
   points: number;
   attended: boolean;

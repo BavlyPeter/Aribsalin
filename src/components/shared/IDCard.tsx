@@ -6,6 +6,7 @@ import { StudentData } from '../../types';
 interface IDCardProps {
   student: {
     id: string;
+    participant_id?: string | number;
     name: string;
     data: {
       educationStage: StudentData['educationStage'];
@@ -25,6 +26,8 @@ const educationStageLabels: Record<string, string> = {
 };
 
 export function IDCard({ student }: IDCardProps) {
+  const participantSmartId = student.participant_id || student.id;
+
   const getInitials = (name: string) => {
     const parts = name.split(' ');
     if (parts.length >= 2) {
@@ -81,7 +84,7 @@ export function IDCard({ student }: IDCardProps) {
             className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-white px-3 py-1 rounded-full shadow-md"
             style={{ border: '2px solid rgba(139, 21, 56, 0.2)' }}
           >
-            <span className="text-xs font-medium" style={{ color: '#8B1538' }}>{student.id}</span>
+            <span className="text-xs font-medium" style={{ color: '#8B1538' }}>{participantSmartId}</span>
           </div>
         </div>
       </div>

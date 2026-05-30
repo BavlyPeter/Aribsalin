@@ -16,6 +16,7 @@ export function StudentProfile({ student, totalDays, onBack }: StudentProfilePro
   const qrRef = useRef<HTMLDivElement>(null);
   const idCardRef = useRef<HTMLDivElement>(null);
   const [isDownloadingCard, setIsDownloadingCard] = useState(false);
+  const participantSmartId = student.participant_id || 'غير متوفر';
 
   const calculateAge = (dateOfBirth: string) => {
     const today = new Date();
@@ -131,7 +132,7 @@ export function StudentProfile({ student, totalDays, onBack }: StudentProfilePro
             <User className="w-12 h-12 text-primary" />
           </div>
           <h3 className="text-xl mb-1 text-primary">{student.name}</h3>
-          <p className="text-sm text-muted-foreground mb-4">رقم المشارك: {student.id}</p>
+          <p className="text-sm text-muted-foreground mb-4">رقم المشارك: {participantSmartId}</p>
 
           {/* Status Badge */}
           {student.attended && (

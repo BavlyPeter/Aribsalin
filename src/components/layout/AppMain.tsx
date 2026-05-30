@@ -187,7 +187,7 @@ export default function AppMain() {
     setCurrentView('studentScanner');
   };
 
-  const handleNavigate = (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers') => {
+  const handleNavigate = (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers') => {
     if (view === 'scanner') {
       setScanMode('attendance');
       setCurrentView('scanner');

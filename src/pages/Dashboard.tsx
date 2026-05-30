@@ -1,10 +1,10 @@
-import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, Settings, FileText, Wallet, BarChart3, LogOut } from 'lucide-react';
+import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, FileText, Wallet, BarChart3, LogOut } from 'lucide-react';
 import { ParticipantsList } from '../components/shared/ParticipantsList';
 import churchLogo from '../assets/images/new-church-logo.png';
 import festivalLogo from '../assets/images/Arebsalin-1.png';
 
 interface DashboardProps {
-  onNavigate: (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers') => void;
+  onNavigate: (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers') => void;
   onViewProfile: (participantId: string) => void;
   onLogout: () => void | Promise<void>;
   currentServant: any;
@@ -160,16 +160,6 @@ export function Dashboard({
             <div className="flex items-center justify-center gap-3">
               <UserPlus className="w-5 h-5 text-primary" />
               <span>تسجيل مشارك جديد</span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => onNavigate('manualPoints')}
-            className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
-          >
-            <div className="flex items-center justify-center gap-3">
-              <Settings className="w-5 h-5 text-primary" />
-              <span>إدارة النقاط يدوياً</span>
             </div>
           </button>
 
