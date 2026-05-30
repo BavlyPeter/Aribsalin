@@ -2,6 +2,7 @@ import { Search, User, Coins, Trash2, Edit } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
+import { normalizeArabicText } from '../../utils/textUtils';
 
 interface Participant {
   id: string;
@@ -27,11 +28,14 @@ export function ParticipantsList({ participants, onEdit, onManagePoints, onDelet
 
   useEffect(() => setItems(participants), [participants]);
 
-  const filteredParticipants = items.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.participant_id?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const normalizedSearchQuery = normalizeArabicText(searchQuery);
+  const filteredParticipants = items.filter(p => {
+    const normalizedName = normalizeArabicText(p.name || '');
+    const normalizedId = normalizeArabicText(p.participant_id || p.id || '');
+
+    return normalizedName.includes(normalizedSearchQuery) ||
+      normalizedId.includes(normalizedSearchQuery);
+  });
 
   const handleDelete = async (record: Participant) => {
     const confirmed = window.confirm('هل أنت متأكد من حذف هذا السجل تماماً؟');

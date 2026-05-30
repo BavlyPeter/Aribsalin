@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X, Search, Plus, Minus, User } from 'lucide-react';
+import { normalizeArabicText } from '../../utils/textUtils';
 
 interface Participant {
   id: string;
@@ -31,10 +32,14 @@ export function ManualPointsModal({ participants, onConfirm, onCancel, initialPa
     }
   }, [initialParticipant]);
 
-  const filteredParticipants = participants.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const normalizedSearchQuery = normalizeArabicText(searchQuery);
+  const filteredParticipants = participants.filter(p => {
+    const normalizedName = normalizeArabicText(p.name || '');
+    const normalizedId = normalizeArabicText(p.participant_id || p.id || '');
+
+    return normalizedName.includes(normalizedSearchQuery) ||
+      normalizedId.includes(normalizedSearchQuery);
+  });
 
   const handleConfirm = () => {
     if (selectedParticipant && points && parseInt(points) > 0) {
