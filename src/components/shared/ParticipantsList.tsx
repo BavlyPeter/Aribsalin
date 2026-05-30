@@ -1,4 +1,4 @@
-import { Search, User, Coins, Trash2, Edit } from 'lucide-react';
+import { Search, Trash2, Coins, Edit, CheckCircle2, XCircle, Filter, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
@@ -9,8 +9,18 @@ interface Participant {
   participant_id?: string;
   dbId?: string;
   name: string;
+  full_name?: string;
   points: number;
   attended: boolean;
+  data?: {
+    gender?: string;
+    educationStage?: string;
+    educational_stage?: string;
+    educationYear?: string;
+    academic_year?: string;
+    area?: string;
+    address_area?: string;
+  };
   onClick?: () => void;
 }
 
@@ -25,16 +35,48 @@ export function ParticipantsList({ participants, onEdit, onManagePoints, onDelet
   const [searchQuery, setSearchQuery] = useState('');
   const [items, setItems] = useState<Participant[]>(participants);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filterGender, setFilterGender] = useState('');
+  const [filterStage, setFilterStage] = useState('');
+  const [filterYear, setFilterYear] = useState('');
+  const [filterArea, setFilterArea] = useState('');
+
+  const ASWAN_AREAS = ['السيل', 'كيما', 'الصداقة', 'المحمودية', 'أطلس', 'العقاد', 'الكورنيش', 'الكرور', 'الشيخ هارون', 'أخرى'];
+  const EDUCATION_STAGES = [
+    { value: 'kg', label: 'حضانة' },
+    { value: 'primary', label: 'ابتدائي' },
+    { value: 'preparatory', label: 'إعدادي' },
+    { value: 'secondary', label: 'ثانوي' },
+    { value: 'university', label: 'جامعي' },
+    { value: 'graduate', label: 'خريجين' }
+  ];
 
   useEffect(() => setItems(participants), [participants]);
 
-  const normalizedSearchQuery = normalizeArabicText(searchQuery);
-  const filteredParticipants = items.filter(p => {
-    const normalizedName = normalizeArabicText(p.name || '');
+  const filteredParticipants = participants.filter(p => {
+    // 1. Tolerant Search (existing logic)
+    const normalizedSearchQuery = normalizeArabicText(searchQuery);
+    const normalizedName = normalizeArabicText(p.name || p.full_name || '');
     const normalizedId = normalizeArabicText(p.participant_id || p.id || '');
 
-    return normalizedName.includes(normalizedSearchQuery) ||
-      normalizedId.includes(normalizedSearchQuery);
+    const matchesSearch = !searchQuery ||
+                         normalizedName.includes(normalizedSearchQuery) ||
+                         normalizedId.includes(normalizedSearchQuery);
+
+    // 2. Advanced Filters
+    const pData = p.data || {};
+    const matchesGender = !filterGender || pData.gender === filterGender;
+    const matchesStage = !filterStage || pData.educationStage === filterStage || pData.educational_stage === filterStage;
+
+    // Check year (handling both camelCase and snake_case from DB)
+    const pYear = pData.educationYear || pData.academic_year || '';
+    const matchesYear = !filterYear || pYear.includes(filterYear);
+
+    // Check area (handling both cases)
+    const pArea = pData.area || pData.address_area || '';
+    const matchesArea = !filterArea || pArea === filterArea;
+
+    return matchesSearch && matchesGender && matchesStage && matchesYear && matchesArea;
   });
 
   const handleDelete = async (record: Participant) => {
@@ -67,17 +109,107 @@ export function ParticipantsList({ participants, onEdit, onManagePoints, onDelet
       <div className="mb-4">
         <h3 className="mb-3 text-primary">قائمة المشاركين</h3>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="ابحث باسم المشارك أو الرقم..."
-            className="w-full pr-11 pl-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-          />
+        {/* Search and Filter Toggle */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="ابحث باسم المشارك أو الرقم..."
+              className="w-full pl-4 pr-10 py-3 bg-input-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+            />
+          </div>
+
+          <button
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className={`px-4 flex items-center justify-center rounded-xl border transition-all ${
+              isFilterOpen || filterGender || filterStage || filterArea || filterYear
+                ? 'bg-primary/10 border-primary/20 text-primary'
+                : 'bg-input-background border-border text-muted-foreground hover:bg-muted'
+            }`}
+            title="تصفية متقدمة"
+          >
+            {isFilterOpen || filterGender || filterStage || filterArea || filterYear ? (
+              <CheckCircle2 className="w-5 h-5" />
+            ) : (
+              <Filter className="w-5 h-5" />
+            )}
+          </button>
         </div>
+
+        {/* Filter Panel */}
+        {isFilterOpen && (
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-card p-4 rounded-xl border border-border">
+            <select
+              value={filterGender}
+              onChange={(e) => setFilterGender(e.target.value)}
+              className="w-full px-3 py-2 bg-input-background rounded-lg border border-border focus:outline-none focus:border-primary text-sm"
+            >
+              <option value="">كل الأنواع</option>
+              <option value="male">ذكور فقط</option>
+              <option value="female">إناث فقط</option>
+            </select>
+
+            <select
+              value={filterStage}
+              onChange={(e) => { setFilterStage(e.target.value); setFilterYear(''); }}
+              className="w-full px-3 py-2 bg-input-background rounded-lg border border-border focus:outline-none focus:border-primary text-sm"
+            >
+              <option value="">كل المراحل</option>
+              {EDUCATION_STAGES.map(stage => (
+                <option key={stage.value} value={stage.value}>
+                  {stage.label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={filterYear}
+              onChange={(e) => setFilterYear(e.target.value)}
+              className="w-full px-3 py-2 bg-input-background rounded-lg border border-border focus:outline-none focus:border-primary text-sm"
+              disabled={!filterStage || filterStage === 'kg' || filterStage === 'graduate'}
+            >
+              <option value="">كل الصفوف</option>
+              <option value="الصف الأول الابتدائي">الصف الأول / الفرقة الأولى</option>
+              <option value="الصف الثاني الابتدائي">الصف الثاني / الفرقة الثانية</option>
+              <option value="الصف الثالث الابتدائي">الصف الثالث / الفرقة الثالثة</option>
+              <option value="الصف الرابع الابتدائي">الصف الرابع / الفرقة الرابعة</option>
+              <option value="الصف الخامس الابتدائي">الصف الخامس / الفرقة الخامسة</option>
+              <option value="الصف السادس الابتدائي">الصف السادس / الفرقة السادسة</option>
+            </select>
+
+            <select
+              value={filterArea}
+              onChange={(e) => setFilterArea(e.target.value)}
+              className="w-full px-3 py-2 bg-input-background rounded-lg border border-border focus:outline-none focus:border-primary text-sm"
+            >
+              <option value="">كل المناطق (أسوان)</option>
+              {ASWAN_AREAS.map(area => (
+                <option key={area} value={area}>
+                  {area}
+                </option>
+              ))}
+            </select>
+
+            {/* Clear Filters Button (Shows only if a filter is active) */}
+            {(filterGender || filterStage || filterArea || filterYear) && (
+              <button
+                onClick={() => {
+                  setFilterGender('');
+                  setFilterStage('');
+                  setFilterYear('');
+                  setFilterArea('');
+                }}
+                className="lg:col-span-4 flex items-center justify-center gap-2 text-red-500 bg-red-50 hover:bg-red-100 py-2 rounded-lg transition-colors text-sm font-medium mt-1"
+              >
+                <XCircle className="w-4 h-4" />
+                مسح الفلاتر
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* List */}
