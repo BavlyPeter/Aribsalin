@@ -49,10 +49,9 @@ const educationYears = {
   ]
 };
 
-const ASWAN_AREAS = ['السيل', 'كيما', 'الصداقة', 'المحمودية', 'أطلس', 'العقاد', 'الكورنيش', 'الكرور', 'الشيخ هارون', 'أخرى'];
-
 export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPageWithEditProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const [areas, setAreas] = useState<string[]>([]);
   const [formData, setFormData] = useState<TeacherData>({
     fullName: '',
     gender: '',
@@ -72,6 +71,20 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
     address: '',
     dateOfBirth: ''
   });
+
+  useEffect(() => {
+    const fetchAreas = async () => {
+      try {
+        const { data, error } = await supabase.from('areas').select('name').order('name');
+        if (!error && data) {
+          setAreas(data.map(a => a.name));
+        }
+      } catch (err) {
+        console.error('Error fetching areas:', err);
+      }
+    };
+    fetchAreas();
+  }, []);
 
   // Fetch full data for editing from Supabase to ensure all fields populate
   useEffect(() => {
@@ -496,9 +509,13 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
                 className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">اختر المنطقة</option>
-                {ASWAN_AREAS.map((area) => (
-                  <option key={area} value={area}>{area}</option>
-                ))}
+                  {areas.length > 0 ? (
+                    areas.map((area) => (
+                      <option key={area} value={area}>{area}</option>
+                    ))
+                  ) : (
+                    <option value="" disabled>جاري تحميل المناطق...</option>
+                  )}
               </select>
             </div>
 

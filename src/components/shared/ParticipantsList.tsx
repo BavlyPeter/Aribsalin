@@ -31,7 +31,6 @@ interface ParticipantsListProps {
   onDelete?: (id: string) => void;
 }
 
-const ASWAN_AREAS = ['السيل', 'كيما', 'الصداقة', 'المحمودية', 'أطلس', 'العقاد', 'الكورنيش', 'الكرور', 'الشيخ هارون', 'أخرى'];
 const CLASSES = [
   { id: 'kg', label: 'حضانة' },
   { id: 'primary_12', label: 'ابتدائي (الأول والثاني)' },
@@ -68,10 +67,25 @@ export function ParticipantsList({ participants, onEdit, onManagePoints, onDelet
   const [filterGender, setFilterGender] = useState('');
   const [filterClass, setFilterClass] = useState('');
   const [filterArea, setFilterArea] = useState('');
+  const [areas, setAreas] = useState<string[]>([]);
   const [items, setItems] = useState<Participant[]>(participants);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => setItems(participants), [participants]);
+
+  useEffect(() => {
+    const fetchAreas = async () => {
+      try {
+        const { data, error } = await supabase.from('areas').select('name').order('name');
+        if (!error && data) {
+          setAreas(data.map(a => a.name));
+        }
+      } catch (err) {
+        console.error('Error fetching areas:', err);
+      }
+    };
+    fetchAreas();
+  }, []);
 
   const filteredParticipants = items.filter(p => {
     const normalizedSearchQuery = normalizeArabicText(searchQuery);
@@ -160,7 +174,7 @@ export function ParticipantsList({ participants, onEdit, onManagePoints, onDelet
               className="w-full px-4 py-2.5 bg-input-background rounded-xl border border-border focus:outline-none focus:border-primary text-sm"
             >
               <option value="">كل المناطق (أسوان)</option>
-              {ASWAN_AREAS.map(area => (
+              {areas.map(area => (
                 <option key={area} value={area}>
                   {area}
                 </option>

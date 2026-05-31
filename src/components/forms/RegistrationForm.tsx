@@ -51,10 +51,9 @@ const educationYears = {
   ]
 };
 
-const ASWAN_AREAS = ['السيل', 'كيما', 'الصداقة', 'المحمودية', 'أطلس', 'العقاد', 'الكورنيش', 'الكرور', 'الشيخ هارون', 'أخرى'];
-
 export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: RegistrationFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [areas, setAreas] = useState<string[]>([]);
   const [formData, setFormData] = useState<StudentData>({
     fullName: '',
     gender: '',
@@ -123,6 +122,20 @@ export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: Regi
 
     fetchFullParticipantData();
   }, [editData]);
+
+  useEffect(() => {
+    const fetchAreas = async () => {
+      try {
+        const { data, error } = await supabase.from('areas').select('name').order('name');
+        if (!error && data) {
+          setAreas(data.map(a => a.name));
+        }
+      } catch (err) {
+        console.error('Error fetching areas:', err);
+      }
+    };
+    fetchAreas();
+  }, []);
 
   const generateParticipantSmartId = async (stage: string, year: string) => {
     let stageChar = 'X';
@@ -594,7 +607,7 @@ export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: Regi
                 className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">اختر المنطقة</option>
-                {ASWAN_AREAS.map((area) => (
+                {areas.map((area) => (
                   <option key={area} value={area}>{area}</option>
                 ))}
               </select>
