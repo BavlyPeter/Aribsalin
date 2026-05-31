@@ -1,4 +1,4 @@
-import { Search, Trash2, Coins, Edit, CheckCircle2, XCircle, Filter, User } from 'lucide-react';
+import { Search, Trash2, Coins, Edit, XCircle, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
@@ -31,30 +31,49 @@ interface ParticipantsListProps {
   onDelete?: (id: string) => void;
 }
 
+const ASWAN_AREAS = ['السيل', 'كيما', 'الصداقة', 'المحمودية', 'أطلس', 'العقاد', 'الكورنيش', 'الكرور', 'الشيخ هارون', 'أخرى'];
+const CLASSES = [
+  { id: 'kg', label: 'حضانة' },
+  { id: 'primary_12', label: 'ابتدائي (الأول والثاني)' },
+  { id: 'primary_34', label: 'ابتدائي (الثالث والرابع)' },
+  { id: 'primary_56', label: 'ابتدائي (الخامس والسادس)' },
+  { id: 'preparatory', label: 'إعدادي' },
+  { id: 'secondary', label: 'ثانوي' },
+  { id: 'university', label: 'جامعي' },
+  { id: 'graduate', label: 'خريجين' }
+];
+
+// Helper to map DB stage/year to our specific classes
+const getParticipantClass = (stage: string, year: string) => {
+  if (!stage) return '';
+  const s = stage.toLowerCase();
+  if (s === 'kg' || s === 'حضانة') return 'kg';
+  if (s === 'preparatory' || s === 'إعدادي') return 'preparatory';
+  if (s === 'secondary' || s === 'ثانوي') return 'secondary';
+  if (s === 'university' || s === 'جامعي') return 'university';
+  if (s === 'graduate' || s === 'خريجين') return 'graduate';
+
+  if (s === 'primary' || s === 'ابتدائي') {
+    if (!year) return 'primary_12';
+    if (year.includes('الأول') || year.includes('الثاني') || year.includes('1') || year.includes('2')) return 'primary_12';
+    if (year.includes('الثالث') || year.includes('الرابع') || year.includes('3') || year.includes('4')) return 'primary_34';
+    if (year.includes('الخامس') || year.includes('السادس') || year.includes('5') || year.includes('6')) return 'primary_56';
+    return 'primary_12';
+  }
+  return stage;
+};
+
 export function ParticipantsList({ participants, onEdit, onManagePoints, onDelete }: ParticipantsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterGender, setFilterGender] = useState('');
+  const [filterClass, setFilterClass] = useState('');
+  const [filterArea, setFilterArea] = useState('');
   const [items, setItems] = useState<Participant[]>(participants);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [filterGender, setFilterGender] = useState('');
-  const [filterStage, setFilterStage] = useState('');
-  const [filterYear, setFilterYear] = useState('');
-  const [filterArea, setFilterArea] = useState('');
-
-  const ASWAN_AREAS = ['السيل', 'كيما', 'الصداقة', 'المحمودية', 'أطلس', 'العقاد', 'الكورنيش', 'الكرور', 'الشيخ هارون', 'أخرى'];
-  const EDUCATION_STAGES = [
-    { value: 'kg', label: 'حضانة' },
-    { value: 'primary', label: 'ابتدائي' },
-    { value: 'preparatory', label: 'إعدادي' },
-    { value: 'secondary', label: 'ثانوي' },
-    { value: 'university', label: 'جامعي' },
-    { value: 'graduate', label: 'خريجين' }
-  ];
 
   useEffect(() => setItems(participants), [participants]);
 
-  const filteredParticipants = participants.filter(p => {
-    // 1. Tolerant Search (existing logic)
+  const filteredParticipants = items.filter(p => {
     const normalizedSearchQuery = normalizeArabicText(searchQuery);
     const normalizedName = normalizeArabicText(p.name || p.full_name || '');
     const normalizedId = normalizeArabicText(p.participant_id || p.id || '');
@@ -63,20 +82,18 @@ export function ParticipantsList({ participants, onEdit, onManagePoints, onDelet
                          normalizedName.includes(normalizedSearchQuery) ||
                          normalizedId.includes(normalizedSearchQuery);
 
-    // 2. Advanced Filters
     const pData = p.data || {};
     const matchesGender = !filterGender || pData.gender === filterGender;
-    const matchesStage = !filterStage || pData.educationStage === filterStage || pData.educational_stage === filterStage;
 
-    // Check year (handling both camelCase and snake_case from DB)
+    const pStage = pData.educationStage || pData.educational_stage || '';
     const pYear = pData.educationYear || pData.academic_year || '';
-    const matchesYear = !filterYear || pYear.includes(filterYear);
+    const calculatedClass = getParticipantClass(pStage, pYear);
+    const matchesClass = !filterClass || calculatedClass === filterClass;
 
-    // Check area (handling both cases)
     const pArea = pData.area || pData.address_area || '';
     const matchesArea = !filterArea || pArea === filterArea;
 
-    return matchesSearch && matchesGender && matchesStage && matchesYear && matchesArea;
+    return matchesSearch && matchesGender && matchesClass && matchesArea;
   });
 
   const handleDelete = async (record: Participant) => {
@@ -109,81 +126,38 @@ export function ParticipantsList({ participants, onEdit, onManagePoints, onDelet
       <div className="mb-4">
         <h3 className="mb-3 text-primary">قائمة المشاركين</h3>
 
-        {/* Search and Filter Toggle */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1">
+        {/* Unified Search and Filter Panel */}
+        <div className="mt-4 bg-card p-4 rounded-xl border border-border shadow-sm space-y-4">
+          {/* Search Bar */}
+          <div className="relative">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ابحث باسم المشارك أو الرقم..."
-              className="w-full pl-4 pr-10 py-3 bg-input-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+              className="w-full pl-4 pr-12 py-3 bg-input-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-primary transition-all"
             />
           </div>
 
-          <button
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className={`px-4 flex items-center justify-center rounded-xl border transition-all ${
-              isFilterOpen || filterGender || filterStage || filterArea || filterYear
-                ? 'bg-primary/10 border-primary/20 text-primary'
-                : 'bg-input-background border-border text-muted-foreground hover:bg-muted'
-            }`}
-            title="تصفية متقدمة"
-          >
-            {isFilterOpen || filterGender || filterStage || filterArea || filterYear ? (
-              <CheckCircle2 className="w-5 h-5" />
-            ) : (
-              <Filter className="w-5 h-5" />
-            )}
-          </button>
-        </div>
-
-        {/* Filter Panel */}
-        {isFilterOpen && (
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-card p-4 rounded-xl border border-border">
+          {/* Filters Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <select
-              value={filterGender}
-              onChange={(e) => setFilterGender(e.target.value)}
-              className="w-full px-3 py-2 bg-input-background rounded-lg border border-border focus:outline-none focus:border-primary text-sm"
+              value={filterClass}
+              onChange={(e) => setFilterClass(e.target.value)}
+              className="w-full px-4 py-2.5 bg-input-background rounded-xl border border-border focus:outline-none focus:border-primary text-sm"
             >
-              <option value="">كل الأنواع</option>
-              <option value="male">ذكور فقط</option>
-              <option value="female">إناث فقط</option>
-            </select>
-
-            <select
-              value={filterStage}
-              onChange={(e) => { setFilterStage(e.target.value); setFilterYear(''); }}
-              className="w-full px-3 py-2 bg-input-background rounded-lg border border-border focus:outline-none focus:border-primary text-sm"
-            >
-              <option value="">كل المراحل</option>
-              {EDUCATION_STAGES.map(stage => (
-                <option key={stage.value} value={stage.value}>
-                  {stage.label}
+              <option value="">كل الفصول</option>
+              {CLASSES.map(cls => (
+                <option key={cls.id} value={cls.id}>
+                  {cls.label}
                 </option>
               ))}
             </select>
 
             <select
-              value={filterYear}
-              onChange={(e) => setFilterYear(e.target.value)}
-              className="w-full px-3 py-2 bg-input-background rounded-lg border border-border focus:outline-none focus:border-primary text-sm"
-              disabled={!filterStage || filterStage === 'kg' || filterStage === 'graduate'}
-            >
-              <option value="">كل الصفوف</option>
-              <option value="الصف الأول الابتدائي">الصف الأول / الفرقة الأولى</option>
-              <option value="الصف الثاني الابتدائي">الصف الثاني / الفرقة الثانية</option>
-              <option value="الصف الثالث الابتدائي">الصف الثالث / الفرقة الثالثة</option>
-              <option value="الصف الرابع الابتدائي">الصف الرابع / الفرقة الرابعة</option>
-              <option value="الصف الخامس الابتدائي">الصف الخامس / الفرقة الخامسة</option>
-              <option value="الصف السادس الابتدائي">الصف السادس / الفرقة السادسة</option>
-            </select>
-
-            <select
               value={filterArea}
               onChange={(e) => setFilterArea(e.target.value)}
-              className="w-full px-3 py-2 bg-input-background rounded-lg border border-border focus:outline-none focus:border-primary text-sm"
+              className="w-full px-4 py-2.5 bg-input-background rounded-xl border border-border focus:outline-none focus:border-primary text-sm"
             >
               <option value="">كل المناطق (أسوان)</option>
               {ASWAN_AREAS.map(area => (
@@ -193,23 +167,32 @@ export function ParticipantsList({ participants, onEdit, onManagePoints, onDelet
               ))}
             </select>
 
-            {/* Clear Filters Button (Shows only if a filter is active) */}
-            {(filterGender || filterStage || filterArea || filterYear) && (
-              <button
-                onClick={() => {
-                  setFilterGender('');
-                  setFilterStage('');
-                  setFilterYear('');
-                  setFilterArea('');
-                }}
-                className="lg:col-span-4 flex items-center justify-center gap-2 text-red-500 bg-red-50 hover:bg-red-100 py-2 rounded-lg transition-colors text-sm font-medium mt-1"
-              >
-                <XCircle className="w-4 h-4" />
-                مسح الفلاتر
-              </button>
-            )}
+            <select
+              value={filterGender}
+              onChange={(e) => setFilterGender(e.target.value)}
+              className="w-full px-4 py-2.5 bg-input-background rounded-xl border border-border focus:outline-none focus:border-primary text-sm"
+            >
+              <option value="">كل الأنواع</option>
+              <option value="male">ذكور فقط</option>
+              <option value="female">إناث فقط</option>
+            </select>
           </div>
-        )}
+
+          {/* Clear Filters Button */}
+          {(filterGender || filterClass || filterArea) && (
+            <button
+              onClick={() => {
+                setFilterGender('');
+                setFilterClass('');
+                setFilterArea('');
+              }}
+              className="flex items-center gap-2 text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+            >
+              <XCircle className="w-4 h-4" />
+              مسح الفلاتر
+            </button>
+          )}
+        </div>
       </div>
 
       {/* List */}

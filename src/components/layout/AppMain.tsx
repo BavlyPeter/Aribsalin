@@ -30,7 +30,6 @@ export default function AppMain() {
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [viewerRole, setViewerRole] = useState<ViewerRole>('servant');
   const [currentServant, setCurrentServant] = useState<any>(null);
-  const [totalDays] = useState(20); // Total festival days
   const [selectedParticipantForPoints, setSelectedParticipantForPoints] = useState<any | null>(null);
 
   const [participants, setParticipants] = useState<any[]>([]);
@@ -83,39 +82,70 @@ export default function AppMain() {
   useEffect(() => {
     const fetchFestivalData = async () => {
       try {
-        const { data: participantsData, error: pError } = await supabase
+        // Step 1: Fetch all participants (Safe query)
+        const { data: pData, error: pError } = await supabase
           .from('participants')
-          .select('*')
-          .order('created_at', { ascending: false });
+          .select('*');
 
-        if (!pError && participantsData) {
-          const mappedParticipants = participantsData.map((participant: any) => ({
-            id: participant.id,
-            participant_id: participant.participant_id,
-            name: participant.full_name,
-            points: participant.points_balance || 0,
-            attended: false,
-            attendanceDays: [],
-            data: {
-              fullName: participant.full_name,
-              gender: participant.gender,
-              educationStage: participant.educational_stage,
-              educationYear: participant.academic_year,
-              studyOrWorkPlace: participant.class_or_job,
-              dateOfBirth: participant.birth_date,
-              confessionFather: participant.father_of_confession,
-              personalMobile: participant.mobile_personal,
-              fatherMobile: participant.mobile_father,
-              motherMobile: participant.mobile_mother,
-              area: participant.address_area,
-              address: participant.address_details,
-            }
-          }));
+        if (pError) throw pError;
 
-          setParticipants(mappedParticipants);
+        if (pData && pData.length > 0) {
+          // Step 2: Fetch attendance logs for these participants independently
+          const pIds = pData.map(p => p.id);
+          const { data: logsData, error: logsError } = await supabase
+            .from('attendance_logs')
+            .select('participant_id, created_at, scanned_at, attendance_date')
+            .in('participant_id', pIds);
+
+          if (logsError) {
+            console.warn('Could not fetch attendance logs, continuing without them:', logsError);
+          }
+
+          const today = new Date().toISOString().split('T')[0];
+
+          // Step 3: Merge them in memory
+          const mapped = pData.map(p => {
+            // Find all logs for this specific participant
+            const pLogs = (logsData || []).filter(log => log.participant_id === p.id);
+
+            // Extract dates
+            const dates = pLogs.map((log: any) => {
+              const dateStr = log.attendance_date || log.created_at || log.scanned_at;
+              return dateStr ? String(dateStr).split('T')[0] : '';
+            }).filter(Boolean);
+
+            const uniqueAttendanceDays = Array.from(new Set(dates)) as string[];
+
+            return {
+              id: p.id,
+              participant_id: p.participant_id,
+              name: p.full_name,
+              points: p.points_balance || 0,
+              attended: uniqueAttendanceDays.includes(today),
+              attendanceDays: uniqueAttendanceDays,
+              data: {
+                fullName: p.full_name,
+                gender: p.gender,
+                educationStage: p.educational_stage,
+                educationYear: p.academic_year,
+                studyOrWorkPlace: p.class_or_job,
+                confessionFather: p.father_of_confession,
+                personalMobile: p.mobile_personal,
+                fatherMobile: p.mobile_father,
+                motherMobile: p.mobile_mother,
+                area: p.address_area,
+                address: p.address_details,
+                dateOfBirth: p.birth_date
+              }
+            };
+          });
+
+          setParticipants(mapped);
+        } else {
+          setParticipants([]);
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error fetching participants data:', error);
       }
     };
 
@@ -164,6 +194,58 @@ export default function AppMain() {
       String(participant.id || '').trim().toUpperCase() === normalized ||
       String(participant.participant_id || '').trim().toUpperCase() === normalized
     );
+  };
+
+  const getStudentClassKey = (participant: Participant | any) => {
+    const data = participant?.data || {};
+    const stage = String(data.educationStage || data.educational_stage || '').toLowerCase();
+    const year = String(data.educationYear || data.academic_year || '').toLowerCase();
+
+    if (stage === 'kg' || stage === 'حضانة') return 'kg';
+    if (stage === 'preparatory' || stage === 'إعدادي') return 'preparatory';
+    if (stage === 'secondary' || stage === 'ثانوي') return 'secondary';
+    if (stage === 'university' || stage === 'جامعي') return 'university';
+    if (stage === 'graduate' || stage === 'خريجين') return 'graduate';
+
+    if (stage === 'primary' || stage === 'ابتدائي') {
+      if (year.includes('الأول') || year.includes('الثاني') || year.includes('1') || year.includes('2')) return 'primary_12';
+      if (year.includes('الثالث') || year.includes('الرابع') || year.includes('3') || year.includes('4')) return 'primary_34';
+      if (year.includes('الخامس') || year.includes('السادس') || year.includes('5') || year.includes('6')) return 'primary_56';
+      return 'primary_12';
+    }
+
+    return stage || '';
+  };
+
+  // Calculate total unique days attendance was taken for a specific class
+  const getActiveDaysForClass = (classKey: string) => {
+    if (!participants || participants.length === 0) return 1; // Fallback to avoid division by zero
+
+    const classParticipants = participants.filter(p => getStudentClassKey(p) === classKey);
+    const uniqueDates = new Set<string>();
+
+    classParticipants.forEach(p => {
+      if (p.attendanceDays && Array.isArray(p.attendanceDays)) {
+        p.attendanceDays.forEach((date: string) => uniqueDates.add(date));
+      }
+    });
+
+    // Return the number of unique days, minimum 1 to prevent 0 division
+    return Math.max(1, uniqueDates.size);
+  };
+
+  // Calculate overall unique days across the entire festival (for general statistics)
+  const getOverallActiveDays = () => {
+    if (!participants || participants.length === 0) return 1;
+
+    const uniqueDates = new Set<string>();
+    participants.forEach(p => {
+      if (p.attendanceDays && Array.isArray(p.attendanceDays)) {
+        p.attendanceDays.forEach((date: string) => uniqueDates.add(date));
+      }
+    });
+
+    return Math.max(1, uniqueDates.size);
   };
 
   const handleStudentLoginById = (id: string) => {
@@ -731,7 +813,7 @@ export default function AppMain() {
           selectedParticipant ? (
             <StudentProfile
               student={selectedParticipant}
-              totalDays={totalDays}
+              totalDays={getActiveDaysForClass(getStudentClassKey(selectedParticipant))}
               onBack={handleProfileBack}
             />
           ) : (
@@ -761,14 +843,14 @@ export default function AppMain() {
           <StatisticsPage
             onBack={() => setCurrentView('dashboard')}
             participants={participants}
-            totalDays={totalDays}
+            totalDays={getOverallActiveDays()}
           />
         )}
 
         {currentView === 'teachers' && (
           <TeachersPage
             onBack={() => setCurrentView('dashboard')}
-            onEditRequest={(rec) => handleEditRequest(rec, 'servant')}
+            onEdit={(rec: any) => handleEditRequest(rec, 'servant')}
           />
         )}
       </div>

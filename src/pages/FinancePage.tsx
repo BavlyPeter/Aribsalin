@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowRight, Plus, TrendingUp, TrendingDown, DollarSign, Calendar, User, FileText } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { stageLabels } from '../app/utils/stageHelpers';
+import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
 
 interface Transaction {
   id: string;
@@ -26,48 +28,54 @@ const educationStages = [
 
 export function FinancePage({ onBack }: FinancePageProps) {
   const [showAddForm, setShowAddForm] = useState(false);
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    {
-      id: 'T001',
-      type: 'revenue',
-      title: 'اشتراكات المشاركين',
-      amount: 5000,
-      date: '2025-07-01',
-      educationStage: 'all',
-      personName: 'أبونا يوسف',
-      description: 'اشتراكات المهرجان الصيفي'
-    },
-    {
-      id: 'T002',
-      type: 'expense',
-      title: 'شراء أدوات مكتبية',
-      amount: 800,
-      date: '2025-07-02',
-      educationStage: 'primary',
-      personName: 'مينا جرجس',
-      description: 'أدوات للمرحلة الابتدائية'
-    },
-    {
-      id: 'T003',
-      type: 'revenue',
-      title: 'تبرعات',
-      amount: 2000,
-      date: '2025-07-03',
-      educationStage: 'all',
-      personName: 'متبرع كريم',
-      description: 'تبرع لدعم المهرجان'
-    },
-    {
-      id: 'T004',
-      type: 'expense',
-      title: 'مكافآت الخدام',
-      amount: 1500,
-      date: '2025-07-04',
-      educationStage: 'all',
-      personName: 'مريم بطرس',
-      description: 'مكافآت للخدام المشاركين'
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Lifted form state so we can reset it from parent after successful save
+  const [formData, setFormData] = useState({
+    type: 'revenue' as 'expense' | 'revenue',
+    title: '',
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+    educationStage: 'all',
+    personName: '',
+    description: ''
+  });
+
+  // Fetch real data on mount
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const fetchTransactions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('financial_transactions')
+        .select('*')
+        .order('transaction_date', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        const mapped: Transaction[] = data.map((t: any) => ({
+          id: t.id,
+          type: t.type as 'expense' | 'revenue',
+          title: t.title,
+          amount: t.amount,
+          date: t.transaction_date,
+          educationStage: t.education_stage,
+          personName: t.person_name,
+          description: t.description
+        }));
+        setTransactions(mapped);
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      toast.error('فشل في تحميل البيانات المالية');
+    } finally {
+      setIsLoading(false);
     }
-  ]);
+  };
 
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'revenue'>('all');
   const [filterStage, setFilterStage] = useState<string>('all');
@@ -115,11 +123,65 @@ export function FinancePage({ onBack }: FinancePageProps) {
       };
     });
 
-  const handleAddTransaction = (data: Omit<Transaction, 'id'>) => {
-    const newId = `T${String(transactions.length + 1).padStart(3, '0')}`;
-    setTransactions([{ id: newId, ...data }, ...transactions]);
-    setShowAddForm(false);
+  const handleAddTransaction = async (data: Omit<Transaction, 'id'>) => {
+    try {
+      const { data: inserted, error } = await supabase
+        .from('financial_transactions')
+        .insert([
+          {
+            type: data.type,
+            title: data.title,
+            amount: Number(data.amount),
+            transaction_date: data.date,
+            education_stage: data.educationStage,
+            person_name: data.personName,
+            description: data.description
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newTransaction: Transaction = {
+        id: inserted.id,
+        type: inserted.type as 'expense' | 'revenue',
+        title: inserted.title,
+        amount: inserted.amount,
+        date: inserted.transaction_date,
+        educationStage: inserted.education_stage,
+        personName: inserted.person_name,
+        description: inserted.description
+      };
+
+      setTransactions(prev => [newTransaction, ...prev]);
+      setShowAddForm(false);
+
+      // Reset form state for the next entry
+      setFormData({
+        type: 'revenue',
+        title: '',
+        amount: '',
+        date: new Date().toISOString().split('T')[0],
+        educationStage: 'all',
+        personName: '',
+        description: ''
+      });
+
+      toast.success('تم تسجيل المعاملة بنجاح');
+    } catch (error) {
+      console.error('Error saving transaction:', error);
+      toast.error('فشل في حفظ المعاملة');
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        جاري تحميل البيانات المالية...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-8">
@@ -311,6 +373,8 @@ export function FinancePage({ onBack }: FinancePageProps) {
         <AddTransactionModal
           onClose={() => setShowAddForm(false)}
           onSubmit={handleAddTransaction}
+          formData={formData}
+          setFormData={setFormData}
         />
       )}
     </div>
@@ -320,19 +384,27 @@ export function FinancePage({ onBack }: FinancePageProps) {
 interface AddTransactionModalProps {
   onClose: () => void;
   onSubmit: (data: Omit<Transaction, 'id'>) => void;
+  formData: {
+    type: 'expense' | 'revenue';
+    title: string;
+    amount: string;
+    date: string;
+    educationStage: string;
+    personName: string;
+    description: string;
+  };
+  setFormData: React.Dispatch<React.SetStateAction<{
+    type: 'expense' | 'revenue';
+    title: string;
+    amount: string;
+    date: string;
+    educationStage: string;
+    personName: string;
+    description: string;
+  }>>;
 }
 
-function AddTransactionModal({ onClose, onSubmit }: AddTransactionModalProps) {
-  const [formData, setFormData] = useState({
-    type: 'expense' as 'expense' | 'revenue',
-    title: '',
-    amount: '',
-    date: new Date().toISOString().split('T')[0],
-    educationStage: 'all',
-    personName: '',
-    description: ''
-  });
-
+function AddTransactionModal({ onClose, onSubmit, formData, setFormData }: AddTransactionModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
@@ -442,7 +514,7 @@ function AddTransactionModal({ onClose, onSubmit }: AddTransactionModalProps) {
 
           <div>
             <label className="block mb-2 text-sm text-foreground">
-              {formData.type === 'revenue' ? 'الشخص الذي أعطى' : 'الشخص الذي استلم'} *
+              {formData.type === 'revenue' ? 'المصدر' : 'الشخص الذي استلم'} *
             </label>
             <input
               type="text"

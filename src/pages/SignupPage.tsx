@@ -172,108 +172,53 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     setIsLoading(true);
 
     try {
-      const phoneRegex = /^[0-9]{11}$/;
-      const phonesToCheck = [formData.mobile].filter(Boolean);
+      const servantPayload = {
+        full_name: formData.fullName,
+        gender: formData.gender,
+        mobile_personal: formData.mobile,
+        educational_stage: formData.educationStage, // Their personal education
+        academic_year: formData.educationYear,
+        class_stage: formData.classStage,           // The class they serve in
+        class_or_job: formData.classStage,          // Fallback just in case
+        father_of_confession: formData.confessionFather,
+        address_area: formData.area,
+        address_details: formData.address,
+        birth_date: formData.dateOfBirth || null
+      };
 
-      for (const phone of phonesToCheck) {
-        if (!phoneRegex.test(phone)) {
-          toast.error('رقم الهاتف يجب أن يتكون من 11 رقم');
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      // If editData exists, update servant record instead of creating new
       if (editData && editData.id) {
-        const formattedClassOrJob = formData.studyOrWorkPlace || null;
+        // Update existing servant
+        const { error } = await supabase
+          .from('servants')
+          .update(servantPayload)
+          .eq('id', editData.id);
 
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(editData.id);
-
-        let updateQuery = supabase.from('servants').update({
-          full_name: formData.fullName,
-          gender: formData.gender,
-          educational_stage: formData.educationStage,
-          academic_year: formData.educationYear || null,
-          class_or_job: formattedClassOrJob,
-          birth_date: formData.dateOfBirth || null,
-          father_of_confession: formData.confessionFather,
-          mobile_personal: formData.mobile,
-          address_area: formData.area,
-          address_details: formData.address,
-          role: formData.role,
-          class_stage: formData.role === 'admin' ? null : formData.classStage
-        });
-
-        if (isUuid) {
-          updateQuery = updateQuery.eq('id', editData.id);
-        } else {
-          updateQuery = updateQuery.eq('teacher_id', editData.id);
-        }
-
-        const { error: updateError } = await updateQuery;
-
-        if (updateError) throw updateError;
+        if (error) throw error;
 
         toast.success('تم تحديث بيانات الخادم بنجاح');
-        onSignup({ ...formData, teacherId: editData.teacher_id || editData.teacherId });
-        clearEdit?.();
       } else {
-        const generatedTeacherId = await generateSmartId(formData.role, formData.classStage);
-        const email = `${generatedTeacherId.toLowerCase()}@aribsalin.com`;
+        // Insert new servant
+        const { error } = await supabase
+          .from('servants')
+          .insert([servantPayload]);
 
-        let formattedClassOrJob = formData.studyOrWorkPlace || null;
-        if (formData.educationStage === 'university' || formData.educationStage === 'جامعي') {
-          const uni = formData.universityName?.trim();
-          const col = formData.collegeName?.trim();
-          if (uni && col) {
-            formattedClassOrJob = `${uni} - ${col}`;
-          } else if (uni || col) {
-            formattedClassOrJob = uni || col || null;
-          }
-        }
+        if (error) throw error;
 
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email,
-          password: formData.password,
-        });
-
-        if (authError) throw authError;
-
-        if (authData.user) {
-          const { error: dbError } = await supabase.from('servants').insert([{
-            id: authData.user.id,
-            teacher_id: generatedTeacherId,
-            full_name: formData.fullName,
-            gender: formData.gender,
-            educational_stage: formData.educationStage,
-            academic_year: formData.educationYear,
-            class_or_job: formattedClassOrJob,
-            birth_date: formData.dateOfBirth || null,
-            father_of_confession: formData.confessionFather,
-            mobile_personal: formData.mobile,
-            address_area: formData.area,
-            address_details: formData.address,
-            role: formData.role,
-            class_stage: formData.role === 'admin' ? null : formData.classStage
-          }]);
-
-          if (dbError) throw dbError;
-
-          toast.success(`تم إنشاء الحساب بنجاح! رقم الدخول الخاص بك هو: ${generatedTeacherId}`, {
-            duration: 15000,
-            description: 'يرجى الاحتفاظ بهذا الرقم لتسجيل الدخول لاحقاً'
-          });
-
-          onSignup({ ...formData, teacherId: generatedTeacherId });
-        }
+        toast.success('تم تسجيل الخادم بنجاح');
       }
+
+      // Notify parent component to redirect or update state
+      if (onSignup) {
+        onSignup(formData as any);
+      }
+
+      clearEdit?.();
     } catch (error: any) {
-      console.error(error);
-      toast.error('حدث خطأ أثناء التسجيل: ' + error.message);
+      console.error('Error saving servant:', error);
+      toast.error('حدث خطأ أثناء حفظ البيانات: ' + error.message);
     } finally {
       setIsLoading(false);
     }

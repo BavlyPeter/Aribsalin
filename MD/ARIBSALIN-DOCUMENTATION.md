@@ -1,8 +1,8 @@
 # اريبصالين - Summer Festival Management System
 ## Complete Technical Documentation
 
-**Current Version:** 1.2.0 (Architecture & Portal Update)  
-**Last Updated:** May 28, 2026
+**Current Version:** 1.4.0 (Statistics Stability & Attendance Timeline Fixes)  
+**Last Updated:** May 31, 2026
 
 ---
 
@@ -41,6 +41,51 @@ This release focuses on architecture improvements, new entry flows (servant vs s
 - **Dashboard personalization:** Replaced the top metrics cards with a personalized servant welcome banner; `AppMain` now tracks `currentServant` and the banner shows role/stage-aware greeting.
 - **Forms & UI:** `RegistrationForm`, `SignupPage`, and other forms updated to use the split address fields, the `area` select, and the new types. Submit flows include loading states and toasts for user feedback.
 - **Build & verification:** Project builds successfully with `pnpm build` after these changes; Supabase runtime requires environment variables to function in production.
+
+---
+
+## 🆕 What's New in v1.3.0 (May 30, 2026)
+
+This release focuses on UI simplification, tolerant Arabic search, advanced participant filtering, and correcting participant ID displays to use the database `participant_id` field instead of the UUID.
+
+- **Servant info card refinement:** The dashboard welcome card now places the servant avatar/name group on one side and a compact logout button on the opposite side. Logout now shows a confirmation dialog before signing out.
+- **Dashboard simplification:** Removed the standalone “إدارة النقاط يدوياً” button from the dashboard and removed the unused `manualPoints` navigation branch from the shell while keeping the per-card point actions intact.
+- **Participant ID display fix:** Participant profile and ID card views now display `participant_id` instead of the UUID, with a safe fallback when the ID is missing.
+- **Tolerant Arabic search:** Added `normalizeArabicText()` to remove diacritics, unify Hamza forms, normalize `ة/ه` and `ى/ي`, and improve search matching in Arabic text.
+- **Unified participant filtering:** `ParticipantsList` now uses one always-visible search/filter card with class, gender, and area filters. The class filter maps stored stage/year combinations into simplified class buckets.
+- **Manual points search parity:** `ManualPointsModal` now uses the same normalized Arabic search behavior so name and ID matching are consistent across both participant lists and manual point management.
+- **Type alignment:** The shared participant type now includes `participant_id?: string | number;` so UI labels and filters reflect the actual database field name.
+
+---
+
+## 🆕 What's New in v1.4.0 (May 31, 2026)
+
+This release focuses on removing the remaining React white-screen crashes in the analytics view, hardening the attendance timeline chart, and making attendance data loading resilient when Supabase joins fail.
+
+- **Statistics page crash-proofing:** `StatisticsPage` now builds all summary and leaderboard data inside a safe `useMemo` result object so the page never returns `null` and no chart or list depends on an unguarded array.
+- **Safe leaderboard rendering:** Top participants and top attendance lists now render from precomputed arrays with fallback values, avoiding direct `.map()` access on potentially missing data.
+- **Attendance rate fixes:** The attendance statistics block now reads from memoized stats fields only, removing reference errors that were crashing the page during render.
+- **Stage-specific attendance rankings:** The bottom leaderboard now computes the “Top 10 by Attendance” per education stage instead of reusing the global attendance ranking.
+- **Attendance timeline zero-line fallback:** When no attendance records exist yet, the line chart now renders a zero-value point for today so the Recharts chart still displays a baseline instead of disappearing.
+- **Chart binding hardening:** The attendance line chart now uses safe `name/value` data keys and a zero-based Y axis domain so it remains visible and consistent even with empty data.
+- **Supabase attendance fetch resilience:** `AppMain` no longer relies on the broken `attendance_logs` join; participants and attendance logs are fetched separately and merged in memory to avoid schema-cache / PostgREST join failures.
+- **Teachers route prop fix:** The teachers page wiring was aligned with the real `TeachersPageProps` interface so the app shell no longer throws on that route.
+
+Files touched in this release (not exhaustive):
+- `src/pages/StatisticsPage.tsx` — crash-proof stats object, safe leaderboards, attendance timeline fallback, safe chart bindings
+- `src/components/layout/AppMain.tsx` — separate participants/logs fetch and in-memory attendance merge
+- `src/pages/TeachersPage.tsx` / route wiring — prop alignment for the teachers page
+
+---
+
+Files touched in this release (not exhaustive):
+- `src/pages/Dashboard.tsx` — compact servant info card and logout confirmation
+- `src/components/shared/ParticipantsList.tsx` — tolerant search + unified filters
+- `src/components/modals/ManualPointsModal.tsx` — tolerant search parity
+- `src/pages/StudentProfile.tsx` — participant ID display uses `participant_id`
+- `src/components/shared/IDCard.tsx` — participant ID badge uses `participant_id`
+- `src/types/index.ts` — participant type updated to include `participant_id`
+- `src/utils/textUtils.ts` — Arabic normalization helper
 
 Files touched in this release (not exhaustive):
 - `src/types/index.ts` — centralized types and `area` addition
@@ -95,13 +140,29 @@ This section enumerates concrete code changes, file-by-file, made during the rec
 
 - `src/pages/StudentProfile.tsx`: Shows `area` + `address` fields, QR download helper, and attendance/points stats.
 
+- `src/pages/StatisticsPage.tsx`:
+  - Replaced fragile render-time calculations with a safe memoized stats object that always returns arrays for charts and leaderboards.
+  - Added `topAttendance` and used safe fallbacks for `topParticipants`, `genderData`, `stageData`, and all attendance metrics.
+  - Moved attendance timeline grouping into `useMemo`, added a zero-line fallback point for days with no attendance, and bound the line chart to `name/value` data.
+  - Hardened per-stage “Top 10 by Attendance” and attendance-rate statistics to prevent React render crashes.
+
+- `src/components/layout/AppMain.tsx`:
+  - Replaced the broken joined attendance query with separate participant and attendance-log fetches.
+  - Merged logs into participant state in memory so the dashboard continues to work even if the Supabase schema cache or join metadata is stale.
+  - Fixed the teachers route prop wiring to match `TeachersPageProps`.
+
 - `MD/ARIBSALIN-DOCUMENTATION.md`: This file updated (you are reading it) — added this detailed change log and release notes.
 
 Additional notes about behavior and verification:
 - Real-time phone UX: all mobile inputs now strip non-numeric characters while typing and limit entry to 11 digits (`maxLength={11}`), plus `handleSubmit` still enforces 11-digit validation.
 - Parents' mobile fields in the participant form were made optional per the latest UX request.
 - All DB writes that affect points create a `points_transactions` record and update `participants.points_balance`.
-- Build & checks: modified files were validated with TypeScript checks and production build runs (`pnpm build`) during the session; builds succeeded (some large-chunk warnings only).
+- Build & checks: modified files were validated with TypeScript checks during the session; `StatisticsPage.tsx` and `AppMain.tsx` were rechecked after each crash fix.
+
+Latest stability notes:
+- The attendance timeline now always has at least one point to render, so the chart remains visible even before the first check-in.
+- The app shell no longer depends on the Supabase join path that was crashing the UI.
+- The statistics page now guards all `.map()` calls and attendance count references that were causing React render failures.
 
 If you want, I can also:
 - Produce a compact `CHANGELOG.md` with the same entries formatted as release notes.
@@ -3318,8 +3379,8 @@ This project includes multiple documentation files:
 
 **End of Documentation**
 
-**Last Updated:** May 28, 2026  
-**Current Version:** 1.2.0  
+**Last Updated:** May 30, 2026  
+**Current Version:** 1.3.0  
 **Church:** كنيسة الشهيد العظيم مارمينا العجايبي والقديس العظيم البابا كيرلس السادس - أسوان
 
 

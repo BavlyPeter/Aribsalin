@@ -1,0 +1,100 @@
+- default_shadcn_theme.css
+- index.html
+- package.json
+- pnpm-workspace.yaml
+- postcss.config.mjs
+- vercel.json
+- vite.config.ts
+- MD/
+  - ARIBSALIN-DOCUMENTATION.md
+  - CHANGELOG.md
+  - FEATURES.md
+  - Guidelines.md
+  - ID_CARD_DOCUMENTATION.md
+  - README_DOCS.md
+  - README.md
+  - RECENT_UPDATES.md
+  - TROUBLESHOOTING.md
+- src/
+  - main.tsx
+  - app/
+    - App.tsx
+    - components/
+      - AddPointsModal.tsx
+      - AppMain.tsx
+      - Dashboard.tsx
+      - EnhancedDashboard.tsx
+      - EnhancedRegistrationForm.tsx
+      - FinancePage.tsx
+      - IDCard.tsx
+      - LoginPage.tsx
+      - ManualPointsModal.tsx
+      - MarketModal.tsx
+      - ParticipantsList.tsx
+      - QRScanner.tsx
+      - RegistrationForm.tsx
+      - SignupPage.tsx
+      - StatisticsPage.tsx
+      - StudentProfile.tsx
+      - TeachersPage.tsx
+      - TestQRCode.tsx
+      - WelcomeScreen.tsx
+      - figma/
+        - ImageWithFallback.tsx
+      - ui/
+        - accordion.tsx
+        - alert-dialog.tsx
+        - alert.tsx
+        - aspect-ratio.tsx
+        - avatar.tsx
+        - badge.tsx
+        - breadcrumb.tsx
+        - button.tsx
+        - calendar.tsx
+        - card.tsx
+        - carousel.tsx
+        - chart.tsx
+        - checkbox.tsx
+        - collapsible.tsx
+        - command.tsx
+        - context-menu.tsx
+        - dialog.tsx
+        - drawer.tsx
+        - dropdown-menu.tsx
+        - form.tsx
+        - hover-card.tsx
+        - input-otp.tsx
+        - input.tsx
+        - label.tsx
+        - menubar.tsx
+        - navigation-menu.tsx
+        - pagination.tsx
+        - popover.tsx
+        - progress.tsx
+        - radio-group.tsx
+        - resizable.tsx
+        - scroll-area.tsx
+        - select.tsx
+        - separator.tsx
+        - sheet.tsx
+        - sidebar.tsx
+        - skeleton.tsx
+        - slider.tsx
+        - sonner.tsx
+        - switch.tsx
+        - table.tsx
+        - tabs.tsx
+        - textarea.tsx
+        - toggle-group.tsx
+        - toggle.tsx
+        - tooltip.tsx
+        - use-mobile.ts
+        - utils.ts
+  - assets/
+  - imports/
+  - styles/
+    - fonts.css
+    - globals.css
+    - index.css
+    - tailwind.css
+    - theme.css
