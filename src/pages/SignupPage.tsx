@@ -248,7 +248,8 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
         father_of_confession: formData.confessionFather,
         address_area: formData.area,
         address_details: formData.address,
-        birth_date: formData.dateOfBirth || null
+        birth_date: formData.dateOfBirth || null,
+        role: formData.role
       };
 
       if (editData && editData.id) {
