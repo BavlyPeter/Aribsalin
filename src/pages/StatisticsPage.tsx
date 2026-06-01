@@ -42,8 +42,8 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
     const males = participants.filter(p => p.data?.gender === 'male').length;
     const females = participants.filter(p => p.data?.gender === 'female').length;
     const genderData = [
-      { name: 'ذكور', value: males, color: '#3b82f6' },
-      { name: 'إناث', value: females, color: '#ec4899' }
+      { id: 'male', name: 'ذكور', value: males, color: '#3b82f6' },
+      { id: 'female', name: 'إناث', value: females, color: '#ec4899' }
     ].filter(d => d.value > 0);
 
     const totalAttendancePercentage = participants.reduce((sum, p) => {
@@ -56,13 +56,16 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
     const topParticipants = [...participants]
       .sort((a, b) => (b.points || 0) - (a.points || 0))
       .slice(0, 5)
-      .map(p => ({
-        id: p.id,
-        name: p.name || p.data?.fullName || 'بدون اسم',
-        points: p.points || 0,
-        stage: p.data?.educationStage || p.data?.educational_stage || 'غير محدد',
-        attendanceCount: p.attendanceDays?.length || 0
-      }));
+      .map(p => {
+        const pdata: any = (p as any).data || {};
+        return {
+          id: p.id,
+          name: p.name || pdata.fullName || 'بدون اسم',
+          points: p.points || 0,
+          stage: pdata['educational_stage'] || pdata.educationStage || 'غير محدد',
+          attendanceCount: p.attendanceDays?.length || 0
+        };
+      });
 
     const topAttendance = [...participants]
       .sort((a, b) => ((b.attendanceDays?.length || 0) - (a.attendanceDays?.length || 0)))
@@ -75,15 +78,32 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
 
     const totalPointsDistributed = participants.reduce((sum, p) => sum + (p.points || 0), 0);
 
-    const stageCounts: Record<string, number> = {};
+    const stageMap: Record<string, { male: number; female: number; total: number }> = {};
     participants.forEach(p => {
-      const stageKey = p.data?.educationStage || p.data?.educational_stage || 'أخرى';
-      stageCounts[stageKey] = (stageCounts[stageKey] || 0) + 1;
+      const pdata: any = (p as any).data || {};
+      const rawStage = String(pdata['educational_stage'] || pdata.educationStage || 'أخرى').trim() || 'أخرى';
+      const stageKey = rawStage;
+      const gender = String(pdata.gender || '').trim().toLowerCase();
+
+      if (!stageMap[stageKey]) {
+        stageMap[stageKey] = { male: 0, female: 0, total: 0 };
+      }
+
+      if (gender === 'male') {
+        stageMap[stageKey].male += 1;
+      } else if (gender === 'female') {
+        stageMap[stageKey].female += 1;
+      }
+
+      stageMap[stageKey].total += 1;
     });
 
-    const stageData = Object.entries(stageCounts).map(([name, value]) => ({
-      name: educationStageLabels[name] || name,
-      value
+    const stageData = Object.entries(stageMap).map(([key, counts]) => ({
+      id: key,
+      name: educationStageLabels[key] || key,
+      ذكور: counts.male,
+      إناث: counts.female,
+      total: counts.total
     }));
 
     const allAttendanceDates = Array.from(new Set(participants.flatMap(p => p.attendanceDays || []))).sort();
@@ -412,7 +432,16 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
 
         {/* Points Statistics by Class */}
         {Object.entries(educationStageLabels).map(([stageKey, stageLabel]) => {
-          const stageParticipants = participants.filter(p => getParticipantClassStage(p.data?.educationStage || '', p.data?.educationYear || '') === stageKey);
+          
+          const stageParticipants = participants.filter(
+            p => {
+              const pdata: any = (p as any).data || {};
+              return getParticipantClassStage(
+                pdata['educational_stage'] || pdata.educationStage || '',
+                pdata['academic_year'] || pdata.educationYear || ''
+              ) === stageKey;
+            }
+          );
 
           if (stageParticipants.length === 0) return null;
 

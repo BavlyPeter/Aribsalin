@@ -97,15 +97,18 @@ export function ParticipantsList({ participants, onEdit, onManagePoints, onDelet
                          normalizedId.includes(normalizedSearchQuery);
 
     const pData = p.data || {};
-    const matchesGender = !filterGender || pData.gender === filterGender;
+    const normalizedGender = String(pData.gender || '').trim();
+    const matchesGender = !filterGender || normalizedGender === String(filterGender).trim();
 
-    const pStage = pData.educationStage || pData.educational_stage || '';
-    const pYear = pData.educationYear || pData.academic_year || '';
+    const pStage = String(pData.educational_stage || pData.educationStage || '').trim();
+    const pYear = String(pData.educationYear || pData.academic_year || '').trim();
     const calculatedClass = getParticipantClass(pStage, pYear);
-    const matchesClass = !filterClass || calculatedClass === filterClass;
+    const normalizedFilterClass = String(filterClass || '').trim();
+    const matchesClass = !normalizedFilterClass || calculatedClass === normalizedFilterClass || pStage === normalizedFilterClass;
 
-    const pArea = pData.area || pData.address_area || '';
-    const matchesArea = !filterArea || pArea === filterArea;
+    const pArea = String(pData.address_area || pData.area || '').trim();
+    const normalizedFilterArea = String(filterArea || '').trim();
+    const matchesArea = !normalizedFilterArea || pArea === normalizedFilterArea;
 
     return matchesSearch && matchesGender && matchesClass && matchesArea;
   });

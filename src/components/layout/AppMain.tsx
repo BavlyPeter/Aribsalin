@@ -79,76 +79,76 @@ export default function AppMain() {
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const fetchFestivalData = async () => {
-      try {
-        // Step 1: Fetch all participants (Safe query)
-        const { data: pData, error: pError } = await supabase
-          .from('participants')
-          .select('*');
+  const fetchFestivalData = async () => {
+    try {
+      // Step 1: Fetch all participants (Safe query)
+      const { data: pData, error: pError } = await supabase
+        .from('participants')
+        .select('*');
 
-        if (pError) throw pError;
+      if (pError) throw pError;
 
-        if (pData && pData.length > 0) {
-          // Step 2: Fetch attendance logs for these participants independently
-          const pIds = pData.map(p => p.id);
-          const { data: logsData, error: logsError } = await supabase
-            .from('attendance_logs')
-            .select('participant_id, created_at, scanned_at, attendance_date')
-            .in('participant_id', pIds);
+      if (pData && pData.length > 0) {
+        // Step 2: Fetch attendance logs for these participants independently
+        const pIds = pData.map(p => p.id);
+        const { data: logsData, error: logsError } = await supabase
+          .from('attendance_logs')
+          .select('participant_id, created_at, scanned_at, attendance_date')
+          .in('participant_id', pIds);
 
-          if (logsError) {
-            console.warn('Could not fetch attendance logs, continuing without them:', logsError);
-          }
-
-          const today = new Date().toISOString().split('T')[0];
-
-          // Step 3: Merge them in memory
-          const mapped = pData.map(p => {
-            // Find all logs for this specific participant
-            const pLogs = (logsData || []).filter(log => log.participant_id === p.id);
-
-            // Extract dates
-            const dates = pLogs.map((log: any) => {
-              const dateStr = log.attendance_date || log.created_at || log.scanned_at;
-              return dateStr ? String(dateStr).split('T')[0] : '';
-            }).filter(Boolean);
-
-            const uniqueAttendanceDays = Array.from(new Set(dates)) as string[];
-
-            return {
-              id: p.id,
-              participant_id: p.participant_id,
-              name: p.full_name,
-              points: p.points_balance || 0,
-              attended: uniqueAttendanceDays.includes(today),
-              attendanceDays: uniqueAttendanceDays,
-              data: {
-                fullName: p.full_name,
-                gender: p.gender,
-                educationStage: p.educational_stage,
-                educationYear: p.academic_year,
-                studyOrWorkPlace: p.class_or_job,
-                confessionFather: p.father_of_confession,
-                personalMobile: p.mobile_personal,
-                fatherMobile: p.mobile_father,
-                motherMobile: p.mobile_mother,
-                area: p.address_area,
-                address: p.address_details,
-                dateOfBirth: p.birth_date
-              }
-            };
-          });
-
-          setParticipants(mapped);
-        } else {
-          setParticipants([]);
+        if (logsError) {
+          console.warn('Could not fetch attendance logs, continuing without them:', logsError);
         }
-      } catch (error) {
-        console.error('Error fetching participants data:', error);
-      }
-    };
 
+        const today = new Date().toISOString().split('T')[0];
+
+        // Step 3: Merge them in memory
+        const mapped = pData.map(p => {
+          // Find all logs for this specific participant
+          const pLogs = (logsData || []).filter(log => log.participant_id === p.id);
+
+          // Extract dates
+          const dates = pLogs.map((log: any) => {
+            const dateStr = log.attendance_date || log.created_at || log.scanned_at;
+            return dateStr ? String(dateStr).split('T')[0] : '';
+          }).filter(Boolean);
+
+          const uniqueAttendanceDays = Array.from(new Set(dates)) as string[];
+
+          return {
+            id: p.id,
+            participant_id: p.participant_id,
+            name: p.full_name,
+            points: p.points_balance || 0,
+            attended: uniqueAttendanceDays.includes(today),
+            attendanceDays: uniqueAttendanceDays,
+            data: {
+              fullName: p.full_name,
+              gender: p.gender,
+              educationStage: p.educational_stage,
+              educationYear: p.academic_year,
+              studyOrWorkPlace: p.class_or_job,
+              confessionFather: p.father_of_confession,
+              personalMobile: p.mobile_personal,
+              fatherMobile: p.mobile_father,
+              motherMobile: p.mobile_mother,
+              area: p.address_area,
+              address: p.address_details,
+              dateOfBirth: p.birth_date
+            }
+          };
+        });
+
+        setParticipants(mapped);
+      } else {
+        setParticipants([]);
+      }
+    } catch (error) {
+      console.error('Error fetching participants data:', error);
+    }
+  };
+
+  useEffect(() => {
     fetchFestivalData();
   }, []);
 
@@ -293,22 +293,135 @@ export default function AppMain() {
     }
   };
 
-  const handleRegistrationSubmit = (data: StudentData, participantId?: string) => {
-    const newId = participantId || `P${String(participants.length + 1).padStart(3, '0')}`;
-    const newParticipant: Participant = {
-      id: newId,
-      name: data.fullName,
-      points: 0,
-      attended: false,
-      data,
-      attendanceDays: []
-    };
+  const handleRegistrationSubmit = async (data: StudentData, participantId?: string) => {
+    try {
+      const normalizedFullName = String(data.fullName || '').trim();
 
-    setParticipants(prev => [...prev, newParticipant]);
-    toast.success('تم تسجيل المشارك بنجاح!', {
-      description: `رقم المشارك: ${newId}`
-    });
-    setCurrentView('dashboard');
+      // 1) Enforce unique participant full name (exact match), excluding the current record in edit mode.
+      let duplicateQuery = supabase
+        .from('participants')
+        .select('id, participant_id')
+        .eq('full_name', normalizedFullName)
+        .limit(1);
+
+      if (participantId) {
+        const isUuid = String(participantId).includes('-');
+        duplicateQuery = isUuid
+          ? duplicateQuery.neq('id', participantId)
+          : duplicateQuery.neq('participant_id', participantId);
+      }
+
+      const { data: duplicateParticipant, error: duplicateError } = await duplicateQuery.maybeSingle();
+      if (duplicateError) throw duplicateError;
+
+      if (duplicateParticipant) {
+        toast.error('هذا المخدوم مسجل بالفعل في النظام!');
+        return;
+      }
+
+      const payload = {
+        full_name: normalizedFullName,
+        gender: data.gender,
+        educational_stage: data.educationStage,
+        academic_year: data.educationYear,
+        class_or_job: data.studyOrWorkPlace,
+        father_of_confession: data.confessionFather,
+        mobile_personal: data.personalMobile,
+        mobile_father: data.fatherMobile,
+        mobile_mother: data.motherMobile,
+        address_area: data.area,
+        address_details: data.address,
+        birth_date: data.dateOfBirth || null
+      };
+
+      if (participantId) {
+        // Edit Mode: Update existing participant
+        const isUuid = String(participantId).includes('-');
+
+        let updateQuery = supabase
+          .from('participants')
+          .update(payload);
+
+        updateQuery = isUuid
+          ? updateQuery.eq('id', participantId)
+          : updateQuery.eq('participant_id', participantId);
+
+        const { error } = await updateQuery;
+
+        if (error) throw error;
+        toast.success('تم تحديث بيانات المشارك بنجاح');
+      } else {
+        // Determine Prefix based on Education Stage
+        const s = String(data.educationStage || '').toLowerCase();
+        const y = String(data.educationYear || '').toLowerCase();
+        let prefix = 'X';
+        if (s.includes('حضانة') || s === 'kg') prefix = 'K';
+        else if (s.includes('ابتدائي') || s.includes('primary')) {
+          if (y.includes('أول') || y.includes('ثاني')) prefix = 'P1';
+          else if (y.includes('ثالث') || y.includes('رابع')) prefix = 'P2';
+          else prefix = 'P3';
+        }
+        else if (s.includes('إعدادي') || s.includes('preparatory')) prefix = 'M';
+        else if (s.includes('ثانوي') || s.includes('secondary')) prefix = 'S';
+        else if (s.includes('جامعي') || s.includes('university') || s.includes('خريج')) prefix = 'U';
+
+        // Gap-Filling Algorithm
+        const { data: existingIds, error: fetchError } = await supabase
+          .from('participants')
+          .select('participant_id')
+          .like('participant_id', `${prefix}%`);
+
+        if (fetchError) throw fetchError;
+
+        let nextNum = 1;
+        if (existingIds && existingIds.length > 0) {
+          const numbers = existingIds
+            .map(row => parseInt(String(row.participant_id).replace(prefix, ''), 10))
+            .filter(n => !isNaN(n))
+            .sort((a, b) => a - b);
+
+          for (const num of numbers) {
+            if (num === nextNum) nextNum++;
+            else if (num > nextNum) break; // Found the missing gap!
+          }
+        }
+        const smartId = `${prefix}${String(nextNum).padStart(3, '0')}`;
+
+        // Insert new participant with calculated Smart ID
+        const { error } = await supabase
+          .from('participants')
+          .insert([{ ...payload, participant_id: smartId, points_balance: 0 }]);
+
+        if (error) throw error;
+        toast.success('تم تسجيل المشارك بنجاح');
+      }
+
+      await fetchFestivalData();
+      setCurrentView('dashboard');
+    } catch (err: any) {
+      console.error('Error saving participant:', err);
+      toast.error(err?.message || 'حدث خطأ أثناء حفظ البيانات');
+    }
+  };
+
+  const handleDeleteParticipant = async (id: string) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذا المشارك؟')) return;
+
+    try {
+      const { error } = await supabase
+        .from('participants')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('تم حذف المشارك بنجاح');
+
+      // Update local state immediately
+      setParticipants(prev => prev.filter(p => p.id !== id));
+    } catch (err: any) {
+      console.error('Error deleting participant:', err);
+      toast.error('حدث خطأ أثناء الحذف');
+    }
   };
 
   const handleScanSuccess = (decodedText: string) => {
@@ -322,11 +435,11 @@ export default function AppMain() {
         }
 
         try {
-          // 1. Verify participant by Smart ID (participant_id)
+          // 1. Verify participant by Smart ID (participant_id) or DB UUID (id)
           const { data: participant, error: fetchError } = await supabase
             .from('participants')
             .select('*')
-            .eq('participant_id', scanned)
+            .or(`participant_id.eq.${scanned},id.eq.${scanned}`)
             .single();
 
           if (fetchError || !participant) {
@@ -342,7 +455,8 @@ export default function AppMain() {
             .insert([
               {
                 participant_id: participantUuid,
-                servant_id: currentServant.id
+                servant_id: currentServant.id,
+                attendance_date: new Date().toISOString().split('T')[0]
               }
             ]);
 
@@ -585,27 +699,53 @@ export default function AppMain() {
     }
   };
 
-  const handleManualPointsConfirm = (participantId: string, points: number, action: 'add' | 'subtract') => {
-    const participant = findParticipantByIdentifier(participantId);
-    if (!participant) return;
+  const handleManualPointsConfirm = async (participantId: string, points: number, action: 'add' | 'subtract') => {
+    try {
+      const amount = action === 'add' ? points : -points;
 
-    setParticipants(prev =>
-      prev.map(p =>
-        String(p.id || '').trim().toUpperCase() === String(participantId).trim().toUpperCase() ||
-        String(p.participant_id || '').trim().toUpperCase() === String(participantId).trim().toUpperCase()
-          ? {
-              ...p,
-              points: action === 'add' ? p.points + points : p.points - points
-            }
-          : p
-      )
-    );
+      // 1. Get current points to calculate new balance
+      const { data: pData } = await supabase
+        .from('participants')
+        .select('points_balance')
+        .eq('id', participantId)
+        .single();
 
-    toast.success(action === 'add' ? 'تم إضافة النقاط بنجاح!' : 'تم خصم النقاط بنجاح!', {
-      description: `${participant.name} - ${action === 'add' ? '+' : '-'}${points} نقطة`
-    });
+      if (!pData) throw new Error('المشارك غير موجود');
 
-    setCurrentView('dashboard');
+      const newBalance = (pData.points_balance || 0) + amount;
+
+      // 2. Update Participant Balance
+      const { error: updateError } = await supabase
+        .from('participants')
+        .update({ points_balance: newBalance })
+        .eq('id', participantId);
+
+      if (updateError) throw updateError;
+
+      // 3. Insert into Transaction History
+      const { error: logError } = await supabase
+        .from('points_transactions')
+        .insert([{
+          participant_id: participantId,
+          points_amount: amount,
+          transaction_type: 'manual',
+          description: `تعديل يدوي: ${action === 'add' ? 'إضافة' : 'خصم'} ${points} نقطة`
+        }]);
+
+      if (logError) throw logError;
+
+      toast.success('تم تعديل النقاط بنجاح');
+
+      // Update local state to reflect change
+      setParticipants(prev => prev.map(p => 
+        p.id === participantId ? { ...p, points: newBalance } : p
+      ));
+
+      setCurrentView('dashboard'); // Close modal
+    } catch (err: any) {
+      console.error('Error updating points:', err);
+      toast.error('فشل في تعديل النقاط: ' + err.message);
+    }
   };
 
   // --- Edit / Manage points handlers ---
@@ -738,7 +878,7 @@ export default function AppMain() {
             }))}
             onEditRequest={(rec) => handleEditRequest(rec, 'participant')}
             onManagePoints={(rec) => handleManagePointsRequest(rec)}
-            onDeleteParticipant={(id: string) => setParticipants(prev => prev.filter(p => p.id !== id))}
+            onDeleteParticipant={handleDeleteParticipant}
           />
         )}
 

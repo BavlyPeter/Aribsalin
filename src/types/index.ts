@@ -2,7 +2,9 @@ export interface StudentData {
   fullName: string;
   gender: 'male' | 'female' | '';
   educationStage: string;
+  educational_stage?: string;
   educationYear: string;
+  academic_year?: string;
   studyOrWorkPlace: string;
   universityName?: string;
   collegeName?: string;
@@ -12,6 +14,7 @@ export interface StudentData {
   fatherMobile: string;
   motherMobile: string;
   area: string;
+  address_area?: string;
   address: string;
   dateOfBirth: string;
 }

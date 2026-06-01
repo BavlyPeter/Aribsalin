@@ -188,7 +188,39 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
     setIsLoading(true);
 
     try {
+      // Determine Prefix based on Role
+      let prefix = 'T'; // Default Teacher
+      if (formData.role === 'admin') prefix = 'A';
+      else if (formData.role === 'supervisor') prefix = 'S';
+
+      // Gap-Filling Algorithm for Teacher ID
+      const { data: existingIds, error: fetchError } = await supabase
+        .from('servants')
+        .select('teacher_id')
+        .like('teacher_id', `${prefix}%`);
+
+      if (fetchError && fetchError.code !== '42703') {
+        // ignore 42703 if column doesn't exist yet in some environments, but throw otherwise
+        console.warn('Could not fetch existing teacher_ids:', fetchError);
+      }
+
+      let nextNum = 1;
+      if (existingIds && existingIds.length > 0) {
+        const numbers = existingIds
+          .map(row => parseInt(String(row.teacher_id).replace(prefix, ''), 10))
+          .filter(n => !isNaN(n))
+          .sort((a, b) => a - b);
+
+        for (const num of numbers) {
+          if (num === nextNum) nextNum++;
+          else if (num > nextNum) break; // Found the missing gap!
+        }
+      }
+      const finalTeacherId = `${prefix}${String(nextNum).padStart(2, '0')}`;
+
+      // Build payload ensuring teacher_id is explicitly included to fix the Not-Null constraint
       const servantPayload = {
+        teacher_id: finalTeacherId,
         full_name: formData.fullName,
         gender: formData.gender,
         mobile_personal: formData.mobile,
@@ -213,14 +245,37 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
 
         toast.success('تم تحديث بيانات الخادم بنجاح');
       } else {
-        // Insert new servant
-        const { error } = await supabase
+        // 1. Create Supabase Auth User with a dummy email based on the generated Smart ID
+        const dummyEmail = `${finalTeacherId.toLowerCase()}@aribsalin.com`;
+        const defaultPassword = formData.password || '123456'; // Ensure a password exists
+
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: dummyEmail,
+          password: defaultPassword,
+        });
+
+        if (authError) {
+          throw new Error('فشل إنشاء حساب تسجيل الدخول: ' + authError.message);
+        }
+
+        if (!authData.user?.id) {
+          throw new Error('تعذر الحصول على معرّف المستخدم من نظام المصادقة');
+        }
+
+        // 2. Link the Auth User UUID to the servants table record
+        const finalPayload = {
+          ...servantPayload,
+          id: authData.user.id // Satisfies the servants_auth_fkey constraint
+        };
+
+        // 3. Insert into servants table
+        const { error: insertError } = await supabase
           .from('servants')
-          .insert([servantPayload]);
+          .insert([finalPayload]);
 
-        if (error) throw error;
+        if (insertError) throw insertError;
 
-        toast.success('تم تسجيل الخادم بنجاح');
+        toast.success(`تم تسجيل الخادم بنجاح. كود الدخول: ${finalTeacherId}`);
       }
 
       // Notify parent component to redirect or update state
@@ -294,6 +349,7 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
         </div>
       </div>
         <form onSubmit={handleSubmit}>
+        <h2 className="text-2xl font-bold mb-6 text-center text-primary">تسجيل خادم جديد</h2>
         <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
           <h3 className="mb-4 text-primary">البيانات الأساسية</h3>
 
@@ -576,7 +632,7 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
             </div>
 
             {formData.role !== 'admin' && (
-              <div>
+              <div className="relative z-20 pb-24">
                 <label className="block mb-2 text-sm text-foreground">فصل الخدمة (المرحلة التي تخدم بها) *</label>
                 <select
                   required
