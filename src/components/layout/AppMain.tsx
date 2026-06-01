@@ -93,7 +93,7 @@ export default function AppMain() {
         const pIds = pData.map(p => p.id);
         const { data: logsData, error: logsError } = await supabase
           .from('attendance_logs')
-          .select('participant_id, created_at, scanned_at, attendance_date')
+          .select('participant_id, scanned_at, attendance_date')
           .in('participant_id', pIds);
 
         if (logsError) {
@@ -109,7 +109,7 @@ export default function AppMain() {
 
           // Extract dates
           const dates = pLogs.map((log: any) => {
-            const dateStr = log.attendance_date || log.created_at || log.scanned_at;
+            const dateStr = log.attendance_date || log.scanned_at;
             return dateStr ? String(dateStr).split('T')[0] : '';
           }).filter(Boolean);
 

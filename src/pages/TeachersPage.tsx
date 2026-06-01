@@ -69,7 +69,6 @@ export function TeachersPage({ onBack, onEdit }: TeachersPageProps) {
         const grouped: Record<string, Teacher[]> = {};
 
         data.forEach((servant: any) => {
-          // Correctly use class_stage (or class_or_job fallback) for the class they SERVE in, NOT their own education
           const stageKey = getStageKey(servant.class_stage || servant.class_or_job || '');
 
           if (!grouped[stageKey]) {
@@ -80,20 +79,23 @@ export function TeachersPage({ onBack, onEdit }: TeachersPageProps) {
             id: servant.id,
             name: servant.full_name,
             mobile: servant.mobile_personal,
-            email: '', // Not in schema, can leave empty or map if added later
-            isSupervisor: false // Supervisor flag can be added to schema later if needed
+            email: '',
+            isSupervisor: servant.role === 'supervisor'
           });
         });
 
-        // Convert grouped object to ClassData array based on servingStages
         const mappedData: ClassData[] = Object.keys(servingStages)
           .map(key => ({
             stage: key,
             stageLabel: servingStages[key as keyof typeof servingStages] || key,
-            supervisor: null, // Assign logic later if schema supports it
-            teachers: grouped[key] || []
+            supervisor: null,
+            teachers: (grouped[key] || []).sort((a, b) => {
+              if (a.isSupervisor && !b.isSupervisor) return -1;
+              if (!a.isSupervisor && b.isSupervisor) return 1;
+              return 0;
+            })
           }))
-          .filter(c => c.teachers.length > 0); // Only show stages that have teachers
+          .filter(c => c.teachers.length > 0);
 
         setClassesData(mappedData);
       }
@@ -192,39 +194,33 @@ export function TeachersPage({ onBack, onEdit }: TeachersPageProps) {
               {/* Expanded Content */}
               {expandedStages.has(classData.stage) && (
                 <div className="border-t border-border p-4 space-y-3">
-                  {/* Supervisor */}
-                  {classData.supervisor && (
-                    <div className="bg-secondary/10 rounded-lg p-3 border-2 border-secondary/30">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Crown className="w-4 h-4" style={{ color: 'var(--secondary)' }} />
-                        <span className="text-sm font-medium" style={{ color: 'var(--secondary)' }}>
-                          المشرف
-                        </span>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="font-medium">{classData.supervisor.name}</div>
-                        <div className="text-xs text-muted-foreground">{classData.supervisor.mobile}</div>
-                        <div className="text-xs text-muted-foreground">{classData.supervisor.email}</div>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Teachers List */}
                   {classData.teachers.length > 0 && (
                     <div className="space-y-2">
-                      <div className="text-sm font-medium text-muted-foreground">الخدام</div>
                       {classData.teachers.map((teacher) => (
                         <div
                           key={teacher.id}
-                          className="bg-muted/30 rounded-lg p-3 flex items-start justify-between"
+                          className={`rounded-lg p-3 flex items-start justify-between border ${teacher.isSupervisor ? 'bg-secondary/10 border-secondary/30' : 'bg-muted/30 border-transparent'}`}
                         >
-                          <div className="space-y-1">
-                            <div className="font-medium text-sm">{teacher.name}</div>
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {teacher.isSupervisor && (
+                                <Crown className="w-4 h-4 shrink-0" style={{ color: 'var(--secondary)' }} />
+                              )}
+                              <div className={`font-medium text-sm ${teacher.isSupervisor ? 'text-[var(--secondary)]' : 'text-foreground'}`}>
+                                {teacher.name}
+                              </div>
+                              {teacher.isSupervisor && (
+                                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-secondary/20" style={{ color: 'var(--secondary)' }}>
+                                  (أمين الفصل)
+                                </span>
+                              )}
+                            </div>
                             <div className="text-xs text-muted-foreground">{teacher.mobile}</div>
-                            <div className="text-xs text-muted-foreground">{teacher.email}</div>
+                            {teacher.email && <div className="text-xs text-muted-foreground">{teacher.email}</div>}
                           </div>
 
-                          <div className="flex items-center gap-2 mr-2">
+                          <div className="flex items-center gap-2 mr-2 shrink-0">
                             <button
                               title="تعديل"
                               onClick={(e) => {
@@ -249,7 +245,6 @@ export function TeachersPage({ onBack, onEdit }: TeachersPageProps) {
                                     console.error(error);
                                     return;
                                   }
-                                  // Remove teacher from local state
                                   setClassesData(prev => prev.map(cls => ({
                                     ...cls,
                                     teachers: cls.teachers.filter(t => t.id !== teacher.id),

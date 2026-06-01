@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { ArrowRight, Users, Calendar, TrendingUp, Award, BarChart3 } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Participant } from '../types';
-import { stageLabels, getParticipantClassStage } from '../app/utils/stageHelpers';
 
 interface StatisticsPageProps {
   onBack: () => void;
@@ -10,7 +9,34 @@ interface StatisticsPageProps {
   totalDays: number;
 }
 
-const educationStageLabels = stageLabels;
+const CLASS_LABELS: Record<string, string> = {
+  'kg': 'حضانة',
+  'primary_12': 'ابتدائي (الأول والثاني)',
+  'primary_34': 'ابتدائي (الثالث والرابع)',
+  'primary_56': 'ابتدائي (الخامس والسادس)',
+  'preparatory': 'إعدادي',
+  'secondary': 'ثانوي',
+  'university_graduate': 'جامعيين وخريجين',
+  'other': 'أخرى'
+};
+
+const getParticipantClass = (stage: string, year: string) => {
+  const s = String(stage || '').toLowerCase();
+  const y = String(year || '').toLowerCase();
+
+  if (s.includes('حضانة') || s === 'kg') return 'kg';
+  if (s.includes('إعدادي') || s === 'preparatory') return 'preparatory';
+  if (s.includes('ثانوي') || s === 'secondary') return 'secondary';
+  if (s.includes('جامعي') || s.includes('خريج') || s === 'university' || s === 'graduate') return 'university_graduate';
+
+  if (s.includes('ابتدائي') || s === 'primary') {
+    if (y.includes('أول') || y.includes('ثاني') || y.includes('1') || y.includes('2')) return 'primary_12';
+    if (y.includes('ثالث') || y.includes('رابع') || y.includes('3') || y.includes('4')) return 'primary_34';
+    if (y.includes('خامس') || y.includes('سادس') || y.includes('5') || y.includes('6')) return 'primary_56';
+    return 'primary_12';
+  }
+  return 'other';
+};
 
 export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPageProps) {
   const stats = useMemo(() => {
@@ -58,11 +84,14 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
       .slice(0, 5)
       .map(p => {
         const pdata: any = (p as any).data || {};
+        const stage = String(pdata['educational_stage'] || pdata.educationStage || '');
+        const year = String(pdata['academic_year'] || pdata.educationYear || '');
+        const classKey = getParticipantClass(stage, year);
         return {
           id: p.id,
           name: p.name || pdata.fullName || 'بدون اسم',
           points: p.points || 0,
-          stage: pdata['educational_stage'] || pdata.educationStage || 'غير محدد',
+          stage: CLASS_LABELS[classKey] || classKey,
           attendanceCount: p.attendanceDays?.length || 0
         };
       });
@@ -81,26 +110,29 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
     const stageMap: Record<string, { male: number; female: number; total: number }> = {};
     participants.forEach(p => {
       const pdata: any = (p as any).data || {};
-      const rawStage = String(pdata['educational_stage'] || pdata.educationStage || 'أخرى').trim() || 'أخرى';
-      const stageKey = rawStage;
+      const rawStage = String(pdata['educational_stage'] || pdata.educationStage || '');
+      const rawYear = String(pdata['academic_year'] || pdata.educationYear || '');
+      const stageKey = getParticipantClass(rawStage, rawYear);
       const gender = String(pdata.gender || '').trim().toLowerCase();
 
       if (!stageMap[stageKey]) {
         stageMap[stageKey] = { male: 0, female: 0, total: 0 };
       }
 
-      if (gender === 'male') {
+      if (gender === 'male' || gender === 'ذكر') {
         stageMap[stageKey].male += 1;
-      } else if (gender === 'female') {
+      } else if (gender === 'female' || gender === 'أنثى') {
         stageMap[stageKey].female += 1;
       }
 
       stageMap[stageKey].total += 1;
     });
 
-    const stageData = Object.entries(stageMap).map(([key, counts]) => ({
+    const stageData = Object.entries(stageMap)
+      .filter(([key]) => key !== 'other')
+      .map(([key, counts]) => ({
       id: key,
-      name: educationStageLabels[key] || key,
+      name: CLASS_LABELS[key] || key,
       ذكور: counts.male,
       إناث: counts.female,
       total: counts.total
@@ -285,7 +317,7 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
                 <div className="text-right shrink-0">
                   <div className="font-bold text-sm" style={{ color: 'var(--secondary)' }}>{participant.points}</div>
                   <div className="text-[11px] text-muted-foreground">
-                    {educationStageLabels[participant.stage] || participant.stage}
+                    {participant.stage}
                   </div>
                   <div className="text-[11px] text-muted-foreground">
                     {participant.attendanceCount} يوم ({((participant.attendanceCount / Math.max(1, totalDays)) * 100).toFixed(0)}%)
@@ -431,12 +463,11 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
         </div>
 
         {/* Points Statistics by Class */}
-        {Object.entries(educationStageLabels).map(([stageKey, stageLabel]) => {
-          
+        {Object.entries(CLASS_LABELS).filter(([k]) => k !== 'other').map(([stageKey, stageLabel]) => {
           const stageParticipants = participants.filter(
             p => {
               const pdata: any = (p as any).data || {};
-              return getParticipantClassStage(
+              return getParticipantClass(
                 pdata['educational_stage'] || pdata.educationStage || '',
                 pdata['academic_year'] || pdata.educationYear || ''
               ) === stageKey;
