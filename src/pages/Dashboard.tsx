@@ -8,7 +8,7 @@ interface DashboardProps {
   onViewProfile: (participantId: string) => void;
   onLogout: () => void | Promise<void>;
   currentServant: any;
-  participants?: Array<{ id: string; participant_id?: string; dbId?: string; name: string; points: number; attended: boolean }>;
+  participants?: Array<{ id: string; participant_id?: string; dbId?: string; name: string; points: number; attended: boolean; data?: any }>;
   onEditRequest?: (rec: any) => void;
   onManagePoints?: (rec: any) => void;
   onDeleteParticipant?: (id: string) => void;

@@ -316,7 +316,7 @@ export default function AppMain() {
 
       if (duplicateParticipant) {
         toast.error('هذا المخدوم مسجل بالفعل في النظام!');
-        return;
+        return; // STRICT HALT: Prevents further execution and insert
       }
 
       const payload = {
@@ -351,21 +351,39 @@ export default function AppMain() {
         if (error) throw error;
         toast.success('تم تحديث بيانات المشارك بنجاح');
       } else {
-        // Determine Prefix based on Education Stage
+        // Determine Stage Letter (L)
         const s = String(data.educationStage || '').toLowerCase();
         const y = String(data.educationYear || '').toLowerCase();
-        let prefix = 'X';
-        if (s.includes('حضانة') || s === 'kg') prefix = 'K';
-        else if (s.includes('ابتدائي') || s.includes('primary')) {
-          if (y.includes('أول') || y.includes('ثاني')) prefix = 'P1';
-          else if (y.includes('ثالث') || y.includes('رابع')) prefix = 'P2';
-          else prefix = 'P3';
-        }
-        else if (s.includes('إعدادي') || s.includes('preparatory')) prefix = 'M';
-        else if (s.includes('ثانوي') || s.includes('secondary')) prefix = 'S';
-        else if (s.includes('جامعي') || s.includes('university') || s.includes('خريج')) prefix = 'U';
+        
+        let L = 'X';
+        if (s.includes('حضانة') || s === 'kg') L = 'K';
+        else if (s.includes('ابتدائي') || s.includes('primary')) L = 'P';
+        else if (s.includes('إعدادي') || s.includes('preparatory')) L = 'Y';
+        else if (s.includes('ثانوي') || s.includes('secondary')) L = 'S';
+        else if (s.includes('جامعي') || s.includes('university') || s.includes('خريج') || s.includes('graduate')) L = 'G';
 
-        // Gap-Filling Algorithm
+        // Determine Year Number (X)
+        let X = '1'; // Default fallback
+        if (L === 'K') {
+          if (y.includes('baby') || y.includes('بيبي') || y.includes('0')) X = '0';
+          else if (y.includes('1') || y.includes('kg1') || y.includes('أول')) X = '1';
+          else if (y.includes('2') || y.includes('kg2') || y.includes('ثاني')) X = '2';
+        } else if (L === 'G' && (s.includes('خريج') || y.includes('خريج'))) {
+          X = '0'; // Graduates
+        } else {
+          // Check for Arabic/English numerals or words
+          if (y.includes('أول') || y.includes('1')) X = '1';
+          else if (y.includes('ثاني') || y.includes('2')) X = '2';
+          else if (y.includes('ثالث') || y.includes('3')) X = '3';
+          else if (y.includes('رابع') || y.includes('4')) X = '4';
+          else if (y.includes('خامس') || y.includes('5')) X = '5';
+          else if (y.includes('سادس') || y.includes('6')) X = '6';
+          else if (y.includes('خريج') || y.includes('0')) X = '0';
+        }
+
+        const prefix = `${L}${X}`;
+
+        // Gap-Filling Algorithm specific to the Prefix (LXYY)
         const { data: existingIds, error: fetchError } = await supabase
           .from('participants')
           .select('participant_id')
@@ -385,7 +403,9 @@ export default function AppMain() {
             else if (num > nextNum) break; // Found the missing gap!
           }
         }
-        const smartId = `${prefix}${String(nextNum).padStart(3, '0')}`;
+        
+        // Final Smart ID format: LXYY (e.g., P301)
+        const smartId = `${prefix}${String(nextNum).padStart(2, '0')}`;
 
         // Insert new participant with calculated Smart ID
         const { error } = await supabase
@@ -874,7 +894,8 @@ export default function AppMain() {
               dbId: p.id,
               name: p.name,
               points: p.points,
-              attended: p.attended
+              attended: p.attended,
+              data: p.data
             }))}
             onEditRequest={(rec) => handleEditRequest(rec, 'participant')}
             onManagePoints={(rec) => handleManagePointsRequest(rec)}
@@ -885,8 +906,8 @@ export default function AppMain() {
         {currentView === 'registration' && (
           <RegistrationForm
             onBack={() => { setCurrentView('dashboard'); handleClearEdit(); }}
-            onSubmit={(data, participantId) => {
-              handleRegistrationSubmit(data, participantId);
+            onSubmit={async (data, participantId) => {
+              await handleRegistrationSubmit(data, participantId);
               handleClearEdit();
             }}
             editData={editData}

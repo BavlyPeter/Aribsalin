@@ -87,30 +87,53 @@ export function ParticipantsList({ participants, onEdit, onManagePoints, onDelet
     fetchAreas();
   }, []);
 
-  const filteredParticipants = items.filter(p => {
-    const normalizedSearchQuery = normalizeArabicText(searchQuery);
-    const normalizedName = normalizeArabicText(p.name || p.full_name || '');
-    const normalizedId = normalizeArabicText(p.participant_id || p.id || '');
+  const filteredParticipants = items.filter((p: any) => {
+    // 1. Search Match
+    const normalizedSearch = normalizeArabicText(searchQuery);
+    const pName = normalizeArabicText(p.name || p.full_name || '');
+    const pId = normalizeArabicText(p.participant_id || p.id || '');
+    const matchesSearch = !searchQuery || pName.includes(normalizedSearch) || pId.includes(normalizedSearch);
 
-    const matchesSearch = !searchQuery ||
-                         normalizedName.includes(normalizedSearchQuery) ||
-                         normalizedId.includes(normalizedSearchQuery);
+    // Extract raw fields safely (checking both flat DB structure and nested data structure)
+    const rawGender = String(p.gender || p.data?.gender || '').trim();
+    const rawArea = String(p.address_area || p.area || p.data?.address_area || p.data?.area || '').trim();
+    const rawStage = String(p.educational_stage || p.educationStage || p.data?.educational_stage || p.data?.educationStage || '').trim();
+    const rawYear = String(p.academic_year || p.educationYear || p.data?.academic_year || p.data?.educationYear || '').trim();
 
-    const pData = p.data || {};
-    const normalizedGender = String(pData.gender || '').trim();
-    const matchesGender = !filterGender || normalizedGender === String(filterGender).trim();
+    // 2. Gender Match (Map Arabic DB values to English Filter values)
+    let mappedGender = rawGender;
+    if (rawGender === 'ذكر' || rawGender === 'male') mappedGender = 'male';
+    if (rawGender === 'أنثى' || rawGender === 'female') mappedGender = 'female';
+    const matchesGender = !filterGender || mappedGender === filterGender;
 
-    const pStage = String(pData.educational_stage || pData.educationStage || '').trim();
-    const pYear = String(pData.educationYear || pData.academic_year || '').trim();
-    const calculatedClass = getParticipantClass(pStage, pYear);
-    const normalizedFilterClass = String(filterClass || '').trim();
-    const matchesClass = !normalizedFilterClass || calculatedClass === normalizedFilterClass || pStage === normalizedFilterClass;
+    // 3. Area Match
+    const matchesArea = !filterArea || rawArea === filterArea;
 
-    const pArea = String(pData.address_area || pData.area || '').trim();
-    const normalizedFilterArea = String(filterArea || '').trim();
-    const matchesArea = !normalizedFilterArea || pArea === normalizedFilterArea;
+    // 4. Class / Stage Match
+    let matchesClass = true;
+    if (filterClass) {
+      let calculatedClass = rawStage;
+      if (rawStage.includes('حضانة') || rawStage === 'kg') {
+        calculatedClass = 'kg';
+      } else if (rawStage.includes('إعدادي') || rawStage === 'preparatory') {
+        calculatedClass = 'preparatory';
+      } else if (rawStage.includes('ثانوي') || rawStage === 'secondary') {
+        calculatedClass = 'secondary';
+      } else if (rawStage.includes('جامعي') || rawStage.includes('خريج') || rawStage === 'university') {
+        calculatedClass = 'university';
+      } else if (rawStage.includes('ابتدائي') || rawStage === 'primary') {
+        if (rawYear.includes('أول') || rawYear.includes('ثاني') || rawYear.includes('1') || rawYear.includes('2')) {
+          calculatedClass = 'primary_12';
+        } else if (rawYear.includes('ثالث') || rawYear.includes('رابع') || rawYear.includes('3') || rawYear.includes('4')) {
+          calculatedClass = 'primary_34';
+        } else {
+          calculatedClass = 'primary_56';
+        }
+      }
+      matchesClass = (calculatedClass === filterClass);
+    }
 
-    return matchesSearch && matchesGender && matchesClass && matchesArea;
+    return matchesSearch && matchesGender && matchesArea && matchesClass;
   });
 
   const handleDelete = async (record: Participant) => {

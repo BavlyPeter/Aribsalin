@@ -188,12 +188,29 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
     setIsLoading(true);
 
     try {
-      // Determine Prefix based on Role
-      let prefix = 'T'; // Default Teacher
-      if (formData.role === 'admin') prefix = 'A';
-      else if (formData.role === 'supervisor') prefix = 'S';
+      // Determine Role, Stage, and Class for Prefix
+      let prefix = '';
+      if (formData.role === 'admin') {
+        prefix = 'A'; // Admins just get A + YZ
+      } else {
+        const R = formData.role === 'supervisor' ? 'S' : 'N';
 
-      // Gap-Filling Algorithm for Teacher ID
+        let L = 'X';
+        let X = '0';
+        const stage = formData.classStage || '';
+
+        if (stage === 'kg') { L = 'K'; X = '0'; }
+        else if (stage === 'primary_12') { L = 'P'; X = '1'; }
+        else if (stage === 'primary_34') { L = 'P'; X = '3'; }
+        else if (stage === 'primary_56') { L = 'P'; X = '5'; }
+        else if (stage === 'preparatory') { L = 'Y'; X = '0'; }
+        else if (stage === 'secondary') { L = 'S'; X = '0'; }
+        else if (stage === 'university_graduate') { L = 'G'; X = '0'; }
+
+        prefix = `${R}${L}${X}`;
+      }
+
+      // Gap-Filling Algorithm specific to the Prefix
       const { data: existingIds, error: fetchError } = await supabase
         .from('servants')
         .select('teacher_id')

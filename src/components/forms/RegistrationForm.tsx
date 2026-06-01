@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 
 interface RegistrationFormProps {
   onBack: () => void;
-  onSubmit: (data: StudentData, participantId?: string) => void;
+  onSubmit: (data: StudentData, participantId?: string) => Promise<void> | void;
   editData?: any | null;
   clearEdit?: () => void;
 }
@@ -204,95 +204,25 @@ export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: Regi
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate mobile numbers length if provided
+    if (formData.personalMobile && formData.personalMobile.length !== 11) {
+      toast.error('رقم الموبايل الشخصي يجب أن يتكون من 11 رقم بالضبط');
+      return;
+    }
+    if (formData.fatherMobile && formData.fatherMobile.length !== 11) {
+      toast.error('رقم موبايل الأب يجب أن يتكون من 11 رقم بالضبط');
+      return;
+    }
+    if (formData.motherMobile && formData.motherMobile.length !== 11) {
+      toast.error('رقم موبايل الأم يجب أن يتكون من 11 رقم بالضبط');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const phoneRegex = /^[0-9]{11}$/;
-      const phonesToCheck = [formData.personalMobile, formData.fatherMobile, formData.motherMobile].filter(Boolean);
-
-      for (const phone of phonesToCheck) {
-        if (!phoneRegex.test(phone)) {
-          toast.error('رقم الهاتف يجب أن يتكون من 11 رقم');
-          setIsLoading(false);
-          return;
-        }
-      }
-
-
-      let formattedClassOrJob = formData.studyOrWorkPlace || null;
-      if (formData.educationStage === 'university' || formData.educationStage === 'جامعي') {
-        const uni = formData.universityName?.trim();
-        const col = formData.collegeName?.trim();
-        if (uni && col) {
-          formattedClassOrJob = `${uni} - ${col}`;
-        } else if (uni || col) {
-          formattedClassOrJob = uni || col || null;
-        }
-      }
-
-      // If we have editData, perform update instead of insert
-      if (editData && editData.id) {
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(editData.id);
-
-        let updateQuery = supabase.from('participants').update({
-          full_name: formData.fullName,
-          gender: formData.gender,
-          educational_stage: formData.educationStage,
-          academic_year: formData.educationYear || null,
-          class_or_job: formattedClassOrJob,
-          birth_date: formData.dateOfBirth || null,
-          father_of_confession: formData.confessionFather,
-          mobile_personal: formData.personalMobile || null,
-          mobile_father: formData.fatherMobile,
-          mobile_mother: formData.motherMobile,
-          address_area: formData.area,
-          address_details: formData.address
-        });
-
-        if (isUuid) {
-          updateQuery = updateQuery.eq('id', editData.id);
-        } else {
-          updateQuery = updateQuery.eq('participant_id', editData.id);
-        }
-
-        const { error: updateError } = await updateQuery;
-
-        if (updateError) throw updateError;
-
-        toast.success('تم تحديث بيانات المشارك بنجاح');
-        onSubmit(formData, editData.id);
-        clearEdit?.();
-      } else {
-        const generatedSmartId = await generateParticipantSmartId(formData.educationStage, formData.educationYear);
-
-        const { error: dbError } = await supabase.from('participants').insert([{
-          participant_id: generatedSmartId,
-          full_name: formData.fullName,
-          gender: formData.gender,
-          educational_stage: formData.educationStage,
-          academic_year: formData.educationYear || null,
-          class_or_job: formattedClassOrJob,
-          birth_date: formData.dateOfBirth || null,
-          father_of_confession: formData.confessionFather,
-          mobile_personal: formData.personalMobile || null,
-          mobile_father: formData.fatherMobile,
-          mobile_mother: formData.motherMobile,
-          address_area: formData.area,
-          address_details: formData.address,
-          points_balance: 0
-        }]);
-
-        if (dbError) {
-          throw dbError;
-        }
-
-        toast.success(`تم تسجيل المخدوم بنجاح! رقم المخدوم هو: ${generatedSmartId}`, {
-          duration: 15000,
-          description: 'هذا هو الرقم الذي سيطبع على كارت الـ QR الخاص به.'
-        });
-
-        onSubmit(formData, generatedSmartId);
-      }
+      await onSubmit(formData, editData?.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'حدث خطأ غير متوقع';
       console.error(error);
@@ -342,7 +272,7 @@ export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: Regi
   };
 
   const isStudyPlaceRequired = () => {
-    return !!formData.educationStage && formData.educationStage !== 'graduate';
+    return formData.educationStage === 'secondary';
   };
 
   return (
@@ -552,12 +482,9 @@ export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: Regi
                 type="tel"
                 maxLength={11}
                 value={formData.personalMobile}
-                onChange={(e) => {
-                  const onlyNumbers = e.target.value.replace(/\D/g, '');
-                  updateField('personalMobile', onlyNumbers);
-                }}
+                onChange={(e) => updateField('personalMobile', e.target.value.replace(/\D/g, ''))}
                 className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="01XXXXXXXXX"
+                placeholder="01xxxxxxxxx"
               />
             </div>
 
@@ -567,12 +494,9 @@ export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: Regi
                 type="tel"
                 maxLength={11}
                 value={formData.fatherMobile}
-                onChange={(e) => {
-                  const onlyNumbers = e.target.value.replace(/\D/g, '');
-                  updateField('fatherMobile', onlyNumbers);
-                }}
+                onChange={(e) => updateField('fatherMobile', e.target.value.replace(/\D/g, ''))}
                 className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="01XXXXXXXXX"
+                placeholder="01xxxxxxxxx"
               />
             </div>
 
@@ -582,24 +506,14 @@ export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: Regi
                 type="tel"
                 maxLength={11}
                 value={formData.motherMobile}
-                onChange={(e) => {
-                  const onlyNumbers = e.target.value.replace(/\D/g, '');
-                  updateField('motherMobile', onlyNumbers);
-                }}
+                onChange={(e) => updateField('motherMobile', e.target.value.replace(/\D/g, ''))}
                 className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="01XXXXXXXXX"
+                placeholder="01xxxxxxxxx"
               />
             </div>
-          </div>
-        </div>
 
-        {/* Address Card */}
-        <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
-          <h3 className="mb-4 text-primary">العنوان</h3>
-
-          <div className="space-y-4">
             <div>
-              <label className="block mb-2 text-sm text-foreground">المنطقة *</label>
+              <label className="block mb-2 text-sm text-foreground">المنطقة السكنية *</label>
               <select
                 required
                 value={formData.area}
