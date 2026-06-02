@@ -364,10 +364,12 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
           >
             <ArrowRight className="w-6 h-6" />
           </button>
+          <h2 className="text-xl font-bold">
+            {editData ? 'تعديل بيانات الخادم' : 'تسجيل خادم جديد'}
+          </h2>
         </div>
       </div>
-        <form onSubmit={handleSubmit}>
-        <h2 className="text-2xl font-bold mb-6 text-center text-primary">تسجيل خادم جديد</h2>
+        <form onSubmit={handleSubmit} className="p-4 space-y-4 pb-32">
         <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
           <h3 className="mb-4 text-primary">البيانات الأساسية</h3>
 
@@ -650,7 +652,7 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
             </div>
 
             {formData.role !== 'admin' && (
-              <div className="relative z-20 pb-24">
+              <div>
                 <label className="block mb-2 text-sm text-foreground">فصل الخدمة (المرحلة التي تخدم بها) *</label>
                 <select
                   required
@@ -669,7 +671,7 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
         </div>
 
       {/* Fixed Submit Button */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border">
+        <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background border-t border-border">
         <button
           type="submit"
           disabled={isLoading}
