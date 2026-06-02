@@ -253,7 +253,10 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
                                 const ok = window.confirm('هل أنت متأكد من حذف هذا السجل تماماً؟');
                                 if (!ok) return;
                                 try {
-                                  const { error } = await supabase.from('servants').delete().eq('id', teacher.id);
+                                  // Call the secure RPC function to completely delete the user and clean up dependencies
+                                  const { error } = await supabase.rpc('delete_servant_completely', { 
+                                    target_user_id: teacher.id 
+                                  });
                                   if (error) {
                                     toast.error('فشل الحذف');
                                     console.error(error);
