@@ -452,7 +452,22 @@ export default function AppMain() {
 
   const handleScanSuccess = (decodedText: string) => {
     (async () => {
-      const scanned = String(decodedText).trim();
+      const scanned = String(decodedText).trim().toLowerCase();
+      if (!scanned) return;
+
+      // UNIFIED ROBUST LOOKUP: Check UUID, Smart ID, and internal dbId
+      const participant = participants.find(p => 
+        String(p.id || '').trim().toLowerCase() === scanned ||
+        String(p.participant_id || '').trim().toLowerCase() === scanned ||
+        String((p as any).dbId || '').trim().toLowerCase() === scanned
+      );
+
+      if (!participant) {
+        toast.error('هذا الكود غير مسجل في النظام');
+        return;
+      }
+
+      const targetParticipant = participant;
 
       if (scanMode === 'attendance') {
         if (!currentServant || !currentServant.id) {
@@ -461,21 +476,9 @@ export default function AppMain() {
         }
 
         try {
-          // 1. Verify participant by Smart ID (participant_id) or DB UUID (id)
-          const { data: participant, error: fetchError } = await supabase
-            .from('participants')
-            .select('*')
-            .or(`participant_id.eq.${scanned},id.eq.${scanned}`)
-            .single();
+          const participantUuid = targetParticipant.id as string;
 
-          if (fetchError || !participant) {
-            toast.error('هذا الكود غير مسجل في النظام');
-            return;
-          }
-
-          const participantUuid = participant.id as string;
-
-          // 2. Log attendance (will fail on unique_daily_attendance constraint if already attended today)
+          // 1. Log attendance (will fail on unique_daily_attendance constraint if already attended today)
           const { error: attendError } = await supabase
             .from('attendance_logs')
             .insert([
@@ -493,8 +496,8 @@ export default function AppMain() {
             return;
           }
 
-          // 3. Add points (+10)
-          const currentPoints = Number(participant.points_balance || 0);
+          // 2. Add points (+10)
+          const currentPoints = Number(targetParticipant.points || 0);
           const newPoints = currentPoints + 10;
 
           const { error: updateError } = await supabase
@@ -508,7 +511,7 @@ export default function AppMain() {
             return;
           }
 
-          // 4. Record transaction
+          // 3. Record transaction
           const { error: txError } = await supabase.from('points_transactions').insert([
             {
               participant_id: participantUuid,
@@ -527,7 +530,7 @@ export default function AppMain() {
           // Update local state for immediate UI feedback
           setParticipants(prev =>
             prev.map(p =>
-              (String(p.id) === String(participant.participant_id) || String(p.id) === String(participantUuid))
+              (String(p.id) === String(participantUuid))
                 ? { ...p, points: newPoints, attended: true, attendanceDays: [...p.attendanceDays, new Date().toISOString().split('T')[0]] }
                 : p
             )
@@ -541,14 +544,6 @@ export default function AppMain() {
         }
 
       } else {
-        // non-attendance flows: keep existing demo behavior
-        const participant = participants.find(p =>
-          String(p.id || '').trim().toUpperCase() === String(scanned).trim().toUpperCase() ||
-          String(p.participant_id || '').trim().toUpperCase() === String(scanned).trim().toUpperCase() ||
-          String(p.name || '').includes(scanned)
-        );
-        const targetParticipant = participant || participants[0]; // Use first for demo
-
         if (scanMode === 'market') {
           setSelectedParticipantId(targetParticipant.id);
           setCurrentView('market');

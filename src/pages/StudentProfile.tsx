@@ -303,38 +303,15 @@ export function StudentProfile({ student, totalDays, onBack }: StudentProfilePro
               </div>
             )}
 
-            {student.data.educationStage === 'university' && (student.data.universityName || student.data.collegeName) && (
-              <>
-                {student.data.universityName && (
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
-                    <div className="flex-1">
-                      <div className="text-sm text-muted-foreground">الجامعة</div>
-                      <div className="font-medium">{student.data.universityName}</div>
-                    </div>
-                  </div>
-                )}
-
-                {student.data.collegeName && (
-                  <div className="flex items-start gap-3">
-                    <School className="w-5 h-5 text-muted-foreground mt-0.5" />
-                    <div className="flex-1">
-                      <div className="text-sm text-muted-foreground">الكلية</div>
-                      <div className="font-medium">{student.data.collegeName}</div>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            {student.data.educationStage !== 'university' && student.data.studyOrWorkPlace && (
+            {(student.data?.studyOrWorkPlace || (student as any).class_or_job) && (
               <div className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
                 <div className="flex-1">
                   <div className="text-sm text-muted-foreground">
-                    {student.data.educationStage === 'graduate' ? 'مكان العمل' : 'المدرسة'}
+                    {student.data?.educationStage === 'graduate' ? 'جهة العمل / الوظيفة' : 
+                     (['kg', 'primary', 'preparatory', 'secondary'].includes(student.data?.educationStage || '')) ? 'المدرسة' : 'الجامعة / الكلية'}
                   </div>
-                  <div className="font-medium">{student.data.studyOrWorkPlace}</div>
+                  <div className="font-medium">{student.data?.studyOrWorkPlace || (student as any).class_or_job}</div>
                 </div>
               </div>
             )}
@@ -401,11 +378,11 @@ export function StudentProfile({ student, totalDays, onBack }: StudentProfilePro
         <div
           ref={idCardRef}
           style={{
-            position: 'fixed',
+            position: 'absolute',
             left: '-9999px',
             top: '-9999px',
-            opacity: isDownloadingCard ? 1 : 0,
-            pointerEvents: 'none'
+            backgroundColor: '#ffffff',
+            padding: '20px'
           }}
         >
           <IDCard student={student} />
@@ -414,14 +391,14 @@ export function StudentProfile({ student, totalDays, onBack }: StudentProfilePro
         <div
           ref={qrRef}
           style={{
-            position: 'fixed',
+            position: 'absolute',
             left: '-9999px',
             top: '-9999px',
-            opacity: 0,
-            pointerEvents: 'none'
+            backgroundColor: '#ffffff',
+            padding: '20px'
           }}
         >
-          <QRCodeSVG value={student.id} size={600} />
+          <QRCodeSVG value={String(student.participant_id || student.id)} size={600} includeMargin={true} />
         </div>
       </div>
     </div>

@@ -127,10 +127,10 @@ export function IDCard({ student }: IDCardProps) {
             style={{ border: '2px solid rgba(139, 21, 56, 0.2)' }}
           >
             <QRCodeSVG
-              value={student.id}
+              value={String(participantSmartId)}
               size={140}
               level="H"
-              includeMargin={false}
+              includeMargin={true}
             />
           </div>
         </div>

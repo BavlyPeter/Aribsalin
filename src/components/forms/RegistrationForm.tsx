@@ -103,10 +103,7 @@ export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: Regi
             photo_url: source.photo_url || null,
             educationStage: source.educational_stage || '',
             educationYear: source.academic_year || '',
-            studyOrWorkPlace: source.educational_stage === 'graduate' ? (source.class_or_job || '') : (source.class_or_job && !source.class_or_job.includes(' - ') ? source.class_or_job : ''),
-            universityName: source.educational_stage === 'university' && source.class_or_job?.includes(' - ') ? source.class_or_job.split(' - ')[0] : '',
-            collegeName: source.educational_stage === 'university' && source.class_or_job?.includes(' - ') ? source.class_or_job.split(' - ')[1] : (source.educational_stage === 'university' ? source.class_or_job || '' : ''),
-            jobTitle: source.job_title || '',
+            studyOrWorkPlace: source.class_or_job || '',
             confessionFather: source.father_of_confession || '',
             personalMobile: source.mobile_personal || '',
             fatherMobile: source.mobile_father || '',
@@ -446,74 +443,28 @@ export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: Regi
               </div>
             )}
 
-            {formData.educationStage && formData.educationStage === 'graduate' && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block mb-2 text-sm text-foreground">المسمى الوظيفي</label>
-                  <input
-                    type="text"
-                    value={formData.jobTitle || ''}
-                    onChange={(e) => updateField('jobTitle', e.target.value)}
-                    className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="مثال: مهندس، طبيب، معلم"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">اختياري</p>
-                </div>
-              </div>
-            )}
-
-            {formData.educationStage && formData.educationStage === 'university' && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block mb-2 text-sm text-foreground">اسم الجامعة</label>
-                  <input
-                    type="text"
-                    value={formData.universityName || ''}
-                    onChange={(e) => updateField('universityName', e.target.value)}
-                    className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="مثال: جامعة القاهرة"
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-2 text-sm text-foreground">الكلية</label>
-                  <input
-                    type="text"
-                    value={formData.collegeName || ''}
-                    onChange={(e) => updateField('collegeName', e.target.value)}
-                    className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="مثال: كلية الهندسة"
-                  />
-                </div>
-              </div>
-            )}
-
-            {formData.educationStage && ['kg', 'primary', 'preparatory', 'secondary'].includes(formData.educationStage) && (
+            {formData.educationStage === 'university' && (
               <div>
-                <label className="block mb-2 text-sm text-foreground">
-                  {getStudyPlaceLabel()}
-                </label>
+                <label className="block mb-2 text-sm text-foreground">الجامعة / الكلية</label>
                 <input
                   type="text"
                   value={formData.studyOrWorkPlace}
                   onChange={(e) => updateField('studyOrWorkPlace', e.target.value)}
                   className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder={getPlaceholderForStudyPlace()}
+                  placeholder="مثال: جامعة أسوان / كلية التجارة"
                 />
               </div>
             )}
-
-            {formData.educationStage && formData.educationStage === 'graduate' && (
+            {formData.educationStage === 'graduate' && (
               <div>
-                <label className="block mb-2 text-sm text-foreground">مكان العمل</label>
+                <label className="block mb-2 text-sm text-foreground">جهة العمل / الوظيفة</label>
                 <input
                   type="text"
                   value={formData.studyOrWorkPlace}
                   onChange={(e) => updateField('studyOrWorkPlace', e.target.value)}
                   className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="اسم الشركة أو مكان العمل"
+                  placeholder="مثال: مدرس، مهندس، محاسب..."
                 />
-                <p className="text-xs text-muted-foreground mt-1">اختياري</p>
               </div>
             )}
           </div>

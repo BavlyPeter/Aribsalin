@@ -9,7 +9,8 @@ interface QRScannerProps {
 }
 
 export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
-  const [isScanning, setIsScanning] = useState(false);
+  const [isScannerActive, setIsScannerActive] = useState(false);
+  const [isScanning, setIsScanning] = useState(false); // Used to prevent duplicate scans during processing
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [cameraError, setCameraError] = useState<string>('');
   const [flashEnabled, setFlashEnabled] = useState(false);
@@ -17,6 +18,25 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerIdRef = useRef('qr-reader');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleScanSuccess = (decodedText: string) => {
+    if (isScanning) return;
+
+    const cleanText = decodedText.trim();
+    if (!cleanText || cleanText.length < 1) return;
+
+    setIsScanning(true);
+    if (navigator.vibrate) {
+      navigator.vibrate(200);
+    }
+    
+    onScanSuccess(cleanText);
+
+    // Reset lock after a short delay to allow subsequent scans without remounting
+    setTimeout(() => {
+      setIsScanning(false);
+    }, 2000);
+  };
 
   useEffect(() => {
     const startScanner = async () => {
@@ -43,17 +63,14 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
           config,
           (decodedText) => {
             // Success callback
-            showNotification('success', 'تم مسح الكود بنجاح!');
-            setTimeout(() => {
-              onScanSuccess(decodedText);
-            }, 1000);
+            handleScanSuccess(decodedText);
           },
           (errorMessage) => {
             // Error callback - we can ignore most errors as they're just "no QR code found"
           }
         );
 
-        setIsScanning(true);
+        setIsScannerActive(true);
         setHasPermission(true);
       } catch (err: any) {
         console.error('Error starting scanner:', err);
@@ -74,7 +91,7 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
     startScanner();
 
     return () => {
-      if (scannerRef.current && isScanning) {
+      if (scannerRef.current && isScannerActive) {
         scannerRef.current.stop().catch(console.error);
       }
     };
@@ -116,11 +133,8 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
         scannerRef.current = html5QrCode;
       }
 
-      const result = await scannerRef.current.scanFile(file, false);
-      showNotification('success', 'تم مسح الكود بنجاح!');
-      setTimeout(() => {
-        onScanSuccess(result);
-      }, 1000);
+      const result = await scannerRef.current.scanFile(file, true);
+      handleScanSuccess(result);
     } catch (err) {
       showNotification('error', 'فشل في قراءة الكود من الصورة');
       console.error('Error scanning file:', err);
