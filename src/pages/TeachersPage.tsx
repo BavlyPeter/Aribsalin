@@ -25,14 +25,16 @@ interface TeachersPageProps {
   onViewProfile?: (id: string) => void;
 }
 
-const servingStages = {
+const servingStages: Record<string, string> = {
+  supervisors: 'أمناء الخدمة والمسؤولين',
   kg: 'حضانة',
   primary_12: 'ابتدائي (الأول والثاني)',
   primary_34: 'ابتدائي (الثالث والرابع)',
   primary_56: 'ابتدائي (الخامس والسادس)',
   preparatory: 'إعدادي',
   secondary: 'ثانوي',
-  university_graduate: 'جامعي وخريجين'
+  university_graduate: 'جامعي وخريجين',
+  other: 'غير محدد / أخرى'
 };
 
 export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProps) {
@@ -43,15 +45,28 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
 
   // Helper to map DB stage values to our ClassData keys
   const getStageKey = (dbStage: string) => {
-    const s = (dbStage || '').toLowerCase();
-    if (s.includes('حضانة') || s === 'kg') return 'kg';
-    if (s.includes('إعدادي') || s === 'preparatory') return 'preparatory';
-    if (s.includes('ثانوي') || s === 'secondary') return 'secondary';
-    if (s.includes('جامعي') || s === 'university' || s.includes('خريجين') || s === 'graduate') return 'university_graduate';
+    const s = (dbStage || '').toLowerCase().trim();
+    if (!s || s === 'empty') return 'other';
 
-    // Default to primary combinations if not strictly matched
-    if (s.includes('ابتدائي') || s === 'primary') return 'primary_12';
-    return s;
+    // 1. Check for exact DB matches with our keys
+    if (['kg', 'primary_12', 'primary_34', 'primary_56', 'preparatory', 'secondary', 'university_graduate'].includes(s)) {
+      return s;
+    }
+
+    // 2. Fallback text-based matching for Arabic/English keywords
+    if (s.includes('حضانة') || s.includes('kg')) return 'kg';
+    if (s.includes('إعدادي') || s.includes('preparatory')) return 'preparatory';
+    if (s.includes('ثانوي') || s.includes('secondary')) return 'secondary';
+    if (s.includes('جامعي') || s.includes('university') || s.includes('خريج') || s.includes('graduate')) return 'university_graduate';
+    
+    if (s.includes('ابتدائي') || s.includes('primary')) {
+      if (s.includes('1') || s.includes('2') || s.includes('أول') || s.includes('ثاني')) return 'primary_12';
+      if (s.includes('3') || s.includes('4') || s.includes('ثالث') || s.includes('رابع')) return 'primary_34';
+      if (s.includes('5') || s.includes('6') || s.includes('خامس') || s.includes('سادس')) return 'primary_56';
+      return 'primary_12'; // default fallback for primary
+    }
+
+    return 'other';
   };
 
   useEffect(() => {
@@ -71,7 +86,10 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
         const grouped: Record<string, Teacher[]> = {};
 
         data.forEach((servant: any) => {
-          const stageKey = getStageKey(servant.class_stage || servant.class_or_job || '');
+          const role = servant.role || '';
+          const isSup = role === 'supervisor' || role === 'admin';
+          // Force supervisors to the top section, otherwise use their normal stage
+          const stageKey = isSup ? 'supervisors' : getStageKey(servant.class_stage || servant.class_or_job || '');
 
           if (!grouped[stageKey]) {
             grouped[stageKey] = [];
@@ -82,7 +100,7 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
             name: servant.full_name,
             mobile: servant.mobile_personal,
             email: '',
-            isSupervisor: servant.role === 'supervisor',
+            isSupervisor: isSup,
             photo_url: servant.photo_url
           });
         });
@@ -225,7 +243,7 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
                                 </div>
                                 {teacher.isSupervisor && (
                                   <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-secondary/20" style={{ color: 'var(--secondary)' }}>
-                                    (أمين الفصل)
+                                    {classData.stage === 'supervisors' ? '(أمين خدمة)' : '(أمين الفصل)'}
                                   </span>
                                 )}
                               </div>
