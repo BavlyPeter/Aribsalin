@@ -21,6 +21,7 @@ interface ClassData {
 interface TeachersPageProps {
   onBack: () => void;
   onEdit?: (teacher: Teacher, type: 'servant') => void;
+  onViewProfile?: (id: string) => void;
 }
 
 const servingStages = {
@@ -33,7 +34,7 @@ const servingStages = {
   university_graduate: 'جامعي وخريجين'
 };
 
-export function TeachersPage({ onBack, onEdit }: TeachersPageProps) {
+export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProps) {
   const [classesData, setClassesData] = useState<ClassData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -200,7 +201,8 @@ export function TeachersPage({ onBack, onEdit }: TeachersPageProps) {
                       {classData.teachers.map((teacher) => (
                         <div
                           key={teacher.id}
-                          className={`rounded-lg p-3 flex items-start justify-between border ${teacher.isSupervisor ? 'bg-secondary/10 border-secondary/30' : 'bg-muted/30 border-transparent'}`}
+                          onClick={() => onViewProfile?.(teacher.id)}
+                          className={`rounded-lg p-3 flex items-start justify-between border cursor-pointer hover:shadow-md transition-all ${teacher.isSupervisor ? 'bg-secondary/10 border-secondary/30 hover:bg-secondary/20' : 'bg-muted/30 border-transparent hover:bg-muted/50'}`}
                         >
                           <div className="space-y-1 min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">

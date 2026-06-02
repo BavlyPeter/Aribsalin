@@ -14,11 +14,12 @@ import { WelcomeScreen } from '../shared/WelcomeScreen';
 import { FinancePage } from '../../pages/FinancePage';
 import { StatisticsPage } from '../../pages/StatisticsPage';
 import { TeachersPage } from '../../pages/TeachersPage';
+import { ServantProfile } from '../../pages/ServantProfile';
 import { StudentPortalLogin } from '../../pages/StudentPortalLogin';
 import { Participant, StudentData, TeacherData } from '../../types';
 import { toast, Toaster } from 'sonner';
 
-type View       =  'roleSelection' | 'login' | 'signup' | 'studentPortal' | 'studentScanner' | 'dashboard' | 'registration' | 'scanner' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'finance' | 'statistics' | 'teachers';
+type View       =  'roleSelection' | 'login' | 'signup' | 'studentPortal' | 'studentScanner' | 'dashboard' | 'registration' | 'scanner' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'finance' | 'statistics' | 'teachers' | 'servantProfile';
 type ScanMode   =  'attendance' | 'market' | 'addPoints' | 'viewDetails';
 type ViewerRole =  'servant' | 'student';
 
@@ -31,6 +32,8 @@ export default function AppMain() {
   const [viewerRole, setViewerRole] = useState<ViewerRole>('servant');
   const [currentServant, setCurrentServant] = useState<any>(null);
   const [selectedParticipantForPoints, setSelectedParticipantForPoints] = useState<any | null>(null);
+
+  const [selectedServantProfileId, setSelectedServantProfileId] = useState<string | null>(null);
 
   const [participants, setParticipants] = useState<any[]>([]);
 
@@ -1012,6 +1015,14 @@ export default function AppMain() {
           <TeachersPage
             onBack={() => setCurrentView('dashboard')}
             onEdit={(rec: any) => handleEditRequest(rec, 'servant')}
+            onViewProfile={(id: string) => { setSelectedServantProfileId(id); setCurrentView('servantProfile'); }}
+          />
+        )}
+
+        {currentView === 'servantProfile' && selectedServantProfileId && (
+          <ServantProfile
+            servantId={selectedServantProfileId}
+            onBack={() => { setSelectedServantProfileId(null); setCurrentView('teachers'); }}
           />
         )}
       </div>
