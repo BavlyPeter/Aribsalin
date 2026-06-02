@@ -1,4 +1,4 @@
-import { ArrowRight, Users, Crown, Trash2, Edit } from 'lucide-react';
+import { ArrowRight, Users, Crown, Trash2, Edit, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
@@ -9,6 +9,7 @@ interface Teacher {
   mobile: string;
   email: string;
   isSupervisor?: boolean;
+  photo_url?: string;
 }
 
 interface ClassData {
@@ -81,7 +82,8 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
             name: servant.full_name,
             mobile: servant.mobile_personal,
             email: '',
-            isSupervisor: servant.role === 'supervisor'
+            isSupervisor: servant.role === 'supervisor',
+            photo_url: servant.photo_url
           });
         });
 
@@ -201,25 +203,35 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
                       {classData.teachers.map((teacher) => (
                         <div
                           key={teacher.id}
-                          onClick={() => onViewProfile?.(teacher.id)}
                           className={`rounded-lg p-3 flex items-start justify-between border cursor-pointer hover:shadow-md transition-all ${teacher.isSupervisor ? 'bg-secondary/10 border-secondary/30 hover:bg-secondary/20' : 'bg-muted/30 border-transparent hover:bg-muted/50'}`}
                         >
-                          <div className="space-y-1 min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {teacher.isSupervisor && (
-                                <Crown className="w-4 h-4 shrink-0" style={{ color: 'var(--secondary)' }} />
-                              )}
-                              <div className={`font-medium text-sm ${teacher.isSupervisor ? 'text-[var(--secondary)]' : 'text-foreground'}`}>
-                                {teacher.name}
-                              </div>
-                              {teacher.isSupervisor && (
-                                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-secondary/20" style={{ color: 'var(--secondary)' }}>
-                                  (أمين الفصل)
-                                </span>
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            {/* Avatar */}
+                            <div className="w-11 h-11 rounded-full overflow-hidden bg-primary/5 border-2 border-primary/10 flex items-center justify-center shrink-0">
+                              {teacher.photo_url ? (
+                                <img src={teacher.photo_url} alt={teacher.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <User className="w-5 h-5 text-primary/40" />
                               )}
                             </div>
-                            <div className="text-xs text-muted-foreground">{teacher.mobile}</div>
-                            {teacher.email && <div className="text-xs text-muted-foreground">{teacher.email}</div>}
+
+                            <div className="space-y-1 min-w-0 flex-1 text-right" onClick={() => onViewProfile?.(teacher.id)}>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {teacher.isSupervisor && (
+                                  <Crown className="w-4 h-4 shrink-0" style={{ color: 'var(--secondary)' }} />
+                                )}
+                                <div className={`font-medium text-sm ${teacher.isSupervisor ? 'text-[var(--secondary)]' : 'text-foreground'}`}>
+                                  {teacher.name}
+                                </div>
+                                {teacher.isSupervisor && (
+                                  <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-secondary/20" style={{ color: 'var(--secondary)' }}>
+                                    (أمين الفصل)
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-muted-foreground">{teacher.mobile}</div>
+                              {teacher.email && <div className="text-xs text-muted-foreground">{teacher.email}</div>}
+                            </div>
                           </div>
 
                           <div className="flex items-center gap-2 mr-2 shrink-0">
