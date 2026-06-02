@@ -1,6 +1,7 @@
 export interface StudentData {
   fullName: string;
   gender: 'male' | 'female' | '';
+  photo_url?: string | null;
   educationStage: string;
   educational_stage?: string;
   educationYear: string;
@@ -44,6 +45,7 @@ export interface Participant {
 export interface TeacherData {
   fullName: string;
   gender: 'male' | 'female' | '';
+  photo_url?: string | null;
   educationStage: string;
   educationYear: string;
   studyOrWorkPlace: string;

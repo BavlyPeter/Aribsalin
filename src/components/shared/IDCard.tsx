@@ -27,6 +27,7 @@ const educationStageLabels: Record<string, string> = {
 
 export function IDCard({ student }: IDCardProps) {
   const participantSmartId = student.participant_id || student.id;
+  const photoUrl = student.data?.photo_url || (student as any).photo_url || '';
 
   const getInitials = (name: string) => {
     const parts = name.split(' ');
@@ -66,17 +67,25 @@ export function IDCard({ student }: IDCardProps) {
       {/* Profile Picture Circle - Overlapping */}
       <div className="flex justify-center" style={{ marginTop: '-50px' }}>
         <div className="relative">
-          {/* Profile Picture Placeholder */}
+          {/* Profile Image or Initials */}
           <div
-            className="w-[120px] h-[120px] rounded-full flex items-center justify-center shadow-xl"
+            className="w-[120px] h-[120px] rounded-full overflow-hidden shadow-xl flex items-center justify-center"
             style={{
               ...getGradientStyle(student.data.gender),
               border: '4px solid #ffffff'
             }}
           >
-            <span className="text-4xl font-bold" style={{ color: '#ffffff' }}>
-              {getInitials(student.name)}
-            </span>
+            {photoUrl ? (
+              <img
+                src={photoUrl}
+                alt={student.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-4xl font-bold" style={{ color: '#ffffff' }}>
+                {getInitials(student.name)}
+              </span>
+            )}
           </div>
 
           {/* ID Badge */}

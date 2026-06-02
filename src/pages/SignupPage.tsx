@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowRight, Eye, EyeOff, Save } from 'lucide-react';
 import { TeacherData } from '../types';
 import { supabase } from '../lib/supabase';
+import { uploadProfileImage } from '../lib/uploadHelper';
 import { toast } from 'sonner';
 import churchLogo from '../assets/images/new-church-logo.png';
 import festivalLogo from '../assets/images/Arebsalin-1.png';
@@ -52,6 +53,8 @@ const educationYears = {
 export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPageWithEditProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [areas, setAreas] = useState<string[]>([]);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(editData?.photo_url || null);
   const [formData, setFormData] = useState<TeacherData>({
     fullName: '',
     gender: '',
@@ -113,6 +116,7 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
             classStage: source.class_stage || '',
             fullName: source.full_name || '',
             gender: source.gender || '',
+            photo_url: source.photo_url || null,
             educationStage: source.educational_stage || '',
             educationYear: source.academic_year || '',
             studyOrWorkPlace: source.educational_stage === 'graduate' ? (source.class_or_job || '') : (source.class_or_job && !source.class_or_job.includes(' - ') ? source.class_or_job : ''),
@@ -127,6 +131,8 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
             teacherId: source.teacher_id || '',
             password: '',
           });
+          setPhotoPreview(source.photo_url || null);
+          setPhotoFile(null);
         }
       } catch (err) {
         console.error('Error fetching full servant edit data:', err);
@@ -139,6 +145,14 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
     fetchFullServantData();
   }, [editData]);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (photoPreview && photoPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(photoPreview);
+      }
+    };
+  }, [photoPreview]);
 
   const generateSmartId = async (role: string, stage: string) => {
     let prefix = '';
@@ -189,6 +203,11 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
 
     try {
       let finalTeacherId = formData.teacherId || '';
+      let finalPhotoUrl = formData.photo_url || editData?.photo_url || null;
+
+      if (photoFile) {
+        finalPhotoUrl = await uploadProfileImage(photoFile, 'servants');
+      }
 
       if (!editData || !editData.id) {
         // Determine Role, Stage, and Class for Prefix
@@ -243,6 +262,7 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
         teacher_id: finalTeacherId,
         full_name: formData.fullName,
         gender: formData.gender,
+        photo_url: finalPhotoUrl,
         mobile_personal: formData.mobile,
         educational_stage: formData.educationStage, // Their personal education
         academic_year: formData.educationYear,
@@ -371,6 +391,33 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
             {editData ? 'تعديل بيانات الخادم' : 'تسجيل خادم جديد'}
           </h2>
         </div>
+      </div>
+
+      <div className="px-4 pt-4">
+        <label className="block w-fit mx-auto cursor-pointer">
+          <div className="w-24 h-24 rounded-full border-2 border-dashed border-border overflow-hidden bg-muted/40 flex items-center justify-center shadow-sm">
+            {photoPreview ? (
+              <img src={photoPreview} alt="صورة الخادم" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-xs text-muted-foreground text-center px-2">أضف صورة</span>
+            )}
+          </div>
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                setPhotoFile(file);
+                if (photoPreview && photoPreview.startsWith('blob:')) {
+                  URL.revokeObjectURL(photoPreview);
+                }
+                setPhotoPreview(URL.createObjectURL(file));
+              }
+            }}
+          />
+        </label>
       </div>
         <form onSubmit={handleSubmit} className="p-4 space-y-4 pb-32">
         <div className="bg-card rounded-xl p-5 shadow-sm border border-border">

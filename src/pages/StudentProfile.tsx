@@ -128,8 +128,16 @@ export function StudentProfile({ student, totalDays, onBack }: StudentProfilePro
       <div className="p-4 space-y-4 pb-8">
         {/* Profile Header Card */}
         <div className="bg-card rounded-xl p-6 shadow-sm border border-border text-center">
-          <div className="w-24 h-24 bg-primary/10 rounded-full mx-auto mb-4 flex items-center justify-center">
-            <User className="w-12 h-12 text-primary" />
+          <div className="w-24 h-24 bg-primary/10 rounded-full mx-auto mb-4 overflow-hidden flex items-center justify-center border-4 border-white shadow-xl">
+            {student.data?.photo_url || (student as any).photo_url ? (
+              <img
+                src={student.data?.photo_url || (student as any).photo_url}
+                alt={student.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <User className="w-12 h-12 text-primary" />
+            )}
           </div>
           <h3 className="text-xl mb-1 text-primary">{student.name}</h3>
           <p className="text-sm text-muted-foreground mb-4">رقم المشارك: {participantSmartId}</p>

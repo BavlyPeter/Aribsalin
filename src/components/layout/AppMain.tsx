@@ -325,6 +325,7 @@ export default function AppMain() {
       const payload = {
         full_name: normalizedFullName,
         gender: data.gender,
+        photo_url: data.photo_url || null,
         educational_stage: data.educationStage,
         academic_year: data.educationYear,
         class_or_job: data.studyOrWorkPlace,

@@ -2,6 +2,7 @@ import { ArrowRight, Save } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { StudentData } from '../../types';
 import { supabase } from '../../lib/supabase';
+import { uploadProfileImage } from '../../lib/uploadHelper';
 import { toast } from 'sonner';
 
 interface RegistrationFormProps {
@@ -54,6 +55,8 @@ const educationYears = {
 export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: RegistrationFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [areas, setAreas] = useState<string[]>([]);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(editData?.photo_url || null);
   const [formData, setFormData] = useState<StudentData>({
     fullName: '',
     gender: '',
@@ -97,6 +100,7 @@ export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: Regi
           setFormData({
             fullName: source.full_name || '',
             gender: source.gender || '',
+            photo_url: source.photo_url || null,
             educationStage: source.educational_stage || '',
             educationYear: source.academic_year || '',
             studyOrWorkPlace: source.educational_stage === 'graduate' ? (source.class_or_job || '') : (source.class_or_job && !source.class_or_job.includes(' - ') ? source.class_or_job : ''),
@@ -111,6 +115,8 @@ export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: Regi
             address: source.address_details || '',
             dateOfBirth: source.birth_date || ''
           });
+          setPhotoPreview(source.photo_url || null);
+          setPhotoFile(null);
         }
       } catch (err) {
         console.error('Error fetching full participant edit data:', err);
@@ -122,6 +128,14 @@ export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: Regi
 
     fetchFullParticipantData();
   }, [editData]);
+
+  useEffect(() => {
+    return () => {
+      if (photoPreview && photoPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(photoPreview);
+      }
+    };
+  }, [photoPreview]);
 
   useEffect(() => {
     const fetchAreas = async () => {
@@ -222,7 +236,14 @@ export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: Regi
     setIsLoading(true);
 
     try {
-      await onSubmit(formData, editData?.id);
+      let finalPhotoUrl = formData.photo_url || editData?.photo_url || null;
+      if (photoFile) {
+        finalPhotoUrl = await uploadProfileImage(photoFile, 'participants');
+      }
+
+      const finalData = { ...formData, photo_url: finalPhotoUrl };
+
+      await onSubmit(finalData, editData?.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'حدث خطأ غير متوقع';
       console.error(error);
@@ -288,6 +309,33 @@ export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: Regi
           </button>
           <h2 className="text-xl">{editData ? 'تعديل بيانات المشارك' : 'تسجيل مشارك جديد'}</h2>
         </div>
+      </div>
+
+      <div className="px-4 pt-4">
+        <label className="block w-fit mx-auto cursor-pointer">
+          <div className="w-24 h-24 rounded-full border-2 border-dashed border-border overflow-hidden bg-muted/40 flex items-center justify-center shadow-sm">
+            {photoPreview ? (
+              <img src={photoPreview} alt="صورة المشارك" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-xs text-muted-foreground text-center px-2">أضف صورة</span>
+            )}
+          </div>
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                setPhotoFile(file);
+                if (photoPreview && photoPreview.startsWith('blob:')) {
+                  URL.revokeObjectURL(photoPreview);
+                }
+                setPhotoPreview(URL.createObjectURL(file));
+              }
+            }}
+          />
+        </label>
       </div>
 
       {/* Form */}

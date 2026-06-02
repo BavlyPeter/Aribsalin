@@ -99,8 +99,10 @@ export function ServantProfile({ servantId, onBack }: ServantProfileProps) {
       <div className="p-4 space-y-4">
         {/* Profile Header Card */}
         <div className="bg-card rounded-xl p-6 shadow-sm border border-border text-center">
-          <div className="w-24 h-24 bg-primary/10 rounded-full mx-auto mb-4 flex items-center justify-center">
-            {servant.role === 'supervisor' || servant.role === 'admin' ? (
+          <div className="w-24 h-24 rounded-full mx-auto mb-4 overflow-hidden border-4 border-white shadow-xl bg-primary/10 flex items-center justify-center">
+            {servant.photo_url ? (
+              <img src={servant.photo_url} alt={servant.full_name} className="w-full h-full object-cover" />
+            ) : servant.role === 'supervisor' || servant.role === 'admin' ? (
               <Crown className="w-12 h-12" style={{ color: 'var(--secondary)' }} />
             ) : (
               <User className="w-12 h-12 text-primary" />
