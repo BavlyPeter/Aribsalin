@@ -38,6 +38,7 @@ export interface Participant {
   name: string;
   points: number;
   attended: boolean;
+  photo_url?: string;
   data: StudentData;
   attendanceDays: string[];
 }

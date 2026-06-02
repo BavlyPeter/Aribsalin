@@ -12,6 +12,7 @@ interface Participant {
   full_name?: string;
   points: number;
   attended: boolean;
+  photo_url?: string;
   data?: {
     gender?: string;
     educationStage?: string;
@@ -250,19 +251,26 @@ export function ParticipantsList({ participants, onEdit, onManagePoints, onDelet
               <div className="flex-1 cursor-pointer" onClick={participant.onClick}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      participant.attended ? 'bg-primary/10' : 'bg-muted'
-                    }`}>
-                      <User className={`w-5 h-5 ${
-                        participant.attended ? 'text-primary' : 'text-muted-foreground'
-                      }`} />
+                    {/* Status Indicator */}
+                    <div
+                      className={`w-3 h-3 rounded-full shrink-0 ${
+                        participant.attended ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-slate-200'
+                      }`}
+                      title={participant.attended ? 'حاضر اليوم' : 'لم يسجل حضور اليوم'}
+                    />
+
+                    {/* Avatar Image */}
+                    <div className="w-11 h-11 rounded-full overflow-hidden bg-primary/5 border-2 border-primary/10 flex items-center justify-center shrink-0">
+                      {participant.photo_url || participant.data?.photo_url ? (
+                        <img src={participant.photo_url || participant.data?.photo_url} alt={participant.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-5 h-5 text-primary/40" />
+                      )}
                     </div>
-                    <div>
+
+                    <div className="flex flex-col items-start" dir="rtl">
                       <div className="flex items-center gap-2">
                         <span className="text-foreground">{participant.name}</span>
-                        {participant.attended && (
-                          <div className="w-2 h-2 bg-green-500 rounded-full" />
-                        )}
                       </div>
                       <div className="text-xs text-muted-foreground">{participant.participant_id || participant.id}</div>
                     </div>

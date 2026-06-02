@@ -87,7 +87,8 @@ export default function AppMain() {
       // Step 1: Fetch all participants (Safe query)
       const { data: pData, error: pError } = await supabase
         .from('participants')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (pError) throw pError;
 
@@ -125,6 +126,7 @@ export default function AppMain() {
             points: p.points_balance || 0,
             attended: uniqueAttendanceDays.includes(today),
             attendanceDays: uniqueAttendanceDays,
+            photo_url: p.photo_url,
             data: {
               fullName: p.full_name,
               gender: p.gender,
@@ -723,55 +725,6 @@ export default function AppMain() {
     }
   };
 
-  const handleManualPointsConfirm = async (participantId: string, points: number, action: 'add' | 'subtract') => {
-    try {
-      const amount = action === 'add' ? points : -points;
-
-      // 1. Get current points to calculate new balance
-      const { data: pData } = await supabase
-        .from('participants')
-        .select('points_balance')
-        .eq('id', participantId)
-        .single();
-
-      if (!pData) throw new Error('المشارك غير موجود');
-
-      const newBalance = (pData.points_balance || 0) + amount;
-
-      // 2. Update Participant Balance
-      const { error: updateError } = await supabase
-        .from('participants')
-        .update({ points_balance: newBalance })
-        .eq('id', participantId);
-
-      if (updateError) throw updateError;
-
-      // 3. Insert into Transaction History
-      const { error: logError } = await supabase
-        .from('points_transactions')
-        .insert([{
-          participant_id: participantId,
-          points_amount: amount,
-          transaction_type: 'manual',
-          description: `تعديل يدوي: ${action === 'add' ? 'إضافة' : 'خصم'} ${points} نقطة`
-        }]);
-
-      if (logError) throw logError;
-
-      toast.success('تم تعديل النقاط بنجاح');
-
-      // Update local state to reflect change
-      setParticipants(prev => prev.map(p => 
-        p.id === participantId ? { ...p, points: newBalance } : p
-      ));
-
-      setCurrentView('dashboard'); // Close modal
-    } catch (err: any) {
-      console.error('Error updating points:', err);
-      toast.error('فشل في تعديل النقاط: ' + err.message);
-    }
-  };
-
   // --- Edit / Manage points handlers ---
   const handleEditRequest = (record: any, type: 'participant' | 'servant') => {
     setEditData(record);
@@ -899,7 +852,8 @@ export default function AppMain() {
               name: p.name,
               points: p.points,
               attended: p.attended,
-              data: p.data
+              data: p.data,
+              photo_url: p.photo_url
             }))}
             onEditRequest={(rec) => handleEditRequest(rec, 'participant')}
             onManagePoints={(rec) => handleManagePointsRequest(rec)}
@@ -974,7 +928,60 @@ export default function AppMain() {
               name: p.name,
               points: p.points
             }))}
-            onConfirm={handleManualPointsConfirm}
+            onConfirm={async (participantId, points, action) => {
+              try {
+                // 1. Get the actual DB UUID
+                const targetParticipant = participants.find(p => p.id === participantId || p.participant_id === participantId);
+                if (!targetParticipant) throw new Error('لم يتم العثور على المخدوم');
+                const dbId = targetParticipant.id;
+                
+                const amount = action === 'add' ? points : -points;
+                
+                // 2. Fetch current balance using dbId
+                const { data: pData, error: fetchError } = await supabase
+                  .from('participants')
+                  .select('points_balance')
+                  .eq('id', dbId)
+                  .single();
+                  
+                if (fetchError) throw fetchError;
+                
+                const newBalance = (pData.points_balance || 0) + amount;
+                
+                // 3. Update balance using dbId
+                const { error: updateError } = await supabase
+                  .from('participants')
+                  .update({ points_balance: newBalance })
+                  .eq('id', dbId);
+                  
+                if (updateError) throw updateError;
+                
+                // 4. Log transaction using dbId
+                const { error: logError } = await supabase
+                  .from('points_transactions')
+                  .insert([{ 
+                    participant_id: dbId, 
+                    servant_id: currentServant?.id || null,
+                    points_amount: amount, 
+                    transaction_type: 'manual', 
+                    description: 'تعديل يدوي' 
+                  }]);
+                  
+                if (logError) throw logError;
+                
+                // 5. Update local state
+                setParticipants(prev => prev.map(p => 
+                  p.id === dbId ? { ...p, points: newBalance } : p
+                ));
+                
+                toast.success('تم التعديل بنجاح');
+                setCurrentView('dashboard');
+                setSelectedParticipantForPoints(null);
+              } catch (err: any) {
+                console.error('Manual points error:', err);
+                toast.error(`حدث خطأ: ${err.message || 'غير متوقع'}`);
+              }
+            }}
             initialParticipant={selectedParticipantForPoints ? {
               id: selectedParticipantForPoints.participant_id || selectedParticipantForPoints.id,
               dbId: selectedParticipantForPoints.id,
