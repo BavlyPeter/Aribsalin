@@ -917,6 +917,21 @@ export default function AppMain() {
           />
         )}
 
+        {currentView === 'signup' && (
+          <SignupPage
+            onSignup={(data) => {
+              setCurrentView('teachers');
+              handleClearEdit();
+            }}
+            onBack={() => {
+              setCurrentView('teachers');
+              handleClearEdit();
+            }}
+            editData={editData}
+            clearEdit={handleClearEdit}
+          />
+        )}
+
         {currentView === 'scanner' && (
           <QRScanner
             onBack={() => setCurrentView('dashboard')}

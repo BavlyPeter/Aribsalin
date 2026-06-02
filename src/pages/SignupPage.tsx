@@ -188,52 +188,55 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
     setIsLoading(true);
 
     try {
-      // Determine Role, Stage, and Class for Prefix
-      let prefix = '';
-      if (formData.role === 'admin') {
-        prefix = 'A'; // Admins just get A + YZ
-      } else {
-        const R = formData.role === 'supervisor' ? 'S' : 'N';
+      let finalTeacherId = formData.teacherId || '';
 
-        let L = 'X';
-        let X = '0';
-        const stage = formData.classStage || '';
+      if (!editData || !editData.id) {
+        // Determine Role, Stage, and Class for Prefix
+        let prefix = '';
+        if (formData.role === 'admin') {
+          prefix = 'A'; // Admins just get A + YZ
+        } else {
+          const R = formData.role === 'supervisor' ? 'S' : 'N';
 
-        if (stage === 'kg') { L = 'K'; X = '0'; }
-        else if (stage === 'primary_12') { L = 'P'; X = '1'; }
-        else if (stage === 'primary_34') { L = 'P'; X = '3'; }
-        else if (stage === 'primary_56') { L = 'P'; X = '5'; }
-        else if (stage === 'preparatory') { L = 'Y'; X = '0'; }
-        else if (stage === 'secondary') { L = 'S'; X = '0'; }
-        else if (stage === 'university_graduate') { L = 'G'; X = '0'; }
+          let L = 'X';
+          let X = '0';
+          const stage = formData.classStage || '';
 
-        prefix = `${R}${L}${X}`;
-      }
+          if (stage === 'kg') { L = 'K'; X = '0'; }
+          else if (stage === 'primary_12') { L = 'P'; X = '1'; }
+          else if (stage === 'primary_34') { L = 'P'; X = '3'; }
+          else if (stage === 'primary_56') { L = 'P'; X = '5'; }
+          else if (stage === 'preparatory') { L = 'Y'; X = '0'; }
+          else if (stage === 'secondary') { L = 'S'; X = '0'; }
+          else if (stage === 'university_graduate') { L = 'G'; X = '0'; }
 
-      // Gap-Filling Algorithm specific to the Prefix
-      const { data: existingIds, error: fetchError } = await supabase
-        .from('servants')
-        .select('teacher_id')
-        .like('teacher_id', `${prefix}%`);
-
-      if (fetchError && fetchError.code !== '42703') {
-        // ignore 42703 if column doesn't exist yet in some environments, but throw otherwise
-        console.warn('Could not fetch existing teacher_ids:', fetchError);
-      }
-
-      let nextNum = 1;
-      if (existingIds && existingIds.length > 0) {
-        const numbers = existingIds
-          .map(row => parseInt(String(row.teacher_id).replace(prefix, ''), 10))
-          .filter(n => !isNaN(n))
-          .sort((a, b) => a - b);
-
-        for (const num of numbers) {
-          if (num === nextNum) nextNum++;
-          else if (num > nextNum) break; // Found the missing gap!
+          prefix = `${R}${L}${X}`;
         }
+
+        // Gap-Filling Algorithm specific to the Prefix
+        const { data: existingIds, error: fetchError } = await supabase
+          .from('servants')
+          .select('teacher_id')
+          .like('teacher_id', `${prefix}%`);
+
+        if (fetchError && fetchError.code !== '42703') {
+          console.warn('Could not fetch existing teacher_ids:', fetchError);
+        }
+
+        let nextNum = 1;
+        if (existingIds && existingIds.length > 0) {
+          const numbers = existingIds
+            .map(row => parseInt(String(row.teacher_id).replace(prefix, ''), 10))
+            .filter(n => !isNaN(n))
+            .sort((a, b) => a - b);
+
+          for (const num of numbers) {
+            if (num === nextNum) nextNum++;
+            else if (num > nextNum) break; // Found the missing gap!
+          }
+        }
+        finalTeacherId = `${prefix}${String(nextNum).padStart(2, '0')}`;
       }
-      const finalTeacherId = `${prefix}${String(nextNum).padStart(2, '0')}`;
 
       // Build payload ensuring teacher_id is explicitly included to fix the Not-Null constraint
       const servantPayload = {
@@ -613,28 +616,30 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
           <h3 className="mb-4 text-primary">بيانات الدخول والصلاحية</h3>
 
           <div className="space-y-4">
-            <div>
-              <label className="block mb-2 text-sm text-foreground">كلمة المرور *</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  minLength={4}
-                  value={formData.password}
-                  onChange={(e) => updateField('password', e.target.value)}
-                  className="w-full px-4 py-3 pl-12 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="كلمة المرور (يجب ان تكون اكثر من 4 حروف او ارقام)"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
+            {!editData && (
+              <div>
+                <label className="block mb-2 text-sm text-foreground">كلمة المرور *</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    minLength={4}
+                    value={formData.password}
+                    onChange={(e) => updateField('password', e.target.value)}
+                    className="w-full px-4 py-3 pl-12 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+                    placeholder="كلمة المرور (يجب ان تكون اكثر من 4 حروف او ارقام)"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             <div>
               <label className="block mb-2 text-sm text-foreground">دور الخادم *</label>
