@@ -1,4 +1,5 @@
 import { QRCodeSVG } from 'qrcode.react';
+import { User } from 'lucide-react';
 import churchLogo from '../../assets/images/new-church-logo.png';
 import festivalLogo from '../../assets/images/Arebsalin-1.png';
 import { StudentData } from '../../types';
@@ -27,24 +28,7 @@ const educationStageLabels: Record<string, string> = {
 
 export function IDCard({ student }: IDCardProps) {
   const participantSmartId = student.participant_id || student.id;
-  const photoUrl = student.data?.photo_url || (student as any).photo_url || '';
-
-  const getInitials = (name: string) => {
-    const parts = name.split(' ');
-    if (parts.length >= 2) {
-      return parts[0][0] + parts[1][0];
-    }
-    return name.substring(0, 2);
-  };
-
-  const getGradientStyle = (gender: string) => {
-    if (gender === 'male') {
-      return { background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' }; // Blue
-    } else if (gender === 'female') {
-      return { background: 'linear-gradient(135deg, #EC4899 0%, #DB2777 100%)' }; // Pink
-    }
-    return { background: 'linear-gradient(135deg, #A855F7 0%, #9333EA 100%)' }; // Purple
-  };
+  const photoUrl = (student as any).photo_url || student.data?.photo_url || '';
 
   return (
     <div
@@ -67,11 +51,10 @@ export function IDCard({ student }: IDCardProps) {
       {/* Profile Picture Circle - Overlapping */}
       <div className="flex justify-center" style={{ marginTop: '-50px' }}>
         <div className="relative">
-          {/* Profile Image or Initials */}
+          {/* Profile Image or Fallback User Icon */}
           <div
-            className="w-[120px] h-[120px] rounded-full overflow-hidden shadow-xl flex items-center justify-center"
+            className="w-[120px] h-[120px] rounded-full overflow-hidden shadow-xl flex items-center justify-center bg-white"
             style={{
-              ...getGradientStyle(student.data.gender),
               border: '4px solid #ffffff'
             }}
           >
@@ -82,9 +65,9 @@ export function IDCard({ student }: IDCardProps) {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-4xl font-bold" style={{ color: '#ffffff' }}>
-                {getInitials(student.name)}
-              </span>
+              <div className="w-full h-full flex items-center justify-center bg-slate-100">
+                <User className="w-12 h-12 text-slate-400" />
+              </div>
             )}
           </div>
 
