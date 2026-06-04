@@ -163,21 +163,29 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
     if (!file) return;
 
     try {
-      if (scannerRef.current) {
-        const decodedText = await scannerRef.current.scanFile(file, true);
-        if (decodedText) {
-          scanLockRef.current = false; // Bypass lock forcefully for file uploads
-          handleScanSuccess(decodedText);
-        }
+      // 1. Ensure scanner instance exists even if camera is off/denied
+      let scanner = scannerRef.current;
+      if (!scanner) {
+        scanner = new Html5Qrcode(scannerIdRef.current);
+        scannerRef.current = scanner;
+      }
+
+      // 2. Scan file WITHOUT attempting to render it to the UI (false), 
+      // which prevents canvas memory crashes on high-res mobile photos
+      const decodedText = await scanner.scanFile(file, false);
+      
+      if (decodedText) {
+        scanLockRef.current = false; // Forcefully bypass the lock for file uploads
+        handleScanSuccess(decodedText);
       }
     } catch (err) {
       console.error('Error reading QR from image:', err);
-      alert('لم يتم التعرف على QR Code في هذه الصورة. يرجى التأكد من وضوح الصورة وتوجيه الكود بشكل صحيح.');
-    }
-
-    // Reset input so the same file can be selected again if needed
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      alert('لم يتم التعرف على QR Code في هذه الصورة. يرجى قص الصورة (Crop) لتوضيح الكود، أو التأكد من جودتها وعدم وجود اهتزاز.');
+    } finally {
+      // Reset input so the same file can be selected again if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
