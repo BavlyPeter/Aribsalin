@@ -26,33 +26,46 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
     const cleanText = decodedText.trim();
     if (!cleanText || cleanText.length < 1) return;
 
-    scanLockRef.current = true; // Lock immediately using ref
-    setIsScanning(true); // Keep state for UI if needed
-
+    scanLockRef.current = true;
     if (navigator.vibrate) {
       navigator.vibrate(200);
     }
     
-    // Safely stop the camera BEFORE notifying the parent to change views (prevents mobile freeze)
-    if (scannerRef.current) {
-      scannerRef.current.stop().then(() => {
-        try { scannerRef.current?.clear(); } catch(e) {}
-        onScanSuccess(cleanText);
-      }).catch((err) => {
-        console.error('Error stopping scanner:', err);
-        onScanSuccess(cleanText); // Ensure we still navigate even if stop fails
-      });
-    } else {
+    // For attendance, keep camera running and unlock after 2 seconds for continuous scanning
+    if (mode === 'attendance') {
       onScanSuccess(cleanText);
+      setTimeout(() => {
+        scanLockRef.current = false;
+      }, 2000);
+    } else {
+      // For addPoints/market/viewDetails, safely stop camera to prevent mobile freeze when modal opens
+      if (scannerRef.current) {
+        scannerRef.current.stop().then(() => {
+          try { scannerRef.current?.clear(); } catch(e) {}
+          onScanSuccess(cleanText);
+        }).catch((err) => {
+          onScanSuccess(cleanText);
+        });
+      } else {
+        onScanSuccess(cleanText);
+      }
     }
   };
 
   const handleSafeBack = () => {
+    scanLockRef.current = true; // Prevent new scans while backing out
     if (scannerRef.current) {
+      // Fallback: Force back navigation after 500ms even if stop() hangs
+      const forceBackTimer = setTimeout(() => {
+        onBack();
+      }, 500);
+
       scannerRef.current.stop().then(() => {
+        clearTimeout(forceBackTimer);
         try { scannerRef.current?.clear(); } catch(e) {}
         onBack();
       }).catch(() => {
+        clearTimeout(forceBackTimer);
         onBack();
       });
     } else {
@@ -150,16 +163,21 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
     if (!file) return;
 
     try {
-      if (!scannerRef.current) {
-        const html5QrCode = new Html5Qrcode(scannerIdRef.current);
-        scannerRef.current = html5QrCode;
+      if (scannerRef.current) {
+        const decodedText = await scannerRef.current.scanFile(file, true);
+        if (decodedText) {
+          scanLockRef.current = false; // Bypass lock forcefully for file uploads
+          handleScanSuccess(decodedText);
+        }
       }
-
-      const result = await scannerRef.current.scanFile(file, true);
-      handleScanSuccess(result);
     } catch (err) {
-      showNotification('error', 'فشل في قراءة الكود من الصورة');
-      console.error('Error scanning file:', err);
+      console.error('Error reading QR from image:', err);
+      alert('لم يتم التعرف على QR Code في هذه الصورة. يرجى التأكد من وضوح الصورة وتوجيه الكود بشكل صحيح.');
+    }
+
+    // Reset input so the same file can be selected again if needed
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
