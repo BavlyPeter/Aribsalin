@@ -1,4 +1,4 @@
-import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, FileText, Wallet, BarChart3, LogOut } from 'lucide-react';
+import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, FileText, Wallet, BarChart3, LogOut, User } from 'lucide-react';
 import { ParticipantsList } from '../components/shared/ParticipantsList';
 import churchLogo from '../assets/images/new-church-logo.png';
 import festivalLogo from '../assets/images/Arebsalin-1.png';
@@ -6,6 +6,7 @@ import festivalLogo from '../assets/images/Arebsalin-1.png';
 interface DashboardProps {
   onNavigate: (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers') => void;
   onViewProfile: (participantId: string) => void;
+  onViewServantProfile?: (id: string) => void; // <-- ADD THIS
   onLogout: () => void | Promise<void>;
   currentServant: any;
   participants?: Array<{ id: string; participant_id?: string; dbId?: string; name: string; points: number; attended: boolean; data?: any; photo_url?: string }>;
@@ -17,6 +18,7 @@ interface DashboardProps {
 export function Dashboard({
   onNavigate,
   onViewProfile,
+  onViewServantProfile, // <-- ADD THIS
   onLogout,
   currentServant,
   participants = [],
@@ -63,10 +65,21 @@ export function Dashboard({
         <div className="bg-card rounded-xl p-4 sm:p-6 shadow-sm border border-border mb-6">
           <div className="flex w-full items-center justify-between gap-3 sm:gap-4">
             {/* Part 1 (Starts Left): Avatar and Name Info (grouped together) */}
-            <div className="flex items-center gap-3 text-right min-w-0 flex-1">
-              {/* Avatar Icon */}
-              <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
-                {(currentServant.name || currentServant.full_name || 'خ').charAt(0)}
+            <div 
+              className="flex items-center gap-3 text-right min-w-0 flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => {
+                if (currentServant?.id && onViewServantProfile) {
+                  onViewServantProfile(currentServant.id);
+                }
+              }}
+            >
+              {/* Avatar Icon / Image */}
+              <div className="w-11 h-11 rounded-full overflow-hidden bg-primary/10 border-2 border-primary/20 flex items-center justify-center shrink-0">
+                {currentServant?.photo_url ? (
+                  <img src={currentServant.photo_url} alt={currentServant.name || currentServant.full_name} className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-6 h-6 text-primary/60" />
+                )}
               </div>
 
               {/* Name and Role Details */}

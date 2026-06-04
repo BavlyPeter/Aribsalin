@@ -34,6 +34,7 @@ export default function AppMain() {
   const [selectedParticipantForPoints, setSelectedParticipantForPoints] = useState<any | null>(null);
 
   const [selectedServantProfileId, setSelectedServantProfileId] = useState<string | null>(null);
+  const [servantProfileSource, setServantProfileSource] = useState<'dashboard' | 'teachers'>('teachers');
 
   const [participants, setParticipants] = useState<any[]>([]);
 
@@ -838,6 +839,11 @@ export default function AppMain() {
           <Dashboard
             onNavigate={handleNavigate}
             onViewProfile={handleViewProfile}
+            onViewServantProfile={(id: string) => {
+              setSelectedServantProfileId(id);
+              setServantProfileSource('dashboard');
+              setCurrentView('servantProfile');
+            }}
             onLogout={handleLogout}
             currentServant={currentServant}
             participants={participants.map(p => ({
