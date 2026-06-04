@@ -1039,14 +1039,21 @@ export default function AppMain() {
           <TeachersPage
             onBack={() => setCurrentView('dashboard')}
             onEdit={(rec: any) => handleEditRequest(rec, 'servant')}
-            onViewProfile={(id: string) => { setSelectedServantProfileId(id); setCurrentView('servantProfile'); }}
+            onViewProfile={(id: string) => { 
+              setSelectedServantProfileId(id); 
+              setServantProfileSource('teachers');
+              setCurrentView('servantProfile'); 
+            }}
           />
         )}
 
         {currentView === 'servantProfile' && selectedServantProfileId && (
           <ServantProfile
             servantId={selectedServantProfileId}
-            onBack={() => { setSelectedServantProfileId(null); setCurrentView('teachers'); }}
+            onBack={() => { 
+              setSelectedServantProfileId(null); 
+              setCurrentView(servantProfileSource); 
+            }}
           />
         )}
       </div>
