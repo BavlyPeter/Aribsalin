@@ -18,24 +18,46 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerIdRef = useRef('qr-reader');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const scanLockRef = useRef(false); // Add this to replace stale isScanning state
 
   const handleScanSuccess = (decodedText: string) => {
-    if (isScanning) return;
+    if (scanLockRef.current) return;
 
     const cleanText = decodedText.trim();
     if (!cleanText || cleanText.length < 1) return;
 
-    setIsScanning(true);
+    scanLockRef.current = true; // Lock immediately using ref
+    setIsScanning(true); // Keep state for UI if needed
+
     if (navigator.vibrate) {
       navigator.vibrate(200);
     }
     
-    onScanSuccess(cleanText);
+    // Safely stop the camera BEFORE notifying the parent to change views (prevents mobile freeze)
+    if (scannerRef.current) {
+      scannerRef.current.stop().then(() => {
+        try { scannerRef.current?.clear(); } catch(e) {}
+        onScanSuccess(cleanText);
+      }).catch((err) => {
+        console.error('Error stopping scanner:', err);
+        onScanSuccess(cleanText); // Ensure we still navigate even if stop fails
+      });
+    } else {
+      onScanSuccess(cleanText);
+    }
+  };
 
-    // Reset lock after a short delay to allow subsequent scans without remounting
-    setTimeout(() => {
-      setIsScanning(false);
-    }, 2000);
+  const handleSafeBack = () => {
+    if (scannerRef.current) {
+      scannerRef.current.stop().then(() => {
+        try { scannerRef.current?.clear(); } catch(e) {}
+        onBack();
+      }).catch(() => {
+        onBack();
+      });
+    } else {
+      onBack();
+    }
   };
 
   useEffect(() => {
@@ -157,7 +179,7 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
       <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/80 to-transparent p-4">
         <div className="flex items-center justify-between">
           <button
-            onClick={onBack}
+            onClick={handleSafeBack}
             className="p-2 bg-white/20 backdrop-blur-sm rounded-lg active:scale-95 transition-transform"
           >
             <ArrowRight className="w-6 h-6 text-white" />
