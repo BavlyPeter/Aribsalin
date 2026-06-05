@@ -5,9 +5,10 @@ import { toast } from 'sonner';
 
 interface RegistrationRequestsPageProps {
   onBack: () => void;
+  onViewProfile: (id: string) => void;
 }
 
-export function RegistrationRequestsPage({ onBack }: RegistrationRequestsPageProps) {
+export function RegistrationRequestsPage({ onBack, onViewProfile }: RegistrationRequestsPageProps) {
   const [requests, setRequests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -86,7 +87,11 @@ export function RegistrationRequestsPage({ onBack }: RegistrationRequestsPagePro
           <div className="grid gap-4 md:grid-cols-2">
             {requests.map(request => (
               <div key={request.id} className="bg-card p-5 rounded-2xl border border-border shadow-sm flex flex-col gap-4">
-                <div className="flex items-start gap-4">
+                <div 
+                  onClick={() => onViewProfile(request.id)}
+                  className="flex items-start gap-4 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-xl transition-colors"
+                  title="عرض الملف الشخصي"
+                >
                   <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                     <User className="w-6 h-6 text-primary" />
                   </div>

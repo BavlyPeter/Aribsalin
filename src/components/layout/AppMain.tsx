@@ -1022,6 +1022,11 @@ export default function AppMain() {
         {currentView === 'registrationRequests' && (
           <RegistrationRequestsPage
             onBack={() => setCurrentView('dashboard')}
+            onViewProfile={(id: string) => { 
+              setSelectedServantProfileId(id); 
+              setServantProfileSource('registrationRequests');
+              setCurrentView('servantProfile'); 
+            }}
           />
         )}
       </div>
