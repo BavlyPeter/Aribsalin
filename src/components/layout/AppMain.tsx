@@ -16,10 +16,11 @@ import { StatisticsPage } from '../../pages/StatisticsPage';
 import { TeachersPage } from '../../pages/TeachersPage';
 import { ServantProfile } from '../../pages/ServantProfile';
 import { StudentPortalLogin } from '../../pages/StudentPortalLogin';
+import { RegistrationRequestsPage } from '../../pages/RegistrationRequestsPage';
 import { Participant, StudentData, TeacherData } from '../../types';
 import { toast, Toaster } from 'sonner';
 
-type View       =  'roleSelection' | 'login' | 'signup' | 'studentPortal' | 'studentScanner' | 'dashboard' | 'registration' | 'scanner' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'finance' | 'statistics' | 'teachers' | 'servantProfile';
+type View       =  'roleSelection' | 'login' | 'signup' | 'studentPortal' | 'studentScanner' | 'dashboard' | 'registration' | 'scanner' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'finance' | 'statistics' | 'teachers' | 'servantProfile' | 'registrationRequests';
 type ScanMode   =  'attendance' | 'market' | 'addPoints' | 'viewDetails';
 type ViewerRole =  'servant' | 'student';
 
@@ -275,7 +276,7 @@ export default function AppMain() {
     setCurrentView('studentScanner');
   };
 
-  const handleNavigate = (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers') => {
+  const handleNavigate = (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers' | 'registrationRequests') => {
     if (view === 'scanner') {
       setScanMode('attendance');
       setCurrentView('scanner');
@@ -294,6 +295,8 @@ export default function AppMain() {
       setCurrentView('statistics');
     } else if (view === 'teachers') {
       setCurrentView('teachers');
+    } else if (view === 'registrationRequests') {
+      setCurrentView('registrationRequests');
     } else {
       setCurrentView(view);
     }
@@ -1013,6 +1016,12 @@ export default function AppMain() {
               setSelectedServantProfileId(null); 
               setCurrentView(servantProfileSource); 
             }}
+          />
+        )}
+
+        {currentView === 'registrationRequests' && (
+          <RegistrationRequestsPage
+            onBack={() => setCurrentView('dashboard')}
           />
         )}
       </div>

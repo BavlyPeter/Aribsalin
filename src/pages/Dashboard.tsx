@@ -1,10 +1,10 @@
-import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, FileText, Wallet, BarChart3, LogOut, User } from 'lucide-react';
+import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, FileText, Wallet, BarChart3, LogOut, User, UserCheck } from 'lucide-react';
 import { ParticipantsList } from '../components/shared/ParticipantsList';
 import churchLogo from '../assets/images/new-church-logo.png';
 import festivalLogo from '../assets/images/Arebsalin-1.png';
 
 interface DashboardProps {
-  onNavigate: (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers') => void;
+  onNavigate: (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers' | 'registrationRequests') => void;
   onViewProfile: (participantId: string) => void;
   onViewServantProfile?: (id: string) => void; // <-- ADD THIS
   onLogout: () => void | Promise<void>;
@@ -189,6 +189,16 @@ export function Dashboard({
           {/* Admin Only Buttons: Finance, Statistics, Teachers */}
           {isAdmin && (
             <>
+              <button
+                onClick={() => onNavigate('registrationRequests')}
+                className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
+              >
+                <div className="flex items-center justify-center gap-3">
+                  <UserCheck className="w-5 h-5 text-primary" />
+                  <span>طلبات التسجيل</span>
+                </div>
+              </button>
+
               <button
                 onClick={() => onNavigate('finance')}
                 className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"

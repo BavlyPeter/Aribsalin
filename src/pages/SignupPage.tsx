@@ -309,11 +309,16 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
         // 3. Insert into servants table
         const { error: insertError } = await supabase
           .from('servants')
-          .insert([finalPayload]);
+          .insert([{
+            ...finalPayload,
+            status: 'pending'
+          }]);
 
         if (insertError) throw insertError;
 
-        toast.success(`تم تسجيل الخادم بنجاح. كود الدخول: ${finalTeacherId}`);
+        toast.success('تم تسجيل الحساب بنجاح! يرجى انتظار موافقة أمين الخدمة.');
+        onBack(); // Go back to login/role selection instead of auto-logging in
+        return; // Stop here to prevent calling onSignup
       }
 
       // Notify parent component to redirect or update state

@@ -43,6 +43,14 @@ export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps) {
         return;
       }
 
+      // Prevent pending users from logging in
+      if (servantData.status === 'pending') {
+        toast.error('حسابك قيد المراجعة. يرجى انتظار موافقة أمين الخدمة.');
+        await supabase.auth.signOut();
+        setIsLoading(false);
+        return;
+      }
+
       onLogin(servantData);
       toast.success('تم تسجيل الدخول بنجاح');
     } catch (error) {
