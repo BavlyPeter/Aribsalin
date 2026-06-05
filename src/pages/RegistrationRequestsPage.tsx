@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowRight, Check, X, User, Phone, Book } from 'lucide-react';
+import { ArrowRight, Check, X, User, Shield, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 
@@ -11,6 +11,22 @@ interface RegistrationRequestsPageProps {
 export function RegistrationRequestsPage({ onBack, onViewProfile }: RegistrationRequestsPageProps) {
   const [requests, setRequests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const roleLabels: Record<string, string> = {
+    'normal': 'خادم',
+    'supervisor': 'أمين فصل',
+    'admin': 'أمين خدمة'
+  };
+
+  const servingStages: Record<string, string> = {
+    'kg': 'حضانة',
+    'primary_12': 'ابتدائي (الأول والثاني)',
+    'primary_34': 'ابتدائي (الثالث والرابع)',
+    'primary_56': 'ابتدائي (الخامس والسادس)',
+    'preparatory': 'إعدادي',
+    'secondary': 'ثانوي',
+    'university_graduate': 'جامعي وخريجين'
+  };
 
   useEffect(() => {
     fetchRequests();
@@ -97,14 +113,18 @@ export function RegistrationRequestsPage({ onBack, onViewProfile }: Registration
                   </div>
                   <div>
                     <h3 className="font-bold text-lg text-foreground">{request.full_name || request.name}</h3>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                      <Phone className="w-4 h-4" />
-                      <span dir="ltr" className="font-medium">{request.mobile_personal || request.mobile}</span>
+                    
+                    <div className="flex items-center gap-2 text-sm mt-1" style={{ color: 'var(--primary)' }}>
+                      <Shield className="w-4 h-4" />
+                      <span className="font-medium">{roleLabels[request.role] || 'غير محدد'}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                      <Book className="w-4 h-4" />
-                      <span>{request.educational_stage || request.educationStage || 'غير محدد'}</span>
-                    </div>
+                    
+                    {request.role !== 'admin' && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                        <Users className="w-4 h-4" />
+                        <span>{servingStages[request.class_stage || request.classStage] || 'غير محدد'}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 

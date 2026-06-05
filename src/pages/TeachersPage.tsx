@@ -75,51 +75,56 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
 
   const fetchServants = async () => {
     try {
+      // Fetch ONLY approved servants
       const { data, error } = await supabase
         .from('servants')
-        .select('*');
+        .select('*')
+        .eq('status', 'approved');
 
       if (error) throw error;
 
-      if (data) {
-        // Group by stage
-        const grouped: Record<string, Teacher[]> = {};
+      // Initialize empty groups
+      const grouped: Record<string, ClassData> = Object.keys(servingStages).reduce((acc, key) => {
+        acc[key] = { stage: key, stageLabel: servingStages[key], supervisor: null, teachers: [] };
+        return acc;
+      }, {} as Record<string, ClassData>);
 
-        data.forEach((servant: any) => {
-          const role = servant.role || '';
-          const isSup = role === 'supervisor' || role === 'admin';
-          // Force supervisors to the top section, otherwise use their normal stage
-          const stageKey = isSup ? 'supervisors' : getStageKey(servant.class_stage || servant.class_or_job || '');
+      data?.forEach(servant => {
+        const teacherObj: Teacher = {
+          id: servant.id,
+          name: servant.full_name || servant.name || 'بدون اسم',
+          mobile: servant.mobile_personal || servant.mobile || '',
+          email: servant.email || '',
+          photo_url: servant.photo_url || '',
+          isSupervisor: servant.role === 'supervisor' // Flag them as supervisor
+        };
 
-          if (!grouped[stageKey]) {
-            grouped[stageKey] = [];
+        if (servant.role === 'admin') {
+          grouped['supervisors'].teachers.push(teacherObj);
+        } else {
+          const stage = servant.class_stage || servant.classStage || 'other';
+          const stageKey = getStageKey(stage);
+          if (grouped[stageKey]) {
+            grouped[stageKey].teachers.push(teacherObj);
+          } else {
+            grouped['other'].teachers.push(teacherObj);
           }
+        }
+      });
 
-          grouped[stageKey].push({
-            id: servant.id,
-            name: servant.full_name,
-            mobile: servant.mobile_personal,
-            email: '',
-            isSupervisor: isSup,
-            photo_url: servant.photo_url
+      // Sort teachers: Supervisors first, then alphabetically
+      const mappedData: ClassData[] = Object.values(grouped)
+        .map(cls => {
+          cls.teachers.sort((a, b) => {
+            if (a.isSupervisor && !b.isSupervisor) return -1;
+            if (!a.isSupervisor && b.isSupervisor) return 1;
+            return a.name.localeCompare(b.name, 'ar');
           });
-        });
+          return cls;
+        })
+        .filter(c => c.teachers.length > 0);
 
-        const mappedData: ClassData[] = Object.keys(servingStages)
-          .map(key => ({
-            stage: key,
-            stageLabel: servingStages[key as keyof typeof servingStages] || key,
-            supervisor: null,
-            teachers: (grouped[key] || []).sort((a, b) => {
-              if (a.isSupervisor && !b.isSupervisor) return -1;
-              if (!a.isSupervisor && b.isSupervisor) return 1;
-              return 0;
-            })
-          }))
-          .filter(c => c.teachers.length > 0);
-
-        setClassesData(mappedData);
-      }
+      setClassesData(mappedData);
     } catch (err) {
       console.error('Error fetching servants:', err);
       toast.error('فشل في تحميل بيانات الخدام');
@@ -236,7 +241,7 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
                             <div className="space-y-1 min-w-0 flex-1 text-right" onClick={() => onViewProfile?.(teacher.id)}>
                               <div className="flex items-center gap-2 flex-wrap">
                                 {teacher.isSupervisor && (
-                                  <Crown className="w-4 h-4 shrink-0" style={{ color: 'var(--secondary)' }} />
+                                  <Crown className="w-4 h-4 shrink-0 text-yellow-500" title="أمين فصل" />
                                 )}
                                 <div className={`font-medium text-sm ${teacher.isSupervisor ? 'text-[var(--secondary)]' : 'text-foreground'}`}>
                                   {teacher.name}
