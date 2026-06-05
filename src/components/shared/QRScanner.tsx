@@ -4,7 +4,7 @@ import { ArrowRight, Flashlight, FlashlightOff, CheckCircle2, XCircle, Camera, U
 
 interface QRScannerProps {
   onBack: () => void;
-  onScanSuccess: (decodedText: string) => void;
+  onScanSuccess: (decodedText: string) => boolean | Promise<boolean> | void;
   mode: 'attendance' | 'market' | 'viewDetails' | 'addPoints';
 }
 
@@ -18,36 +18,40 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerIdRef = useRef('qr-reader');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const scanLockRef = useRef(false); // Add this to replace stale isScanning state
+  const scanLockRef = useRef(false);
+  const lastScannedCodeRef = useRef<string | null>(null);
 
-  const handleScanSuccess = (decodedText: string) => {
+  const handleScanSuccess = async (decodedText: string) => {
     if (scanLockRef.current) return;
-
     const cleanText = decodedText.trim();
     if (!cleanText || cleanText.length < 1) return;
 
+    if (mode === 'attendance' && lastScannedCodeRef.current === cleanText) return;
+
     scanLockRef.current = true;
-    if (navigator.vibrate) {
-      navigator.vibrate(200);
-    }
+    lastScannedCodeRef.current = cleanText;
+
+    if (navigator.vibrate) navigator.vibrate(200);
     
-    // For attendance, keep camera running and unlock after 2 seconds for continuous scanning
+    // Call parent and await validation
+    const isValid = await onScanSuccess(cleanText);
+
+    if (isValid === false) {
+      // Invalid Code: DO NOT STOP CAMERA. Unlock immediately to scan again.
+      setTimeout(() => { scanLockRef.current = false; }, 1500);
+      return;
+    }
+
+    // Valid Code:
     if (mode === 'attendance') {
-      onScanSuccess(cleanText);
-      setTimeout(() => {
-        scanLockRef.current = false;
-      }, 2000);
+      setTimeout(() => { scanLockRef.current = false; }, 2000);
+      setTimeout(() => { if (lastScannedCodeRef.current === cleanText) lastScannedCodeRef.current = null; }, 5000);
     } else {
-      // For addPoints/market/viewDetails, safely stop camera to prevent mobile freeze when modal opens
+      // For modals: Safely stop camera immediately. AppMain will delay view switch by 500ms.
       if (scannerRef.current) {
         scannerRef.current.stop().then(() => {
           try { scannerRef.current?.clear(); } catch(e) {}
-          onScanSuccess(cleanText);
-        }).catch((err) => {
-          onScanSuccess(cleanText);
-        });
-      } else {
-        onScanSuccess(cleanText);
+        }).catch(() => {});
       }
     }
   };
@@ -163,29 +167,58 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
     if (!file) return;
 
     try {
-      // 1. Ensure scanner instance exists even if camera is off/denied
       let scanner = scannerRef.current;
       if (!scanner) {
         scanner = new Html5Qrcode(scannerIdRef.current);
         scannerRef.current = scanner;
       }
 
-      // 2. Scan file WITHOUT attempting to render it to the UI (false), 
-      // which prevents canvas memory crashes on high-res mobile photos
-      const decodedText = await scanner.scanFile(file, false);
-      
+      // NATIVE CANVAS NORMALIZER FOR HIGH-RES MOBILE IMAGES
+      const normalizedFile = await new Promise<File>((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          const canvas = document.createElement('canvas');
+          const MAX_SIZE = 1000;
+          let { width, height } = img;
+
+          if (width > height && width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          } else if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          
+          if (ctx) {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob((blob) => {
+              if (blob) resolve(new File([blob], "normalized_qr.jpg", { type: "image/jpeg" }));
+              else reject(new Error("Canvas toBlob failed"));
+            }, 'image/jpeg', 0.9);
+          } else reject(new Error("No canvas context"));
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Failed to load image")); };
+        img.src = url;
+      });
+
+      const decodedText = await scanner.scanFile(normalizedFile, false);
       if (decodedText) {
-        scanLockRef.current = false; // Forcefully bypass the lock for file uploads
+        scanLockRef.current = false;
         handleScanSuccess(decodedText);
       }
     } catch (err) {
-      console.error('Error reading QR from image:', err);
-      alert('لم يتم التعرف على QR Code في هذه الصورة. يرجى قص الصورة (Crop) لتوضيح الكود، أو التأكد من جودتها وعدم وجود اهتزاز.');
+      alert('لم يتم التعرف على QR Code في هذه الصورة. يرجى قص الصورة (Crop) لتوضيح الكود.');
     } finally {
-      // Reset input so the same file can be selected again if needed
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 

@@ -451,112 +451,71 @@ export default function AppMain() {
     }
   };
 
-  const handleScanSuccess = (decodedText: string) => {
-    (async () => {
-      const scanned = String(decodedText).trim().toLowerCase();
-      if (!scanned) return;
+  const handleScanSuccess = async (decodedText: string): Promise<boolean> => {
+    const scanned = String(decodedText).trim().toLowerCase();
+    if (!scanned) return false;
 
-      // UNIFIED ROBUST LOOKUP: Check UUID, Smart ID, and internal dbId
-      const participant = participants.find(p => 
-        String(p.id || '').trim().toLowerCase() === scanned ||
-        String(p.participant_id || '').trim().toLowerCase() === scanned ||
-        String((p as any).dbId || '').trim().toLowerCase() === scanned
-      );
+    // UNIFIED ROBUST LOOKUP
+    const participant = participants.find(p => 
+      String(p.id || '').trim().toLowerCase() === scanned ||
+      String(p.participant_id || '').trim().toLowerCase() === scanned ||
+      String((p as any).dbId || '').trim().toLowerCase() === scanned
+    );
 
-      if (!participant) {
-        toast.error('هذا الكود غير مسجل في النظام');
-        return;
+    if (!participant) {
+      toast.error('هذا الكود غير مسجل في النظام');
+      return false; // Tells the scanner to keep running
+    }
+
+    const targetParticipant = participant;
+
+    if (scanMode === 'attendance') {
+      if (!currentServant || !currentServant.id) {
+        toast.error('يجب تسجيل الدخول كخادم قبل تسجيل الحضور');
+        return false;
       }
 
-      const targetParticipant = participant;
+      try {
+        const participantUuid = targetParticipant.id as string;
+        const { error: attendError } = await supabase.from('attendance_logs').insert([{
+          participant_id: participantUuid,
+          servant_id: currentServant.id,
+          attendance_date: new Date().toISOString().split('T')[0]
+        }]);
 
-      if (scanMode === 'attendance') {
-        if (!currentServant || !currentServant.id) {
-          toast.error('يجب تسجيل الدخول كخادم قبل تسجيل الحضور');
-          return;
+        if (attendError) {
+          toast.info('تم تسجيل حضور هذا المشارك مسبقاً اليوم');
+          return true; // Stop scanner for this person if needed, or keep running
         }
 
-        try {
-          const participantUuid = targetParticipant.id as string;
+        const currentPoints = Number(targetParticipant.points || 0);
+        const newPoints = currentPoints + 10;
+        await supabase.from('participants').update({ points_balance: newPoints }).eq('id', participantUuid);
+        await supabase.from('points_transactions').insert([{
+          participant_id: participantUuid,
+          servant_id: currentServant.id,
+          transaction_type: 'attendance_bonus',
+          points_amount: 10,
+          description: 'مكافأة حضور اليوم'
+        }]);
 
-          // 1. Log attendance (will fail on unique_daily_attendance constraint if already attended today)
-          const { error: attendError } = await supabase
-            .from('attendance_logs')
-            .insert([
-              {
-                participant_id: participantUuid,
-                servant_id: currentServant.id,
-                attendance_date: new Date().toISOString().split('T')[0]
-              }
-            ]);
-
-          if (attendError) {
-            // Unique violation or other DB error
-            console.warn('attendance insert error', attendError);
-            toast.info('تم تسجيل حضور هذا المشارك مسبقاً اليوم');
-            return;
-          }
-
-          // 2. Add points (+10)
-          const currentPoints = Number(targetParticipant.points || 0);
-          const newPoints = currentPoints + 10;
-
-          const { error: updateError } = await supabase
-            .from('participants')
-            .update({ points_balance: newPoints })
-            .eq('id', participantUuid);
-
-          if (updateError) {
-            console.error('Failed to update points:', updateError);
-            toast.error('حدث خطأ عند تحديث النقاط');
-            return;
-          }
-
-          // 3. Record transaction
-          const { error: txError } = await supabase.from('points_transactions').insert([
-            {
-              participant_id: participantUuid,
-              servant_id: currentServant.id,
-              transaction_type: 'attendance_bonus',
-              points_amount: 10,
-              description: 'مكافأة حضور اليوم'
-            }
-          ]);
-
-          if (txError) {
-            console.error('Failed to insert points transaction:', txError);
-            // Not fatal to user flow
-          }
-
-          // Update local state for immediate UI feedback
-          setParticipants(prev =>
-            prev.map(p =>
-              (String(p.id) === String(participantUuid))
-                ? { ...p, points: newPoints, attended: true, attendanceDays: [...p.attendanceDays, new Date().toISOString().split('T')[0]] }
-                : p
-            )
-          );
-
-          toast.success('تم تسجيل الحضور بنجاح وإضافة 10 نقاط');
-          setCurrentView('dashboard');
-        } catch (err) {
-          console.error('Attendance handling error', err);
-          toast.error('حدث خطأ أثناء تسجيل الحضور');
-        }
-
-      } else {
-        if (scanMode === 'market') {
-          setSelectedParticipantId(targetParticipant.id);
-          setCurrentView('market');
-        } else if (scanMode === 'addPoints') {
-          setSelectedParticipantId(targetParticipant.id);
-          setCurrentView('addPoints');
-        } else if (scanMode === 'viewDetails') {
-          setSelectedParticipantId(targetParticipant.id);
-          setCurrentView('profile');
-        }
+        setParticipants(prev => prev.map(p => (String(p.id) === String(participantUuid)) ? { ...p, points: newPoints, attended: true, attendanceDays: [...p.attendanceDays, new Date().toISOString().split('T')[0]] } : p));
+        toast.success('تم تسجيل الحضور بنجاح وإضافة 10 نقاط');
+        return true;
+      } catch (err) {
+        toast.error('حدث خطأ أثناء تسجيل الحضور');
+        return false;
       }
-    })();
+    } else {
+      // Safe delayed navigation for mobile cameras to allow scanner to stop
+      setTimeout(() => {
+        setSelectedParticipantId(targetParticipant.id);
+        if (scanMode === 'market') setCurrentView('market');
+        else if (scanMode === 'addPoints') setCurrentView('addPoints');
+        else if (scanMode === 'viewDetails') setCurrentView('profile');
+      }, 500);
+      return true; // Tells the scanner it's a valid code and it should safely unmount
+    }
   };
 
   const handleAttendanceScan = (participant: Participant) => {
