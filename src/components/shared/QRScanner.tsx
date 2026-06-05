@@ -38,7 +38,13 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
 
     if (isValid === false) {
       // Invalid Code: DO NOT STOP CAMERA. Unlock immediately to scan again.
-      setTimeout(() => { scanLockRef.current = false; }, 1500);
+      setTimeout(() => { 
+        scanLockRef.current = false; 
+        // Clear memory so the user can scan the SAME invalid code again, preventing the "frozen" illusion
+        if (lastScannedCodeRef.current === cleanText) {
+          lastScannedCodeRef.current = null;
+        }
+      }, 1500);
       return;
     }
 
@@ -173,50 +179,70 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
         scannerRef.current = scanner;
       }
 
-      // NATIVE CANVAS NORMALIZER FOR HIGH-RES MOBILE IMAGES
-      const normalizedFile = await new Promise<File>((resolve, reject) => {
-        const img = new Image();
-        const url = URL.createObjectURL(file);
-        
-        img.onload = () => {
-          URL.revokeObjectURL(url);
-          const canvas = document.createElement('canvas');
-          const MAX_SIZE = 1000;
-          let { width, height } = img;
+      let decodedText = '';
 
-          if (width > height && width > MAX_SIZE) {
-            height *= MAX_SIZE / width;
-            width = MAX_SIZE;
-          } else if (height > MAX_SIZE) {
-            width *= MAX_SIZE / height;
-            height = MAX_SIZE;
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
+      try {
+        // ATTEMPT 1: Direct Read. This works perfectly for clean, lossless PNGs (e.g. system-generated QRs)
+        decodedText = await scanner.scanFile(file, false);
+      } catch (initialError) {
+        // ATTEMPT 2: Fallback for huge mobile photos or transparent backgrounds
+        const normalizedFile = await new Promise<File>((resolve, reject) => {
+          const img = new Image();
+          const url = URL.createObjectURL(file);
           
-          if (ctx) {
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, width, height);
-            ctx.drawImage(img, 0, 0, width, height);
-            canvas.toBlob((blob) => {
-              if (blob) resolve(new File([blob], "normalized_qr.jpg", { type: "image/jpeg" }));
-              else reject(new Error("Canvas toBlob failed"));
-            }, 'image/jpeg', 0.9);
-          } else reject(new Error("No canvas context"));
-        };
-        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Failed to load image")); };
-        img.src = url;
-      });
+          img.onload = () => {
+            URL.revokeObjectURL(url);
+            const canvas = document.createElement('canvas');
+            const MAX_SIZE = 1200;
+            let { width, height } = img;
 
-      const decodedText = await scanner.scanFile(normalizedFile, false);
+            if (width > height && width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            } else if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+
+            // Scale up extremely small images to help the decoder
+            if (width < 200) {
+              const scale = 300 / width;
+              width *= scale;
+              height *= scale;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            
+            if (ctx) {
+              ctx.fillStyle = 'white'; // Fix transparent backgrounds
+              ctx.fillRect(0, 0, width, height);
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+              ctx.drawImage(img, 0, 0, width, height);
+              
+              // SAVE STRICTLY AS PNG to prevent JPEG compression from blurring sharp QR edges!
+              canvas.toBlob((blob) => {
+                if (blob) resolve(new File([blob], "normalized_qr.png", { type: "image/png" }));
+                else reject(new Error("Canvas toBlob failed"));
+              }, 'image/png');
+            } else reject(new Error("No canvas context"));
+          };
+          img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Failed to load image")); };
+          img.src = url;
+        });
+
+        decodedText = await scanner.scanFile(normalizedFile, false);
+      }
+      
       if (decodedText) {
         scanLockRef.current = false;
         handleScanSuccess(decodedText);
       }
     } catch (err) {
-      alert('لم يتم التعرف على QR Code في هذه الصورة. يرجى قص الصورة (Crop) لتوضيح الكود.');
+      console.error('Error reading QR from image:', err);
+      alert('لم يتم التعرف على QR Code في هذه الصورة. يرجى قص الصورة (Crop) لتوضيح الكود بشكل أكبر.');
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
