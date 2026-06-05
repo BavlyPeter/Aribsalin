@@ -1,8 +1,8 @@
 # اريبصالين - Summer Festival Management System
 ## Complete Technical Documentation
 
-**Current Version:** 1.4.0 (Statistics Stability & Attendance Timeline Fixes)  
-**Last Updated:** May 31, 2026
+**Current Version:** 1.5.0 (Mobile QR Stability & Lossless Normalization)  
+**Last Updated:** June 5, 2026
 
 ---
 
@@ -28,33 +28,16 @@ This is the main technical documentation file. For specific topics, see:
 
 ---
 
-## 🆕 What's New in v1.2.0 (May 28, 2026)
+## 🆕 What's New in v1.5.0 (June 5, 2026)
 
-This release focuses on architecture improvements, new entry flows (servant vs student), tighter TypeScript types, and an initial Supabase integration to support automatic Smart ID generation for servants.
+This release focuses on hardening the QR scanner for mobile devices, fixing iOS-specific camera freezes, and improving the reliability of QR code image uploads with lossless normalization.
 
-- **Role selection & student portal:** Added a role gate and lightweight student entry flow so students can view profiles without passing the servant auth gate. New pages: `RoleSelectionPage` and `StudentPortalLogin`.
-- **Centralized TypeScript types:** Moved shared interfaces to `src/types/index.ts` and added `area: string` to address data. This resolved duplicate `Participant` type issues and unified `StudentData`/`TeacherData` shapes.
-- **Address split:** Address data now uses two fields: `area` (select) and `address` (detailed text). Forms and profile displays updated accordingly.
-- **Smart ID generation & Supabase signup (teachers/servants):** `SignupPage` now generates an auto `teacher_id` (Smart ID) during signup, uses `supabase.auth.signUp` for auth, and inserts the servant record into the `servants` table. Supabase client is created at `src/lib/supabase.ts` and environment keys are expected via `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (see `src/vite-env.d.ts`).
-- **Auth model change (email → teacherId):** Login and app gate switched to use `teacherId` (generated Smart ID) instead of email for servant authentication flows.
-- **StudentProfile fix & ID normalization:** Student lookup normalizes input IDs (`trim().toUpperCase()`) to avoid blank-screen mismatches and improves fallback messaging when a profile is not found.
-- **Dashboard personalization:** Replaced the top metrics cards with a personalized servant welcome banner; `AppMain` now tracks `currentServant` and the banner shows role/stage-aware greeting.
-- **Forms & UI:** `RegistrationForm`, `SignupPage`, and other forms updated to use the split address fields, the `area` select, and the new types. Submit flows include loading states and toasts for user feedback.
-- **Build & verification:** Project builds successfully with `pnpm build` after these changes; Supabase runtime requires environment variables to function in production.
-
----
-
-## 🆕 What's New in v1.3.0 (May 30, 2026)
-
-This release focuses on UI simplification, tolerant Arabic search, advanced participant filtering, and correcting participant ID displays to use the database `participant_id` field instead of the UUID.
-
-- **Servant info card refinement:** The dashboard welcome card now places the servant avatar/name group on one side and a compact logout button on the opposite side. Logout now shows a confirmation dialog before signing out.
-- **Dashboard simplification:** Removed the standalone “إدارة النقاط يدوياً” button from the dashboard and removed the unused `manualPoints` navigation branch from the shell while keeping the per-card point actions intact.
-- **Participant ID display fix:** Participant profile and ID card views now display `participant_id` instead of the UUID, with a safe fallback when the ID is missing.
-- **Tolerant Arabic search:** Added `normalizeArabicText()` to remove diacritics, unify Hamza forms, normalize `ة/ه` and `ى/ي`, and improve search matching in Arabic text.
-- **Unified participant filtering:** `ParticipantsList` now uses one always-visible search/filter card with class, gender, and area filters. The class filter maps stored stage/year combinations into simplified class buckets.
-- **Manual points search parity:** `ManualPointsModal` now uses the same normalized Arabic search behavior so name and ID matching are consistent across both participant lists and manual point management.
-- **Type alignment:** The shared participant type now includes `participant_id?: string | number;` so UI labels and filters reflect the actual database field name.
+- **iOS Safari Camera Freeze Fix:** Removed `navigator.vibrate` from the scan success flow. On iOS Safari, vibration triggers were suspending the video track, causing the camera feed to go black.
+- **Isolated File Scanning:** Introduced a dedicated hidden div (`#file-qr-reader`) and an independent `Html5Qrcode` instance for file uploads. This prevents concurrency crashes that occurred when attempting to scan a file while the live camera was active.
+- **Lossless PNG Normalization:** The file upload flow now uses a two-step process: it first attempts a direct scan of the original file, then falls back to a custom canvas normalizer that saves strictly as **PNG**. This avoids JPEG compression artifacts that previously blurred sharp QR edges.
+- **Sharp Edge Preservation:** Disabled `imageSmoothingEnabled` in the canvas context during normalization to ensure QR code modules remain crisp and readable by the decoder.
+- **Improved UI Responsiveness:** Added logic to clear the "last scanned code" memory on invalid scans. This prevents the scanner from appearing "frozen" when a user tries to scan the same invalid code multiple times without moving the camera.
+- **Small Image Scaling:** Added logic to automatically scale up small uploaded images (under 300px) to at least 400px, significantly improving recognition rates for low-res screenshots.
 
 ---
 
@@ -139,6 +122,13 @@ This section enumerates concrete code changes, file-by-file, made during the rec
 - `src/pages/StudentPortalLogin.tsx`: Normalizes entered IDs (`trim().toUpperCase()`) and routes to `StudentProfile` on success.
 
 - `src/pages/StudentProfile.tsx`: Shows `area` + `address` fields, QR download helper, and attendance/points stats.
+
+- `src/app/components/QRScanner.tsx`:
+  - **Mobile Stability Fix:** Removed `navigator.vibrate` to prevent camera feed suspension on iOS Safari.
+  - **Isolated Scanning:** Added a dedicated hidden div (`#file-qr-reader`) and independent `Html5Qrcode` instance for file uploads to prevent concurrency crashes with the live camera.
+  - **Sharp PNG Normalization:** Implemented a two-step upload flow (direct scan → lossless PNG fallback) with `imageSmoothingEnabled: false` for maximum QR readability.
+  - **Responsiveness:** Added `lastScannedCodeRef` clearing on invalid scans to prevent the "frozen" camera illusion.
+  - **Scaling:** Added automatic upscaling for small uploaded images.
 
 - `src/pages/StatisticsPage.tsx`:
   - Replaced fragile render-time calculations with a safe memoized stats object that always returns arrays for charts and leaderboards.

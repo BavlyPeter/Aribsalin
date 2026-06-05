@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.0] - 2026-06-05
+
+### Added
+- **Isolated File Scanner:** Added a hidden div (`#file-qr-reader`) and independent `Html5Qrcode` instance for file uploads to prevent concurrency crashes with the live camera.
+- **Lossless PNG Normalization:** Implemented a custom canvas-based normalization flow that saves strictly as PNG to avoid JPEG compression artifacts.
+- **Small Image Scaling:** Automatic upscaling for small uploaded images to improve recognition rates.
+
+### Fixed
+- **iOS Safari Camera Freeze:** Removed `navigator.vibrate` from the scan success flow to prevent video track suspension.
+- **Unresponsive Invalid Scans:** Added logic to clear `lastScannedCodeRef` on invalid codes so the camera remains responsive for retries of the same code.
+- **Blurry QR Edges:** Disabled `imageSmoothingEnabled` during canvas normalization for sharp QR code modules.
+
+### Changed
+- Refactored `handleFileUpload` into a robust two-step approach (direct scan → lossless fallback).
+- Updated `handleScanSuccess` for better mobile responsiveness.
+
+---
+
 ## [1.1.0] - 2026-05-24
 
 ### Added
