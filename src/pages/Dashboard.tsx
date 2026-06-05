@@ -18,7 +18,7 @@ interface DashboardProps {
 export function Dashboard({
   onNavigate,
   onViewProfile,
-  onViewServantProfile, // <-- ADD THIS
+  onViewServantProfile,
   onLogout,
   currentServant,
   participants = [],
@@ -26,6 +26,13 @@ export function Dashboard({
   onManagePoints,
   onDeleteParticipant
 }: DashboardProps) {
+  
+  // Define roles based on currentServant.role
+  const userRole = currentServant?.role || 'normal';
+  const isAdmin = userRole === 'admin';
+  const isSupervisor = userRole === 'supervisor';
+  const canManageParticipants = isAdmin || isSupervisor; // Admin & Supervisor can add, edit, delete
+
   const roleLabels: Record<string, string> = {
     'normal': 'خادم',
     'supervisor': 'أمين فصل',
@@ -166,46 +173,53 @@ export function Dashboard({
 
         {/* Secondary Actions */}
         <div className="space-y-3 mb-6">
-          <button
-            onClick={() => onNavigate('registration')}
-            className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
-          >
-            <div className="flex items-center justify-center gap-3">
-              <UserPlus className="w-5 h-5 text-primary" />
-              <span>تسجيل مشارك جديد</span>
-            </div>
-          </button>
+          {/* Add Participant Button - Only Admin & Supervisor */}
+          {canManageParticipants && (
+            <button
+              onClick={() => onNavigate('registration')}
+              className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
+            >
+              <div className="flex items-center justify-center gap-3">
+                <UserPlus className="w-5 h-5 text-primary" />
+                <span>تسجيل مشارك جديد</span>
+              </div>
+            </button>
+          )}
 
-          <button
-            onClick={() => onNavigate('finance')}
-            className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
-          >
-            <div className="flex items-center justify-center gap-3">
-              <Wallet className="w-5 h-5 text-primary" />
-              <span>الإدارة المالية</span>
-            </div>
-          </button>
+          {/* Admin Only Buttons: Finance, Statistics, Teachers */}
+          {isAdmin && (
+            <>
+              <button
+                onClick={() => onNavigate('finance')}
+                className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
+              >
+                <div className="flex items-center justify-center gap-3">
+                  <Wallet className="w-5 h-5 text-primary" />
+                  <span>الإدارة المالية</span>
+                </div>
+              </button>
 
-          <button
-            onClick={() => onNavigate('statistics')}
-            className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
-          >
-            <div className="flex items-center justify-center gap-3">
-              <BarChart3 className="w-5 h-5 text-primary" />
-              <span>إحصائيات المهرجان</span>
-            </div>
-          </button>
+              <button
+                onClick={() => onNavigate('statistics')}
+                className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
+              >
+                <div className="flex items-center justify-center gap-3">
+                  <BarChart3 className="w-5 h-5 text-primary" />
+                  <span>إحصائيات المهرجان</span>
+                </div>
+              </button>
 
-          <button
-            onClick={() => onNavigate('teachers')}
-            className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
-          >
-            <div className="flex items-center justify-center gap-3">
-              <Users className="w-5 h-5 text-primary" />
-              <span>إدارة الخدام</span>
-            </div>
-          </button>
-
+              <button
+                onClick={() => onNavigate('teachers')}
+                className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
+              >
+                <div className="flex items-center justify-center gap-3">
+                  <Users className="w-5 h-5 text-primary" />
+                  <span>إدارة الخدام</span>
+                </div>
+              </button>
+            </>
+          )}
         </div>
 
         {/* Participants List */}
@@ -219,6 +233,8 @@ export function Dashboard({
               onEdit={(p) => onEditRequest?.(p)}
               onManagePoints={(p) => onManagePoints?.(p)}
               onDelete={(id) => onDeleteParticipant?.(id)}
+              canEdit={canManageParticipants}
+              canDelete={canManageParticipants}
             />
           </div>
         )}

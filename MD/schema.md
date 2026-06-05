@@ -48,6 +48,7 @@ CREATE TABLE public.servants (
   role text,
   class_stage text,
   teacher_id text NOT NULL UNIQUE,
+  status text DEFAULT 'approved'::text,
   CONSTRAINT servants_pkey PRIMARY KEY (id),
   CONSTRAINT servants_auth_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );

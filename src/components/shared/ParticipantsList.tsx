@@ -30,6 +30,8 @@ interface ParticipantsListProps {
   onEdit?: (p: Participant) => void;
   onManagePoints?: (p: Participant) => void;
   onDelete?: (id: string) => void;
+  canEdit?: boolean;   // ADDED: Controls edit button visibility
+  canDelete?: boolean; // ADDED: Controls delete button visibility
 }
 
 const CLASSES = [
@@ -63,7 +65,14 @@ const getParticipantClass = (stage: string, year: string) => {
   return stage;
 };
 
-export function ParticipantsList({ participants, onEdit, onManagePoints, onDelete }: ParticipantsListProps) {
+export function ParticipantsList({ 
+  participants, 
+  onEdit, 
+  onManagePoints, 
+  onDelete, 
+  canEdit = true, 
+  canDelete = true 
+}: ParticipantsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGender, setFilterGender] = useState('');
   const [filterClass, setFilterClass] = useState('');
@@ -295,22 +304,26 @@ export function ParticipantsList({ participants, onEdit, onManagePoints, onDelet
                   <Coins className="w-4 h-4" />
                 </button>
 
-                <button
-                  title="تعديل"
-                  onClick={(e) => { e.stopPropagation(); onEdit?.(participant); }}
-                  className="p-2 rounded-lg bg-white/10 text-slate-700 hover:bg-muted"
-                >
-                  <Edit className="w-4 h-4" />
-                </button>
+                {canEdit && (
+                  <button
+                    title="تعديل"
+                    onClick={(e) => { e.stopPropagation(); onEdit?.(participant); }}
+                    className="p-2 rounded-lg bg-white/10 text-slate-700 hover:bg-muted"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                )}
 
-                <button
-                  title="حذف"
-                  onClick={(e) => { e.stopPropagation(); handleDelete(participant); }}
-                  className="p-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100"
-                  disabled={deletingId === participant.id}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {canDelete && (
+                  <button
+                    title="حذف"
+                    onClick={(e) => { e.stopPropagation(); handleDelete(participant); }}
+                    className="p-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100"
+                    disabled={deletingId === participant.id}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           ))
