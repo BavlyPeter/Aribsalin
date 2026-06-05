@@ -31,16 +31,15 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
     scanLockRef.current = true;
     lastScannedCodeRef.current = cleanText;
 
-    if (navigator.vibrate) navigator.vibrate(200);
+    // VIBRATION REMOVED: navigator.vibrate causes iOS Safari to suspend the video track!
     
     // Call parent and await validation
     const isValid = await onScanSuccess(cleanText);
 
     if (isValid === false) {
-      // Invalid Code: DO NOT STOP CAMERA. Unlock immediately to scan again.
+      // Invalid Code: Keep camera running smoothly. Unlock after delay.
       setTimeout(() => { 
         scanLockRef.current = false; 
-        // Clear memory so the user can scan the SAME invalid code again, preventing the "frozen" illusion
         if (lastScannedCodeRef.current === cleanText) {
           lastScannedCodeRef.current = null;
         }
@@ -53,7 +52,6 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
       setTimeout(() => { scanLockRef.current = false; }, 2000);
       setTimeout(() => { if (lastScannedCodeRef.current === cleanText) lastScannedCodeRef.current = null; }, 5000);
     } else {
-      // For modals: Safely stop camera immediately. AppMain will delay view switch by 500ms.
       if (scannerRef.current) {
         scannerRef.current.stop().then(() => {
           try { scannerRef.current?.clear(); } catch(e) {}
@@ -173,19 +171,15 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
     if (!file) return;
 
     try {
-      let scanner = scannerRef.current;
-      if (!scanner) {
-        scanner = new Html5Qrcode(scannerIdRef.current);
-        scannerRef.current = scanner;
-      }
-
+      // Create a COMPLETELY ISOLATED scanner instance so we don't crash the live camera!
+      const fileScanner = new Html5Qrcode('file-qr-reader');
       let decodedText = '';
 
       try {
-        // ATTEMPT 1: Direct Read. This works perfectly for clean, lossless PNGs (e.g. system-generated QRs)
-        decodedText = await scanner.scanFile(file, false);
+        // Attempt 1: Direct Scan (Works best for pure, lossless PNGs)
+        decodedText = await fileScanner.scanFile(file, true);
       } catch (initialError) {
-        // ATTEMPT 2: Fallback for huge mobile photos or transparent backgrounds
+        // Attempt 2: Canvas Normalizer
         const normalizedFile = await new Promise<File>((resolve, reject) => {
           const img = new Image();
           const url = URL.createObjectURL(file);
@@ -204,9 +198,8 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
               height = MAX_SIZE;
             }
 
-            // Scale up extremely small images to help the decoder
-            if (width < 200) {
-              const scale = 300 / width;
+            if (width < 300) {
+              const scale = 400 / width;
               width *= scale;
               height *= scale;
             }
@@ -216,13 +209,12 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
             const ctx = canvas.getContext('2d');
             
             if (ctx) {
-              ctx.fillStyle = 'white'; // Fix transparent backgrounds
+              ctx.fillStyle = 'white';
               ctx.fillRect(0, 0, width, height);
-              ctx.imageSmoothingEnabled = true;
-              ctx.imageSmoothingQuality = 'high';
+              // CRITICAL: Disable smoothing to keep QR edges sharp!
+              ctx.imageSmoothingEnabled = false; 
               ctx.drawImage(img, 0, 0, width, height);
               
-              // SAVE STRICTLY AS PNG to prevent JPEG compression from blurring sharp QR edges!
               canvas.toBlob((blob) => {
                 if (blob) resolve(new File([blob], "normalized_qr.png", { type: "image/png" }));
                 else reject(new Error("Canvas toBlob failed"));
@@ -233,16 +225,19 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
           img.src = url;
         });
 
-        decodedText = await scanner.scanFile(normalizedFile, false);
+        decodedText = await fileScanner.scanFile(normalizedFile, true);
       }
       
+      // Cleanup the isolated scanner
+      try { fileScanner.clear(); } catch(e) {}
+
       if (decodedText) {
         scanLockRef.current = false;
         handleScanSuccess(decodedText);
       }
     } catch (err) {
       console.error('Error reading QR from image:', err);
-      alert('لم يتم التعرف على QR Code في هذه الصورة. يرجى قص الصورة (Crop) لتوضيح الكود بشكل أكبر.');
+      alert('لم يتم التعرف على QR Code في هذه الصورة. يرجى التأكد من وضوح الصورة وتوجيه الكود بشكل صحيح.');
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -260,6 +255,9 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
 
   return (
     <div className="min-h-screen bg-black">
+      {/* ISOLATED SCANNER FOR FILE UPLOADS TO PREVENT LIVE CAMERA CRASHES */}
+      <div id="file-qr-reader" className="hidden" />
+      
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-20 bg-gradient-to-b from-black/80 to-transparent p-4">
         <div className="flex items-center justify-between">
