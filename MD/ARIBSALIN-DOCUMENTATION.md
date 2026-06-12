@@ -1,8 +1,8 @@
 # اريبصالين - Summer Festival Management System
 ## Complete Technical Documentation
 
-**Current Version:** 1.5.0 (Mobile QR Stability & Lossless Normalization)  
-**Last Updated:** June 5, 2026
+**Current Version:** 1.6.0 (Registration Approval & Servant Profiles)  
+**Last Updated:** June 12, 2026
 
 ---
 
@@ -25,6 +25,20 @@ This is the main technical documentation file. For specific topics, see:
 - **ID card issues?** Check [ID_CARD_DOCUMENTATION.md](ID_CARD_DOCUMENTATION.md)
 - **Bugs or problems?** See [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 - **Complete history?** Review [CHANGELOG.md](CHANGELOG.md)
+
+---
+
+## 🆕 What's New in v1.6.0 (June 12, 2026)
+
+This release introduces the servant registration approval system, detailed servant profiles, and enhanced navigation gating.
+
+- **Servant Registration Approval Flow:** Added `RegistrationRequestsPage` for admins to review, approve, or reject new servant signups. This ensures a managed onboarding process and data integrity.
+- **Detailed Servant Profiles:** Introduced `ServantProfile` component to display comprehensive servant information, including personal, educational, and contact details, along with profile photo support.
+- **Smart ID Enhancement:** Servant IDs are now displayed upon signup completion to facilitate immediate login.
+- **Profile Photo Support:** Integrated `uploadHelper.ts` with Supabase Storage (`profiles` bucket) to allow servants to upload and display profile pictures.
+- **Navigation & Gating:** Enhanced `AppMain.tsx` with robust routing and view gating, supporting distinct flows for Admins, Supervisors, and regular Servants.
+- **Education Stage Normalization:** Added `stageHelpers.ts` to unify education stage labels and handle complex stage-year mapping (e.g., splitting Primary stage into 1-2, 3-4, 5-6).
+- **Arabic Text Utilities:** Added `textUtils.ts` for consistent Arabic string normalization and formatting across the app.
 
 ---
 
@@ -87,6 +101,16 @@ Files touched in this release (not exhaustive):
 ## 🔧 Detailed Change Log (Full list of code updates applied in this cycle)
 
 This section enumerates concrete code changes, file-by-file, made during the recent development session so the repo history is easy to review.
+
+### v1.6.0 (June 12, 2026)
+- `src/pages/RegistrationRequestsPage.tsx`: Implemented admin-only view for reviewing and approving servant signup requests. Includes logic for toggling roles (admin/servant) and managing servant status in Supabase.
+- `src/pages/ServantProfile.tsx`: Created a detailed profile view for servants, displaying full personal and educational data, contact info, and profile pictures.
+- `src/lib/uploadHelper.ts`: Added utility for uploading profile images to Supabase Storage (`profiles` bucket) with automatic filename generation and public URL retrieval.
+- `src/app/utils/stageHelpers.ts`: Centralized education stage logic, providing Arabic labels and normalizing complex stage/year combinations for consistent UI display.
+- `src/utils/textUtils.ts`: Added helpers for Arabic text normalization, specifically handling different forms of Alif and Teh Marbuta to improve search and display consistency.
+- `src/components/shared/ImageWithFallback.tsx`: Created a robust image component that handles loading errors by displaying a themed placeholder or initials.
+- `src/app/components/layout/AppMain.tsx`: Enhanced routing logic to support the new servant profile and registration request views, along with improved auth session handling.
+- `src/pages/SignupPage.tsx`: Updated to display the generated Smart ID upon successful signup, enabling immediate user feedback.
 
 - `src/types/index.ts`: Extracted and unified shared interfaces (`StudentData`, `TeacherData`, `Participant`), added `area: string` for split address fields and added `teacherId` to teacher shape.
 - `src/lib/supabase.ts`: Added and exported a Supabase client initialized from `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
@@ -176,6 +200,26 @@ Notes & next steps:
 
 ---
 
+## 🛠️ Tools & Workflow
+
+### Development Tools
+- **Vite:** Next-generation frontend tooling for fast development and optimized builds.
+- **TypeScript:** Ensuring type safety and code quality across the entire codebase.
+- **Tailwind CSS v4:** Utility-first styling with modern CSS variables and high performance.
+- **Lucide React:** Consistent and beautiful icon system.
+- **Supabase:** Backend-as-a-Service for Authentication, Database (PostgreSQL), and File Storage.
+- **Sonner:** High-quality toast notifications for user feedback.
+
+### Project Workflow
+1. **Feature Implementation:** Components are designed with a mobile-first approach using Tailwind CSS.
+2. **Type Safety:** All data models and component props are defined in `src/types/index.ts`.
+3. **Database Integration:** Direct Supabase client interaction for real-time data persistence.
+4. **Auth & Gating:** View-based routing in `AppMain.tsx` handles role-based access (Admin, Servant, Student).
+5. **RTL Support:** Global RTL direction for Arabic language support, integrated into layout components.
+6. **Deployment:** Optimized for Vercel or similar static hosting platforms, with Supabase handling the backend.
+
+---
+
 ## 🎨 Color System & Design
 
 ### Primary Colors (Coptic Orthodox Color Scheme)
@@ -218,21 +262,53 @@ Complete file tree with detailed component descriptions:
 
 ```
 src/
+├── app/
+│   ├── App.tsx                   # Main App entry (renders AppMain)
+│   └── utils/
+│       └── stageHelpers.ts       # Education stage normalization and labeling
 ├── assets/
-│   └── images/                   # Logos and media
+│   └── images/                   # Branded logos and fallback images
 ├── components/
-│   ├── forms/                    # e.g., RegistrationForm.tsx - Participant registration
-│   ├── layout/                   # e.g., AppMain.tsx - Main router & auth gate
-│   ├── modals/                   # AddPointsModal.tsx, MarketModal.tsx, ManualPointsModal.tsx
-│   ├── shared/                   # IDCard.tsx, QRScanner.tsx, ParticipantsList.tsx, WelcomeScreen.tsx, TestQRCode.tsx
-│   └── ui/                       # shadcn UI primitives and wrappers
-├── pages/                        # Top-level pages (Dashboard, FinancePage, LoginPage, SignupPage, StatisticsPage, StudentProfile, TeachersPage, RoleSelectionPage, StudentPortalLogin)
-├── types/                        # index.ts - Centralized interfaces
-├── lib/                          # supabase.ts - Database client initialization
-└── styles/
-  ├── theme.css                # Color system and CSS variables
-  ├── fonts.css                # Arabic fonts import
-  └── globals.css              # Global styles and resets
+│   ├── forms/
+│   │   └── RegistrationForm.tsx  # Participant registration form
+│   ├── layout/
+│   │   └── AppMain.tsx           # Router, Auth gate, and global state management
+│   ├── modals/
+│   │   ├── AddPointsModal.tsx    # Modal for adding bonus points
+│   │   ├── ManualPointsModal.tsx # Manual points assignment (search-based)
+│   │   └── MarketModal.tsx       # Point deduction for market purchases
+│   ├── shared/
+│   │   ├── IDCard.tsx            # Branded participant ID card component
+│   │   ├── ImageWithFallback.tsx # Image component with error handling
+│   │   ├── ParticipantsList.tsx  # Searchable participant list
+│   │   ├── QRScanner.tsx         # Multi-mode QR scanner (camera + file)
+│   │   ├── TestQRCode.tsx        # Dev-only QR code display for testing
+│   │   └── WelcomeScreen.tsx     # Animated welcome screen
+│   └── ui/                       # shadcn UI primitives (radix-based)
+├── lib/
+│   ├── supabase.ts              # Supabase client and auth initialization
+│   └── uploadHelper.ts          # Utility for profile image uploads to storage
+├── pages/
+│   ├── Dashboard.tsx            # Main management hub for servants
+│   ├── FinancePage.tsx          # Revenue/Expense tracking and analytics
+│   ├── LoginPage.tsx            # Servant login entry
+│   ├── RegistrationRequestsPage.tsx # Admin view for approving new servants
+│   ├── RoleSelectionPage.tsx     # Initial landing (Servant vs Student)
+│   ├── ServantProfile.tsx       # Detailed profile view for servants
+│   ├── SignupPage.tsx            # Servant registration with Smart ID
+│   ├── StatisticsPage.tsx       # Comprehensive festival analytics
+│   ├── StudentPortalLogin.tsx    # Student entry (ID entry or QR scan)
+│   ├── StudentProfile.tsx        # Student/Participant detailed profile
+│   └── TeachersPage.tsx          # Servant organization by stage
+├── styles/
+│   ├── theme.css                # Primary burgundy/gold color system
+│   ├── fonts.css                # Arabic typography (Tajawal, Cairo)
+│   ├── tailwind.css             # Tailwind v4 main entry
+│   └── globals.css              # Global styles and resets
+├── types/
+│   └── index.ts                 # Centralized TypeScript interfaces
+└── utils/
+    └── textUtils.ts             # Arabic normalization and string helpers
 ```
 
 ---
@@ -404,6 +480,55 @@ export interface TeacherData {
 
 ---
 
+
+### RegistrationRequestsPage
+
+**File Path:** `src/pages/RegistrationRequestsPage.tsx`
+
+**Purpose:** Admin dashboard for managing new servant signup requests. This view allows administrators to vet new accounts before they gain access to the system.
+
+**UI Components:**
+- **Requests List:** Displays pending servant registrations with:
+  - Name and generated Teacher ID
+  - Education stage and year
+  - Role toggle (Servant/Admin)
+  - Approval/Rejection buttons
+- **Empty State:** Friendly message when no pending requests exist.
+
+**Behavior:**
+- **Approve:** Updates servant status to `approved` in Supabase, granting them access to the dashboard.
+- **Reject:** Removes the pending request from the database.
+- **Role Toggle:** Allows admins to promote a new signup to `admin` role during the approval process.
+
+---
+
+### ServantProfile
+
+**File Path:** `src/pages/ServantProfile.tsx`
+
+**Purpose:** Detailed personal profile page for servants (خدام), accessible to the servant themselves and to administrators.
+
+**UI Components:**
+- **Profile Header:** Sticky header with back button and servant name.
+- **Profile Image Section:**
+  - Displays uploaded profile photo from Supabase Storage.
+  - Fallback to initials if no photo is available.
+  - "Update Photo" button (integrated with `uploadHelper`).
+- **Statistics Grid:**
+  - Role badge (Admin/Servant)
+  - Class stage identifier
+  - Contact shortcut (direct mobile link)
+- **Detailed Info Sections:**
+  - **Basic Info:** Name, Age, Gender, Confession Father.
+  - **Educational Info:** Stage, Year, School/University/Work.
+  - **Contact Info:** Mobile number.
+  - **Location Info:** Area and detailed address.
+
+**Behavior:**
+- Fetches real-time profile data from Supabase.
+- Allows photo uploads via the browser file picker, updating the `photo_url` in the database.
+
+---
 
 ### 3. EnhancedDashboard Component
 
@@ -1354,6 +1479,19 @@ Dashboard
   → View supervisor (gold card with crown icon)
   → View list of teachers with contact info
   → Back button returns to Dashboard
+```
+
+#### Scenario 10: Servant Registration Approval (Admin Only)
+```
+Admin Dashboard 
+  → Click "طلبات التسجيل" (if pending requests exist)
+  → RegistrationRequestsPage opens
+  → Review pending servant details
+  → Optionally toggle role between 'servant' and 'admin'
+  → Click "موافقة" (Approve) or "رفض" (Reject)
+  → If approved: Servant status set to 'approved', they can now login
+  → If rejected: Servant record deleted
+  → Return to Dashboard
 ```
 
 ### Data Update Patterns
