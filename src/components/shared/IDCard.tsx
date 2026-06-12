@@ -13,6 +13,7 @@ interface IDCardProps {
       educationStage: StudentData['educationStage'];
       educationYear: StudentData['educationYear'];
       gender: StudentData['gender'];
+      photo_url?: StudentData['photo_url'];
     };
   };
 }
@@ -42,7 +43,7 @@ export function IDCard({ student }: IDCardProps) {
         style={{ background: 'linear-gradient(135deg, #8B1538 0%, #C9A961 100%)' }}
       >
         {/* Church Logo - Upper Right */}
-        <img src={churchLogo} alt="Church Logo" className="absolute top-3 right-3 w-14 h-14 object-contain" />
+        <img src={churchLogo} alt="Church Logo" className="absolute top-3 right-2 w-21 h-14 object-contain" />
 
         {/* Festival Logo - Center */}
         <img src={festivalLogo} alt="Festival Logo" className="absolute top-3 left-1/2 transform -translate-x-1/2 h-14 object-contain" />
@@ -59,15 +60,26 @@ export function IDCard({ student }: IDCardProps) {
             }}
           >
             {photoUrl ? (
-              <img
-                src={photoUrl}
-                alt={student.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-slate-100">
-                <User className="w-12 h-12 text-slate-400" />
-              </div>
+                <img
+                  src={photoUrl}
+                  alt={student.name}
+                  crossOrigin="anonymous"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                // SVG عادي بدون استخدام أي مكتبات أو ألوان oklch
+                <svg 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="#9ca3af" /* لون رمادي صريح */
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  className="w-16 h-16"
+                >
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
             )}
           </div>
 
