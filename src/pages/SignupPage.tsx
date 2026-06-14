@@ -316,6 +316,8 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
 
         if (insertError) throw insertError;
 
+        await supabase.auth.signOut();
+
         toast.success(`تم تسجيل الحساب بنجاح! كود الدخول الخاص بك هو: ${finalTeacherId} - يرجى الاحتفاظ به وانتظار موافقة أمين الخدمة.`, { duration: 15000 });
         onBack(); // Go back to login/role selection instead of auto-logging in
         return; // Stop here to prevent calling onSignup
