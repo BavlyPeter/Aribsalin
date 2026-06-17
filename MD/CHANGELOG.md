@@ -5,6 +5,28 @@ All notable changes to the Festival Management System will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2026-06-17
+
+### Fixed
+- **Signup Session Fix:** Resolved a critical issue where the authentication session was not properly handled immediately after a new servant signup.
+- **Path Normalization:** System-wide update to documentation to reflect the actual component directory structure (src/components, src/pages, etc.).
+- **ID Card Download Stability:** Finalized fixes for cross-browser ID card generation.
+
+---
+
+## [1.6.0] - 2026-06-12
+
+### Added
+- **RegistrationRequestsPage:** Added admin-only view for reviewing and approving servant signup requests.
+- **ServantProfile:** Introduced detailed profile view for servants (personal, educational, and contact details).
+- **Profile Photo Support:** Integrated uploadHelper.ts with Supabase Storage (profiles bucket) for profile pictures.
+- **Smart ID Enhancement:** Servant IDs are now displayed upon signup completion for immediate feedback.
+- **Education Stage Normalization:** Added stageHelpers.ts to unify education stage labels.
+- **Arabic Text Utilities:** Added 	extUtils.ts for consistent Arabic string normalization.
+
+### Changed
+- **Navigation & Gating:** Enhanced AppMain.tsx with robust routing and view gating for distinct flows (Admins, Supervisors, Servants).
+
 ---
 
 ## [1.5.0] - 2026-06-05
@@ -432,3 +454,5 @@ For complete documentation, see:
 **Festival:** اريبصالين Summer Deacon School  
 **Developer:** Claude Code Assistant  
 **Maintained By:** Festival Development Team
+
+

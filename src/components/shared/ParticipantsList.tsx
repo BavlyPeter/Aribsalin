@@ -1,4 +1,4 @@
-import { Search, Trash2, Coins, Edit, XCircle, User } from 'lucide-react';
+import { Search, Trash2, Coins, Edit, XCircle, User, CalendarCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
@@ -30,8 +30,9 @@ interface ParticipantsListProps {
   onEdit?: (p: Participant) => void;
   onManagePoints?: (p: Participant) => void;
   onDelete?: (id: string) => void;
-  canEdit?: boolean;   // ADDED: Controls edit button visibility
-  canDelete?: boolean; // ADDED: Controls delete button visibility
+  canEdit?: boolean;
+  canDelete?: boolean;
+  onManualAttendance?: (participantId: string, date: string) => void;
 }
 
 const CLASSES = [

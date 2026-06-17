@@ -28,6 +28,17 @@ This is the main technical documentation file. For specific topics, see:
 
 ---
 
+## 🆕 What's New in v1.6.1 (June 17, 2026)
+
+This release focuses on authentication session reliability and general codebase stabilization.
+
+- **Signup Session Fix:** Resolved a critical issue where the authentication session was not properly handled immediately after a new servant signup, ensuring a smoother transition to the pending approval state.
+- **Path Normalization:** System-wide update to documentation to reflect the actual component directory structure, moving shared components and layout elements to their respective `src/components` subfolders.
+- **Dependency Audit:** Verified all core libraries (Supabase, Recharts, Tailwind v4) are aligned with the latest stable versions used in the project.
+- **ID Card Download Stability:** Finalized fixes for cross-browser ID card generation, specifically addressing rendering issues on high-DPI mobile screens.
+
+---
+
 ## 🆕 What's New in v1.6.0 (June 12, 2026)
 
 This release introduces the servant registration approval system, detailed servant profiles, and enhanced navigation gating.
@@ -136,18 +147,18 @@ This section enumerates concrete code changes, file-by-file, made during the rec
   - Made parents' mobile fields optional and removed required asterisks, made address details optional where requested.
   - `handleSubmit` validates 11-digit phone numbers, formats `class_or_job` from `universityName`/`collegeName` when needed, and inserts participant record into `participants` table.
 
-- `src/app/components/QRScanner.tsx`: Multi-mode scanner supports `attendance`, `market`, `addPoints`, `viewDetails` flows; camera permission fallback UI preserved.
+- `src/components/shared/QRScanner.tsx`: Multi-mode scanner supports `attendance`, `market`, `addPoints`, `viewDetails` flows; camera permission fallback UI preserved.
 
-- `src/app/components/EnhancedDashboard.tsx` and `src/app/components/EnhancedRegistrationForm.tsx`: UI wiring to open scanner modes and registration flow; adjusted to new types and to call DB-backed handlers in `AppMain`.
+- `src/pages/Dashboard.tsx` and `src/components/forms/RegistrationForm.tsx`: UI wiring to open scanner modes and registration flow; adjusted to new types and to call DB-backed handlers in `AppMain`.
 
-- `src/app/components/MarketModal.tsx`, `AddPointsModal.tsx`, `ManualPointsModal.tsx`:
+- `src/components/modals/MarketModal.tsx`, `AddPointsModal.tsx`, `ManualPointsModal.tsx`:
   - Inputs validate positive integers only (block `-`, `.`, `e`, `E` keys), preview remaining balance, and call DB-backed handlers that update `participants.points_balance` and add `points_transactions` rows.
 
 - `src/pages/StudentPortalLogin.tsx`: Normalizes entered IDs (`trim().toUpperCase()`) and routes to `StudentProfile` on success.
 
 - `src/pages/StudentProfile.tsx`: Shows `area` + `address` fields, QR download helper, and attendance/points stats.
 
-- `src/app/components/QRScanner.tsx`:
+- `src/components/shared/QRScanner.tsx`:
   - **Mobile Stability Fix:** Removed `navigator.vibrate` to prevent camera feed suspension on iOS Safari.
   - **Isolated Scanning:** Added a dedicated hidden div (`#file-qr-reader`) and independent `Html5Qrcode` instance for file uploads to prevent concurrency crashes with the live camera.
   - **Sharp PNG Normalization:** Implemented a two-step upload flow (direct scan → lossless PNG fallback) with `imageSmoothingEnabled: false` for maximum QR readability.
@@ -341,7 +352,7 @@ font-family: 'Tajawal', 'Cairo', sans-serif;
 
 ### 1. LoginPage Component
 
-**File Path:** `src/app/components/LoginPage.tsx`
+**File Path:** `src/pages/LoginPage.tsx`
 
 **Purpose:** Teacher authentication page for accessing the festival management system.
 
@@ -371,7 +382,7 @@ Submit Button: bg-primary, text-primary-foreground, rounded-xl, py-3, active:sca
 
 ### 2. SignupPage Component
 
-**File Path:** `src/app/components/SignupPage.tsx`
+**File Path:** `src/pages/SignupPage.tsx`
 
 **Purpose:** Teacher registration form with comprehensive data collection. This form is specifically for teachers (خدام) - differs from student registration.
 
@@ -530,9 +541,9 @@ export interface TeacherData {
 
 ---
 
-### 3. EnhancedDashboard Component
+### 3. Dashboard Component
 
-**File Path:** `src/app/components/EnhancedDashboard.tsx`
+**File Path:** `src/pages/Dashboard.tsx`
 
 **Purpose:** Main dashboard and navigation hub for all festival management features.
 
@@ -577,7 +588,7 @@ export interface TeacherData {
 
 **Props Interface:**
 ```typescript
-interface EnhancedDashboardProps {
+interface DashboardProps {
   onNavigate: (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 
                      'manualPoints' | 'profile' | 'viewDetails' | 
                      'finance' | 'statistics' | 'teachers') => void;
@@ -590,9 +601,9 @@ interface EnhancedDashboardProps {
 
 ---
 
-### 4. EnhancedRegistrationForm Component
+### 4. RegistrationForm Component
 
-**File Path:** `src/app/components/EnhancedRegistrationForm.tsx`
+**File Path:** `src/components/forms/RegistrationForm.tsx`
 
 **Purpose:** Comprehensive student/participant registration form. This differs from SignupPage (which is for teachers) by including ALL education stages and multiple contact numbers.
 
@@ -683,7 +694,7 @@ export interface StudentData {
 
 ### 5. StudentProfile Component
 
-**File Path:** `src/app/components/StudentProfile.tsx`
+**File Path:** `src/pages/StudentProfile.tsx`
 
 **Purpose:** Detailed participant profile page with QR code, attendance records, and complete personal information.
 
@@ -751,7 +762,7 @@ const downloadQRCode = () => {
 
 ### 6. QRScanner Component
 
-**File Path:** `src/app/components/QRScanner.tsx`
+**File Path:** `src/components/shared/QRScanner.tsx`
 
 **Purpose:** Multi-mode QR code scanner using device camera or image upload.
 
@@ -804,7 +815,7 @@ interface QRScannerProps {
 
 #### MarketModal - Point Deduction
 
-**File Path:** `src/app/components/MarketModal.tsx`
+**File Path:** `src/components/modals/MarketModal.tsx`
 
 **Purpose:** Deduct points when participants make purchases at the market.
 
@@ -828,7 +839,7 @@ interface MarketModalProps {
 
 #### AddPointsModal - Point Addition
 
-**File Path:** `src/app/components/AddPointsModal.tsx`
+**File Path:** `src/components/modals/AddPointsModal.tsx`
 
 **Purpose:** Add bonus points to participants (triggered by QR scan).
 
@@ -843,7 +854,7 @@ interface MarketModalProps {
 
 #### ManualPointsModal - Manual Points Management
 
-**File Path:** `src/app/components/ManualPointsModal.tsx`
+**File Path:** `src/components/modals/ManualPointsModal.tsx`
 
 **Purpose:** Manage participant points without QR scanning - search by name and add/deduct points.
 
@@ -902,7 +913,7 @@ step="1"
 
 ### 8. FinancePage Component
 
-**File Path:** `src/app/components/FinancePage.tsx`
+**File Path:** `src/pages/FinancePage.tsx`
 
 **Purpose:** Comprehensive financial management system to track all festival expenses and revenues.
 
@@ -1020,7 +1031,7 @@ const educationStageLabels: Record<string, string> = {
 
 ### 9. StatisticsPage Component
 
-**File Path:** `src/app/components/StatisticsPage.tsx`
+**File Path:** `src/pages/StatisticsPage.tsx`
 
 **Purpose:** Comprehensive analytics dashboard displaying festival statistics, charts, and leaderboards.
 
@@ -1190,7 +1201,7 @@ const educationStageLabels: Record<string, string> = {
 
 ### 10. TeachersPage Component
 
-**File Path:** `src/app/components/TeachersPage.tsx`
+**File Path:** `src/pages/TeachersPage.tsx`
 
 **Purpose:** Organize and display all teachers/servants (خدام) by education stages with supervisor designation.
 
@@ -1433,7 +1444,7 @@ Dashboard
 ```
 Dashboard 
   → Click "تسجيل مشارك جديد" button
-  → EnhancedRegistrationForm opens
+  → RegistrationForm opens
   → Fill all required fields (dynamic based on education stage)
   → Submit form
   → Generate unique participant ID
@@ -1631,7 +1642,7 @@ export interface TeacherData {
 - Only 3 education stages allowed (secondary, university, graduate)
 - Single mobile number field (vs 3 for students)
 - Single address field (vs detailed for students)
-- Used in SignupPage (vs EnhancedRegistrationForm for students)
+- Used in SignupPage (vs RegistrationForm for students)
 
 ---
 
@@ -3295,8 +3306,8 @@ type View = 'login' | 'signup' | 'dashboard' | 'registration' |
             'profile' | 'finance' | 'statistics' | 'teachers' | 
             'newpage';  // Add here
 
-// 3. Add navigation handler in EnhancedDashboard props
-interface EnhancedDashboardProps {
+// 3. Add navigation handler in Dashboard props
+interface DashboardProps {
   onNavigate: (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 
                      'manualPoints' | 'profile' | 'viewDetails' | 
                      'finance' | 'statistics' | 'teachers' | 
@@ -3313,7 +3324,7 @@ interface EnhancedDashboardProps {
 #### Step 3: Add Navigation Button in Dashboard
 
 ```typescript
-// In EnhancedDashboard.tsx
+// In Dashboard.tsx
 <button
   onClick={() => onNavigate('newpage')}
   className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform hover:bg-muted/50"
@@ -3432,7 +3443,7 @@ This system was built to serve the Coptic Orthodox Church summer festival progra
 
 ### Quick Overview
 
-A new **IDCard** component (`/src/app/components/IDCard.tsx`) has been added that generates professional, downloadable participant ID cards featuring:
+A new **IDCard** component (`/src/components/shared/IDCard.tsx`) has been added that generates professional, downloadable participant ID cards featuring:
 
 - ✨ Dual logo display (church + festival)
 - 🎨 Gender-based color theming (blue/pink/purple gradients)
@@ -3591,10 +3602,10 @@ This project includes multiple documentation files:
 - `SignupPage.tsx` - صفحة التسجيل للخدام
 
 ### الشاشة الرئيسية
-- `EnhancedDashboard.tsx` - لوحة التحكم مع جميع الإحصائيات والأزرار
+- `Dashboard.tsx` - لوحة التحكم مع جميع الإحصائيات والأزرار
 
 ### نماذج التسجيل
-- `EnhancedRegistrationForm.tsx` - نموذج تسجيل المشاركين المحدث
+- `RegistrationForm.tsx` - نموذج تسجيل المشاركين المحدث
 
 ### إدارة النقاط
 - `MarketModal.tsx` - نافذة خصم النقاط من السوق
@@ -3656,7 +3667,7 @@ This project includes multiple documentation files:
 
 **Version:** 1.1.0  
 **Date:** May 24, 2026  
-**Component:** `/src/app/components/IDCard.tsx`
+**Component:** `/src/components/shared/IDCard.tsx`
 
 ---
 
@@ -4146,7 +4157,7 @@ await html2canvas(element, {
 
 For questions or issues:
 1. Review this documentation
-2. Check component source code (`/src/app/components/IDCard.tsx`)
+2. Check component source code (`/src/components/shared/IDCard.tsx`)
 3. Verify image imports and paths
 4. Test download functionality
 5. Check console for errors
@@ -4155,7 +4166,7 @@ For questions or issues:
 
 **Last Updated:** May 24, 2026  
 **Version:** 1.1.0  
-**Component File:** `/src/app/components/IDCard.tsx`  
+**Component File:** `/src/components/shared/IDCard.tsx`  
 **Church:** St. Mina and Pope Kyrillos VI - Aswan
 
 
@@ -4398,7 +4409,7 @@ Attribution for libraries, fonts, and resources used.
 | What's coming in v2.0? | [CHANGELOG.md](CHANGELOG.md) - "Unreleased" section |
 | How to fix build errors? | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Issue #8 |
 | What libraries are used? | [DOCUMENTATION.md](DOCUMENTATION.md) - "Libraries & Dependencies" |
-| How to register students? | [DOCUMENTATION.md](DOCUMENTATION.md) - "EnhancedRegistrationForm" |
+| How to register students? | [DOCUMENTATION.md](DOCUMENTATION.md) - "RegistrationForm" |
 
 ---
 
@@ -4549,7 +4560,7 @@ We've added a professional ID card generation system that creates downloadable, 
 - 🏫 Education stage and year display
 
 **Where to Find It:**
-- Component: `/src/app/components/IDCard.tsx`
+- Component: `/src/components/shared/IDCard.tsx`
 - Usage: Participant profile pages
 - Documentation: [ID_CARD_DOCUMENTATION.md](ID_CARD_DOCUMENTATION.md)
 
@@ -4593,7 +4604,7 @@ import festivalLogo from '../../imports/Arebsalin-1.png';
 ### Why This Matters
 
 - ✅ Logos now display correctly in all environments
-- ✅ Consistent with other components (EnhancedDashboard, LoginPage)
+- ✅ Consistent with other components (Dashboard, LoginPage)
 - ✅ Properly processed by Vite build system
 - ✅ Works in both development and production
 - ✅ No more broken image placeholders
@@ -4640,7 +4651,7 @@ Main documentation updated with:
 ## 🔧 For Developers
 
 ### Files Modified
-- `/src/app/components/IDCard.tsx` - Logo import fix
+- `/src/components/shared/IDCard.tsx` - Logo import fix
 
 ### Files Added
 - `/ID_CARD_DOCUMENTATION.md` - Component documentation
@@ -5481,7 +5492,7 @@ Sometimes old cached files cause issues:
 ### Code References
 
 - Check component source code in `/src/app/components/`
-- Look at working examples in EnhancedDashboard.tsx
+- Look at working examples in Dashboard.tsx
 - Review mock data in AppMain.tsx
 
 ### Search the Codebase
@@ -5580,7 +5591,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### ID Card Component
-- **New Component:** `/src/app/components/IDCard.tsx`
+- **New Component:** `/src/components/shared/IDCard.tsx`
   - Professional ID card design with church branding
   - 350x550px dimensions (standard ID card proportions)
   - Dual logo display (church + festival logos)
@@ -5625,7 +5636,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Problem:** Church logo (`new-church-logo.png`) and festival logo (`Arebsalin-1.png`) not displaying in ID card component
 - **Error Message:** `❌ Festival logo failed to load: /src/imports/Arebsalin-1.png`
 - **Root Cause:** Used dynamic URL construction with `new URL(path, import.meta.url).href` which resolved to source path instead of processed asset path
-- **Solution:** Changed to static ES module imports matching pattern in EnhancedDashboard and LoginPage
+- **Solution:** Changed to static ES module imports matching pattern in Dashboard and LoginPage
   ```typescript
   // Before (broken)
   const churchLogoPath = new URL('../../imports/new-church-logo.png', import.meta.url).href;
@@ -5645,7 +5656,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical Details
 
 #### Files Modified
-- `/src/app/components/IDCard.tsx` - Logo import fix
+- `/src/components/shared/IDCard.tsx` - Logo import fix
 
 #### Files Added
 - `/ID_CARD_DOCUMENTATION.md` - New documentation
@@ -5673,7 +5684,7 @@ No new dependencies added (html2canvas was already installed)
 - SignupPage - Teacher registration form
 
 **Dashboard:**
-- EnhancedDashboard - Main navigation hub
+- Dashboard - Main navigation hub
   - Statistics cards (total participants, today's attendance)
   - QR scanner buttons (attendance, market, add points, view details)
   - Action buttons (register, manual points, finance, statistics, teachers)
@@ -5681,7 +5692,7 @@ No new dependencies added (html2canvas was already installed)
   - Test QR codes section
 
 **Registration:**
-- EnhancedRegistrationForm - Student/participant registration
+- RegistrationForm - Student/participant registration
   - Dynamic fields based on education stage
   - 6 education stages support (KG through Graduate)
   - Multiple contact numbers (personal, father, mother)
@@ -5982,3 +5993,4 @@ For complete documentation, see:
 **Festival:** اريبصالين Summer Deacon School  
 **Developer:** Claude Code Assistant  
 **Maintained By:** Festival Development Team
+
