@@ -13,6 +13,7 @@ interface DashboardProps {
   onEditRequest?: (rec: any) => void;
   onManagePoints?: (rec: any) => void;
   onDeleteParticipant?: (id: string) => void;
+  onManualAttendance?: (participantId: string, date: string) => void;
 }
 
 export function Dashboard({
@@ -24,7 +25,8 @@ export function Dashboard({
   participants = [],
   onEditRequest,
   onManagePoints,
-  onDeleteParticipant
+  onDeleteParticipant,
+  onManualAttendance
 }: DashboardProps) {
   
   // Define roles based on currentServant.role
@@ -243,6 +245,7 @@ export function Dashboard({
               onEdit={(p) => onEditRequest?.(p)}
               onManagePoints={(p) => onManagePoints?.(p)}
               onDelete={(id) => onDeleteParticipant?.(id)}
+              onManualAttendance={onManualAttendance}
               canEdit={canManageParticipants}
               canDelete={canManageParticipants}
             />

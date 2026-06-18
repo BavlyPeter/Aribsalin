@@ -700,6 +700,44 @@ export default function AppMain() {
     setCurrentView('manualPoints');
   };
 
+  const handleManualAttendance = async (participantId: string, date: string) => {
+    try {
+      // Check if attendance already exists for this date
+      const { data: existingAttendance } = await supabase
+        .from('attendance_logs')
+        .select('id')
+        .eq('participant_id', participantId)
+        .eq('attendance_date', date)
+        .single();
+
+      if (existingAttendance) {
+        toast.info('تم تسجيل حضور هذا المخدوم في هذا اليوم مسبقاً');
+        return;
+      }
+
+      // Insert new attendance log
+      const { error } = await supabase
+        .from('attendance_logs')
+        .insert({
+          participant_id: participantId,
+          servant_id: currentServant?.id,
+          attendance_date: date,
+        });
+
+      if (error) throw error;
+
+      toast.success('تم تسجيل الحضور بنجاح');
+      
+      // Refresh participants data
+      if (typeof window !== 'undefined') {
+        fetchFestivalData();
+      }
+    } catch (error) {
+      console.error('Error logging manual attendance:', error);
+      toast.error('حدث خطأ أثناء تسجيل الحضور');
+    }
+  };
+
   const handleClearEdit = () => setEditData(null);
 
   const handleViewProfile = (participantId: string) => {
@@ -821,6 +859,7 @@ export default function AppMain() {
             onEditRequest={(rec) => handleEditRequest(rec, 'participant')}
             onManagePoints={(rec) => handleManagePointsRequest(rec)}
             onDeleteParticipant={handleDeleteParticipant}
+            onManualAttendance={handleManualAttendance}
           />
         )}
 

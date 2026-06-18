@@ -72,7 +72,8 @@ export function ParticipantsList({
   onManagePoints, 
   onDelete, 
   canEdit = true, 
-  canDelete = true 
+  canDelete = true,
+  onManualAttendance
 }: ParticipantsListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGender, setFilterGender] = useState('');
@@ -81,6 +82,10 @@ export function ParticipantsList({
   const [areas, setAreas] = useState<string[]>([]);
   const [items, setItems] = useState<Participant[]>(participants);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const [attendanceModalOpen, setAttendanceModalOpen] = useState(false);
+  const [attendanceParticipant, setAttendanceParticipant] = useState<Participant | null>(null);
+  const [attendanceDate, setAttendanceDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   useEffect(() => setItems(participants), [participants]);
 
@@ -298,6 +303,19 @@ export function ParticipantsList({
               {/* Actions - left side in RTL */}
               <div className="flex items-center gap-2 mr-4">
                 <button
+                  title="تسجيل حضور يدوي"
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    setAttendanceParticipant(participant);
+                    setAttendanceDate(new Date().toISOString().split('T')[0]);
+                    setAttendanceModalOpen(true);
+                  }}
+                  className="p-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
+                >
+                  <CalendarCheck className="w-4 h-4" />
+                </button>
+
+                <button
                   title="إدارة النقاط"
                   onClick={(e) => { e.stopPropagation(); onManagePoints?.(participant); }}
                   className="p-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100"
@@ -330,6 +348,54 @@ export function ParticipantsList({
           ))
         )}
       </div>
+
+      {/* Manual Attendance Modal */}
+      {attendanceModalOpen && attendanceParticipant && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setAttendanceModalOpen(false)}>
+          <div className="bg-background rounded-2xl w-full max-w-sm shadow-xl overflow-hidden border border-border" onClick={e => e.stopPropagation()}>
+            <div className="p-4 bg-blue-50 border-b border-blue-100 flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <CalendarCheck className="w-5 h-5 text-blue-700" />
+              </div>
+              <div>
+                <h3 className="font-bold text-blue-900">تسجيل حضور يدوي</h3>
+                <p className="text-sm text-blue-700 truncate max-w-[200px]">{attendanceParticipant.name}</p>
+              </div>
+            </div>
+            
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">تاريخ الحضور</label>
+                <input 
+                  type="date" 
+                  value={attendanceDate}
+                  onChange={(e) => setAttendanceDate(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-input-background focus:ring-2 focus:ring-blue-500 outline-none"
+                  max={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border flex gap-3">
+              <button
+                onClick={() => {
+                  onManualAttendance?.(attendanceParticipant.dbId || attendanceParticipant.id, attendanceDate);
+                  setAttendanceModalOpen(false);
+                }}
+                className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 active:scale-95 transition-all"
+              >
+                تأكيد الحضور
+              </button>
+              <button
+                onClick={() => setAttendanceModalOpen(false)}
+                className="flex-1 bg-muted text-foreground py-3 rounded-xl font-medium hover:bg-muted/80 active:scale-95 transition-all"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
