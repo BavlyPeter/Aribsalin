@@ -1,8 +1,8 @@
 # اريبصالين - Summer Festival Management System
 ## Complete Technical Documentation
 
-**Current Version:** 1.6.0 (Registration Approval & Servant Profiles)  
-**Last Updated:** June 12, 2026
+**Current Version:** 1.6.1 (Auth Session & Stabilization)  
+**Last Updated:** June 18, 2026
 
 ---
 
@@ -112,6 +112,12 @@ Files touched in this release (not exhaustive):
 ## 🔧 Detailed Change Log (Full list of code updates applied in this cycle)
 
 This section enumerates concrete code changes, file-by-file, made during the recent development session so the repo history is easy to review.
+
+### v1.6.1 (June 18, 2026)
+- `src/components/layout/AppMain.tsx`: Fixed authentication session handling immediately after servant signup to ensure the user is correctly identified and transitioned to the pending approval state without requiring a manual refresh.
+- `src/pages/SignupPage.tsx`: Optimized Smart ID display and ensured session persistence after registration.
+- **Path Normalization:** Verified and updated all internal documentation references to match the actual file system structure (`src/components`, `src/pages`, `src/app`, etc.).
+- **ID Card Stability:** Finalized fixes for cross-browser ID card generation, specifically addressing rendering issues on high-DPI mobile screens and ensuring crisp QR code modules.
 
 ### v1.6.0 (June 12, 2026)
 - `src/pages/RegistrationRequestsPage.tsx`: Implemented admin-only view for reviewing and approving servant signup requests. Includes logic for toggling roles (admin/servant) and managing servant status in Supabase.
@@ -3518,17 +3524,16 @@ This project includes multiple documentation files:
 
 **End of Documentation**
 
-**Last Updated:** May 30, 2026  
-**Current Version:** 1.3.0  
+**Last Updated:** June 18, 2026  
+**Current Version:** 1.6.1  
 **Church:** كنيسة الشهيد العظيم مارمينا العجايبي والقديس العظيم البابا كيرلس السادس - أسوان
 
+---
 
-
-# اريبصالين - نظام إدارة مهرجان الصيف
-
-## الميزات المنفذة
-
-### 1. تصميم الشعارات والهوية البصرية ✅
+**Church:** Church of the Great Martyr St. Mina the Wonderworker and Pope Kyrillos VI - Aswan  
+**Festival:** اريبصالين Summer Deacon School  
+**Developer:** Claude Code Assistant  
+**Maintained By:** Festival Development Team
 - إضافة شعار الكنيسة (مار مينا العجايبي)
 - إضافة شعار المهرجان (اريبصالين)
 - استخدام الألوان القبطية الأرثوذكسية:
