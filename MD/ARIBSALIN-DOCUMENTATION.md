@@ -32,6 +32,7 @@ This is the main technical documentation file. For specific topics, see:
 
 This release focuses on authentication session reliability and general codebase stabilization.
 
+- **Sessions Management (NEW):** Added `SessionsManagementPage` for admins to manage and delete specific attendance sessions grouped by class and date. This allows for correcting attendance errors and ensuring data integrity.
 - **Signup Session Fix:** Resolved a critical issue where the authentication session was not properly handled immediately after a new servant signup, ensuring a smoother transition to the pending approval state.
 - **Path Normalization:** System-wide update to documentation to reflect the actual component directory structure, moving shared components and layout elements to their respective `src/components` subfolders.
 - **Dependency Audit:** Verified all core libraries (Supabase, Recharts, Tailwind v4) are aligned with the latest stable versions used in the project.

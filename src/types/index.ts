@@ -1,3 +1,4 @@
+import { Phone } from 'lucide-react';
 export interface StudentData {
   fullName: string;
   gender: 'male' | 'female' | '';
@@ -30,6 +31,7 @@ export interface ParticipantData {
   motherMobile: string;
   area: string;
   address: string;
+  photo_url?: string;
 }
 
 export interface Participant {

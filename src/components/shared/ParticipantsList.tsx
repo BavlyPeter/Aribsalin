@@ -21,6 +21,7 @@ interface Participant {
     academic_year?: string;
     area?: string;
     address_area?: string;
+    photo_url?: string;
   };
   onClick?: () => void;
 }

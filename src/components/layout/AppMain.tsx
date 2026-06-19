@@ -17,10 +17,12 @@ import { TeachersPage } from '../../pages/TeachersPage';
 import { ServantProfile } from '../../pages/ServantProfile';
 import { StudentPortalLogin } from '../../pages/StudentPortalLogin';
 import { RegistrationRequestsPage } from '../../pages/RegistrationRequestsPage';
+import { SessionsManagementPage } from '../../pages/SessionsManagementPage';
 import { Participant, StudentData, TeacherData } from '../../types';
 import { toast, Toaster } from 'sonner';
 
-type View       =  'roleSelection' | 'login' | 'signup' | 'studentPortal' | 'studentScanner' | 'dashboard' | 'registration' | 'scanner' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'finance' | 'statistics' | 'teachers' | 'servantProfile' | 'registrationRequests';
+type View       =  'roleSelection' | 'login' | 'signup' | 'studentPortal' | 'studentScanner' | 'dashboard' | 'registration' | 'scanner' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'finance' | 'statistics' | 'teachers' | 'servantProfile' | 'registrationRequests' | 'sessions';
+
 type ScanMode   =  'attendance' | 'market' | 'addPoints' | 'viewDetails';
 type ViewerRole =  'servant' | 'student';
 
@@ -35,7 +37,8 @@ export default function AppMain() {
   const [selectedParticipantForPoints, setSelectedParticipantForPoints] = useState<any | null>(null);
 
   const [selectedServantProfileId, setSelectedServantProfileId] = useState<string | null>(null);
-  const [servantProfileSource, setServantProfileSource] = useState<'dashboard' | 'teachers'>('teachers');
+  
+  const [servantProfileSource, setServantProfileSource] = useState<'dashboard' | 'teachers' | 'registrationRequests'>('teachers');
 
   const [participants, setParticipants] = useState<any[]>([]);
 
@@ -276,7 +279,7 @@ export default function AppMain() {
     setCurrentView('studentScanner');
   };
 
-  const handleNavigate = (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers' | 'registrationRequests') => {
+  const handleNavigate = (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers' | 'registrationRequests' | 'sessions') => {
     if (view === 'scanner') {
       setScanMode('attendance');
       setCurrentView('scanner');
@@ -297,6 +300,8 @@ export default function AppMain() {
       setCurrentView('teachers');
     } else if (view === 'registrationRequests') {
       setCurrentView('registrationRequests');
+    } else if (view === 'sessions') {
+      setCurrentView('sessions');
     } else {
       setCurrentView(view);
     }
@@ -1065,6 +1070,15 @@ export default function AppMain() {
               setSelectedServantProfileId(id); 
               setServantProfileSource('registrationRequests');
               setCurrentView('servantProfile'); 
+            }}
+          />
+        )}
+
+        {currentView === 'sessions' && (
+          <SessionsManagementPage
+            onBack={() => {
+              setCurrentView('dashboard');
+              fetchFestivalData();
             }}
           />
         )}
