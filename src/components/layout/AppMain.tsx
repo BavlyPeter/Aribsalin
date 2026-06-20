@@ -773,7 +773,8 @@ export default function AppMain() {
 
   const handleDeleteSingleAttendance = async (participantId: string, date: string) => {
     try {
-      const { error } = await supabase
+      // 1. Delete the attendance log
+      const { error: deleteError } = await supabase
         .from('attendance_logs')
         .delete()
         .match({ 
@@ -781,9 +782,39 @@ export default function AppMain() {
           attendance_date: date 
         });
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
 
-      toast.success(`تم حذف حضور يوم ${date} بنجاح`);
+      // === 2. Deduct 10 Points Automatically ===
+      // Fetch current balance
+      const { data: pData } = await supabase
+        .from('participants')
+        .select('points_balance')
+        .eq('id', participantId)
+        .single();
+        
+      const currentBalance = pData?.points_balance || 0;
+      // Ensure balance doesn't drop below 0
+      const newBalance = Math.max(0, currentBalance - 10); 
+
+      // Update participant's balance
+      await supabase
+        .from('participants')
+        .update({ points_balance: newBalance })
+        .eq('id', participantId);
+
+      // Log the transaction
+      await supabase
+        .from('points_transactions')
+        .insert({
+          participant_id: participantId,
+          servant_id: currentServant?.id,
+          transaction_type: 'deduction',
+          points_amount: 10,
+          description: `إلغاء مكافأة حضور يوم ${date}`
+        });
+      // =========================================
+
+      toast.success(`تم حذف حضور يوم ${date} وخصم 10 نقاط بنجاح`);
       
       // Refresh the data so the profile and global stats update immediately
       if (typeof window !== 'undefined') {
