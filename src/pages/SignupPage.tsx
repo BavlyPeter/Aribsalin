@@ -632,7 +632,7 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
                     value={formData.password}
                     onChange={(e) => updateField('password', e.target.value)}
                     className="w-full px-4 py-3 pl-12 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="كلمة المرور (يجب ان تكون اكثر من 4 حروف او ارقام)"
+                    placeholder="كلمة المرور (يجب ان تكون اكثر من 6 حروف او ارقام)"
                   />
                   <button
                     type="button"
