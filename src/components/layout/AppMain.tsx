@@ -720,8 +720,8 @@ export default function AppMain() {
         return;
       }
 
-      // Insert new attendance log
-      const { error } = await supabase
+      // 1. Insert new attendance log
+      const { error: attendanceError } = await supabase
         .from('attendance_logs')
         .insert({
           participant_id: participantId,
@@ -729,16 +729,44 @@ export default function AppMain() {
           attendance_date: date,
         });
 
-      if (error) throw error;
+      if (attendanceError) throw attendanceError;
 
-      toast.success('تم تسجيل الحضور بنجاح');
+      // === 2. Add 10 Points Automatically ===
+      // Fetch current balance
+      const { data: pData } = await supabase
+        .from('participants')
+        .select('points_balance')
+        .eq('id', participantId)
+        .single();
+        
+      const currentBalance = pData?.points_balance || 0;
+
+      // Update participant's balance
+      await supabase
+        .from('participants')
+        .update({ points_balance: currentBalance + 10 })
+        .eq('id', participantId);
+
+      // Log the transaction
+      await supabase
+        .from('points_transactions')
+        .insert({
+          participant_id: participantId,
+          servant_id: currentServant?.id,
+          transaction_type: 'addition',
+          points_amount: 10,
+          description: `مكافأة حضور يوم ${date}`
+        });
+      // =====================================
+
+      toast.success('تم تسجيل الحضور وإضافة 10 نقاط بنجاح');
       
       // Refresh participants data
       if (typeof window !== 'undefined') {
         fetchFestivalData();
       }
     } catch (error) {
-      console.error('Error logging manual attendance:', error);
+      console.error('Error logging attendance and points:', error);
       toast.error('حدث خطأ أثناء تسجيل الحضور');
     }
   };
