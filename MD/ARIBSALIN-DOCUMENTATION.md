@@ -1,8 +1,8 @@
 # اريبصالين - Summer Festival Management System
 ## Complete Technical Documentation
 
-**Current Version:** 1.6.1 (Auth Session & Stabilization)  
-**Last Updated:** June 18, 2026
+**Current Version:** 1.6.3 (Granular Attendance Management & Security Fixes)  
+**Last Updated:** June 20, 2026
 
 ---
 
@@ -25,6 +25,17 @@ This is the main technical documentation file. For specific topics, see:
 - **ID card issues?** Check [ID_CARD_DOCUMENTATION.md](ID_CARD_DOCUMENTATION.md)
 - **Bugs or problems?** See [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 - **Complete history?** Review [CHANGELOG.md](CHANGELOG.md)
+
+---
+
+## 🆕 What's New in v1.6.3 (June 20, 2026)
+
+This release implements individual attendance deletion, manual attendance registration modal, sessions management dashboard, and ID card engine optimization.
+
+- **Individual Attendance Deletion:** Added the ability for `admin` and `supervisor` roles to delete specific attendance logs directly from a student's profile. This action cascades automatically; if a deleted log is the last remaining log for a class on that specific date, the global session count for that class is dynamically decremented.
+- **Manual Attendance Registration:** Implemented a manual attendance logging feature with a date-picker modal in the `ParticipantsList`, allowing retroactive attendance tracking while preventing duplicate entries.
+- **Sessions Management Dashboard:** Created a dedicated admin-only `SessionsManagementPage` for macro-level attendance control. Features intelligent data grouping (by English database keys linked to academic years) and chunk-based deletion to safely purge entire class sessions without hitting PostgREST URL limits.
+- **ID Card Engine Optimization:** Refactored the `html2canvas` ID generation engine. Replaced CSS functions (`oklch`) with explicit Hex codes and integrated safe off-screen rendering (`left: 200vw`) alongside strict CORS rules to eliminate silent download failures and tainted canvas security blocks.
 
 ---
 
@@ -113,6 +124,12 @@ Files touched in this release (not exhaustive):
 ## 🔧 Detailed Change Log (Full list of code updates applied in this cycle)
 
 This section enumerates concrete code changes, file-by-file, made during the recent development session so the repo history is easy to review.
+
+### v1.6.3 (June 20, 2026)
+- **Individual Attendance Deletion:** Added the ability for `admin` and `supervisor` roles to delete specific attendance logs directly from a student's profile. This action cascades automatically; if a deleted log is the last remaining log for a class on that specific date, the global session count for that class is dynamically decremented.
+- **Manual Attendance Registration:** Implemented a manual attendance logging feature with a date-picker modal in the `ParticipantsList`, allowing retroactive attendance tracking while preventing duplicate entries.
+- **Sessions Management Dashboard:** Created a dedicated admin-only `SessionsManagementPage` for macro-level attendance control. Features intelligent data grouping (by English database keys linked to academic years) and chunk-based deletion to safely purge entire class sessions without hitting PostgREST URL limits.
+- **ID Card Engine Optimization:** Refactored the `html2canvas` ID generation engine. Replaced CSS functions (`oklch`) with explicit Hex codes and integrated safe off-screen rendering (`left: 200vw`) alongside strict CORS rules to eliminate silent download failures and tainted canvas security blocks.
 
 ### v1.6.1 (June 18, 2026)
 - `src/components/layout/AppMain.tsx`: Fixed authentication session handling immediately after servant signup to ensure the user is correctly identified and transitioned to the pending approval state without requiring a manual refresh.
@@ -3525,8 +3542,8 @@ This project includes multiple documentation files:
 
 **End of Documentation**
 
-**Last Updated:** June 18, 2026  
-**Current Version:** 1.6.1  
+**Last Updated:** June 20, 2026  
+**Current Version:** 1.6.3  
 **Church:** كنيسة الشهيد العظيم مارمينا العجايبي والقديس العظيم البابا كيرلس السادس - أسوان
 
 ---

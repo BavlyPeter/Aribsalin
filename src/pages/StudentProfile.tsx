@@ -1,4 +1,4 @@
-import { ArrowRight, Calendar, Phone, MapPin, Book, Award, CheckCircle2, User, School, Download, CreditCard } from 'lucide-react';
+import { ArrowRight, Calendar, Phone, MapPin, Book, Award, CheckCircle2, User, School, Download, CreditCard, Trash2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Participant } from '../types';
 import { useRef, useState } from 'react';
@@ -9,9 +9,12 @@ interface StudentProfileProps {
   student: Participant;
   totalDays: number;
   onBack: () => void;
+  onDeleteAttendance?: (participantId: string, date: string) => Promise<void>; // ADDED
+  viewerRole?: string; // ADDED
 }
 
-export function StudentProfile({ student, totalDays, onBack }: StudentProfileProps) {
+export function StudentProfile({ student, totalDays, onBack, onDeleteAttendance, viewerRole }: StudentProfileProps) {
+  const [isDeletingDate, setIsDeletingDate] = useState<string | null>(null);
   const attendancePercentage = totalDays > 0 ? Math.round((student.attendanceDays.length / totalDays) * 100) : 0;
   const qrRef = useRef<HTMLDivElement>(null);
   const idCardRef = useRef<HTMLDivElement>(null);
@@ -107,6 +110,17 @@ export function StudentProfile({ student, totalDays, onBack }: StudentProfilePro
     } catch (error) {
       console.error('Error generating ID card:', error);
       setIsDownloadingCard(false);
+    }
+  };
+
+  const handleDeleteDate = async (date: string) => {
+    if (!confirm(`هل أنت متأكد من حذف حضور يوم ${date} لهذا المخدوم؟`)) return;
+    
+    setIsDeletingDate(date);
+    try {
+      await onDeleteAttendance?.(student.id, date);
+    } finally {
+      setIsDeletingDate(null);
     }
   };
 
@@ -222,24 +236,37 @@ export function StudentProfile({ student, totalDays, onBack }: StudentProfilePro
             </div>
           </div>
 
-          {student.attendanceDays.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-border">
-              <h4 className="text-sm text-muted-foreground mb-3">أيام الحضور:</h4>
-              <div className="flex flex-wrap gap-2">
-                {student.attendanceDays.map((day, index) => (
-                  <div
-                    key={index}
-                    className="bg-primary/10 text-primary px-3 py-1 rounded-lg text-sm"
-                  >
-                    {new Date(day).toLocaleDateString('ar-EG', {
-                      month: 'short',
-                      day: 'numeric'
-                    })}
+          <div className="space-y-3 mt-4">
+            <h4 className="text-sm text-muted-foreground mb-1">أيام الحضور:</h4>
+            {student.attendanceDays?.length > 0 ? (
+              student.attendanceDays.map((date, index) => (
+                <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/20">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Calendar className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="font-medium text-foreground" dir="ltr">{date}</span>
                   </div>
-                ))}
+                  
+                  {/* Delete Button (Only for Admin/Supervisor) */}
+                  {(viewerRole === 'admin' || viewerRole === 'supervisor') && (
+                    <button
+                      onClick={() => handleDeleteDate(date)}
+                      disabled={isDeletingDate === date}
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                      title="حذف الحصة"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-6 text-muted-foreground bg-muted/10 rounded-xl border border-dashed border-border">
+                لم يتم تسجيل أي حضور حتى الآن
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Personal Information */}

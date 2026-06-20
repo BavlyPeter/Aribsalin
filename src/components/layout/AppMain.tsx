@@ -743,6 +743,30 @@ export default function AppMain() {
     }
   };
 
+  const handleDeleteSingleAttendance = async (participantId: string, date: string) => {
+    try {
+      const { error } = await supabase
+        .from('attendance_logs')
+        .delete()
+        .match({ 
+          participant_id: participantId, 
+          attendance_date: date 
+        });
+
+      if (error) throw error;
+
+      toast.success(`تم حذف حضور يوم ${date} بنجاح`);
+      
+      // Refresh the data so the profile and global stats update immediately
+      if (typeof window !== 'undefined') {
+        fetchFestivalData(); 
+      }
+    } catch (error) {
+      console.error('Error deleting specific attendance:', error);
+      toast.error('حدث خطأ أثناء حذف الحصة');
+    }
+  };
+
   const handleClearEdit = () => setEditData(null);
 
   const handleViewProfile = (participantId: string) => {
@@ -1009,6 +1033,8 @@ export default function AppMain() {
               student={selectedParticipant}
               totalDays={getActiveDaysForClass(getStudentClassKey(selectedParticipant))}
               onBack={handleProfileBack}
+              onDeleteAttendance={handleDeleteSingleAttendance}
+              viewerRole={currentServant?.role}
             />
           ) : (
             <div className="flex flex-col items-center justify-center p-6 text-center">
