@@ -265,7 +265,9 @@ export function ParticipantsList({
               className="w-full bg-card rounded-lg p-4 border border-border shadow-sm active:scale-[0.98] transition-transform text-right flex items-center"
             >
               <div className="flex-1 cursor-pointer" onClick={participant.onClick}>
+                
                 <div className="flex items-center justify-between">
+                  
                   <div className="flex items-center gap-3">
                     {/* Status Indicator */}
                     <div
@@ -292,58 +294,61 @@ export function ParticipantsList({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 bg-secondary/10 px-3 py-1.5 rounded-lg">
-                    <Coins className="w-4 h-4" style={{ color: 'var(--secondary)' }} />
-                    <span className="font-medium" style={{ color: 'var(--secondary)' }}>
-                      {participant.points}
-                    </span>
-                  </div>
                 </div>
-              </div>
 
-              {/* Actions - left side in RTL */}
-              <div className="flex items-center gap-2 mr-4">
-                <button
-                  title="تسجيل حضور يدوي"
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    setAttendanceParticipant(participant);
-                    setAttendanceDate(new Date().toISOString().split('T')[0]);
-                    setAttendanceModalOpen(true);
-                  }}
-                  className="p-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
-                >
-                  <CalendarCheck className="w-4 h-4" />
-                </button>
+                {/* Actions - left side in RTL */}
+                <div className="flex items-center gap-2 mr-4">
+                  <div className="flex items-center gap-2 bg-secondary/10 px-3 py-1.5 rounded-lg">
+                      <Coins className="w-4 h-4" style={{ color: 'var(--secondary)' }} />
+                      <span className="font-medium" style={{ color: 'var(--secondary)' }}>
+                        {participant.points}
+                      </span>
+                  </div>
 
-                <button
-                  title="إدارة النقاط"
-                  onClick={(e) => { e.stopPropagation(); onManagePoints?.(participant); }}
-                  className="p-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100"
-                >
-                  <Coins className="w-4 h-4" />
-                </button>
-
-                {canEdit && (
                   <button
-                    title="تعديل"
-                    onClick={(e) => { e.stopPropagation(); onEdit?.(participant); }}
-                    className="p-2 rounded-lg bg-white/10 text-slate-700 hover:bg-muted"
+                    title="تسجيل حضور يدوي"
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      setAttendanceParticipant(participant);
+                      setAttendanceDate(new Date().toISOString().split('T')[0]);
+                      setAttendanceModalOpen(true);
+                    }}
+                    className="p-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100"
                   >
-                    <Edit className="w-4 h-4" />
+                    <CalendarCheck className="w-4 h-4" />
                   </button>
-                )}
 
-                {canDelete && (
                   <button
-                    title="حذف"
-                    onClick={(e) => { e.stopPropagation(); handleDelete(participant); }}
-                    className="p-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100"
-                    disabled={deletingId === participant.id}
+                    title="إدارة النقاط"
+                    onClick={(e) => { e.stopPropagation(); onManagePoints?.(participant); }}
+                    className="p-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Coins className="w-4 h-4" />
                   </button>
-                )}
+
+                  {canEdit && (
+                    <button
+                      title="تعديل"
+                      onClick={(e) => { e.stopPropagation(); onEdit?.(participant); }}
+                      className="p-2 rounded-lg bg-white/10 text-slate-700 hover:bg-muted"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {canDelete && (
+                    <button
+                      title="حذف"
+                      onClick={(e) => { e.stopPropagation(); handleDelete(participant); }}
+                      className="p-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100"
+                      disabled={deletingId === participant.id}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+
+                </div>
+
               </div>
             </div>
           ))
