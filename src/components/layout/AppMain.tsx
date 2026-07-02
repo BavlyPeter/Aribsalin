@@ -843,6 +843,8 @@ export default function AppMain() {
     ? findParticipantByIdentifier(selectedParticipantId)
     : null;
 
+  const canViewStatistics = ['admin', 'supervisor'].includes(currentServant?.role || '');
+
   const handleProfileBack = () => {
     if (viewerRole === 'student') {
       setSelectedParticipantId(null);
@@ -1118,11 +1120,12 @@ export default function AppMain() {
           />
         )}
 
-        {currentView === 'statistics' && (
+        {currentView === 'statistics' && canViewStatistics && (
           <StatisticsPage
             onBack={() => setCurrentView('dashboard')}
             participants={participants}
             totalDays={getOverallActiveDays()}
+            currentServant={currentServant}
           />
         )}
 

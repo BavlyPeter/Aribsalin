@@ -7,6 +7,7 @@ interface StatisticsPageProps {
   onBack: () => void;
   participants: Participant[];
   totalDays: number;
+  currentServant?: any; // ADDED
 }
 
 const CLASS_LABELS: Record<string, string> = {
@@ -40,7 +41,43 @@ const getParticipantClass = (stage: string, year: string) => {
   return 'other';
 };
 
-export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPageProps) {
+const getStageKey = (dbStage: string, academicYear?: string) => {
+  const s = (dbStage || '').toLowerCase().trim();
+  if (!s || s === 'empty') return 'other';
+
+  if (['kg', 'primary_12', 'primary_34', 'primary_56', 'preparatory', 'secondary', 'university_graduate'].includes(s)) {
+    return s;
+  }
+
+  if (s.includes('حضانة') || s.includes('kg')) return 'kg';
+  if (s.includes('إعدادي') || s.includes('preparatory')) return 'preparatory';
+  if (s.includes('ثانوي') || s.includes('secondary')) return 'secondary';
+  if (s.includes('جامعي') || s.includes('university') || s.includes('خريج') || s.includes('graduate') || s.includes('university_graduate')) return 'university_graduate';
+  
+  if (s.includes('ابتدائي') || s.includes('primary')) {
+    const y = (academicYear || '').toLowerCase();
+    if (s.includes('1') || s.includes('2') || s.includes('أول') || s.includes('ثاني') || y.includes('1') || y.includes('2') || y.includes('أول') || y.includes('ثاني')) return 'primary_12';
+    if (s.includes('3') || s.includes('4') || s.includes('ثالث') || s.includes('رابع') || y.includes('3') || y.includes('4') || y.includes('ثالث') || y.includes('رابع')) return 'primary_34';
+    if (s.includes('5') || s.includes('6') || s.includes('خامس') || s.includes('سادس') || y.includes('5') || y.includes('6') || y.includes('خامس') || y.includes('سادس')) return 'primary_56';
+    return 'primary_12';
+  }
+
+  return 'other';
+};
+
+export function StatisticsPage({ onBack, participants, totalDays, currentServant }: StatisticsPageProps) {
+  const isSupervisor = currentServant?.role === 'supervisor';
+  const supervisorStageKey = isSupervisor ? getStageKey(currentServant.class_stage || '') : null;
+
+  // 1. Filter participants strictly for supervisors
+  const filteredParticipants = isSupervisor
+    ? participants.filter(p => getStageKey(p.data?.educationStage || '', p.data?.educationYear || '') === supervisorStageKey)
+    : participants;
+
+  // 2. Recalculate total days for the specific class (so averages are correct)
+  const uniqueClassDates = new Set(filteredParticipants.flatMap(p => p.attendanceDays || p.data?.attendanceDates || []));
+  const effectiveTotalDays = isSupervisor ? uniqueClassDates.size : totalDays;
+
   const stats = useMemo(() => {
     const defaultStats = {
       totalParticipants: 0,
@@ -63,25 +100,25 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
       avgPoints: 0,
     };
 
-    if (!participants || participants.length === 0) return defaultStats;
+    if (!filteredParticipants || filteredParticipants.length === 0) return defaultStats;
 
-    const totalParticipants = participants.length;
+    const totalParticipants = filteredParticipants.length;
 
-    const males = participants.filter(p => p.data?.gender === 'male').length;
-    const females = participants.filter(p => p.data?.gender === 'female').length;
+    const males = filteredParticipants.filter(p => p.data?.gender === 'male').length;
+    const females = filteredParticipants.filter(p => p.data?.gender === 'female').length;
     const genderData = [
       { id: 'male', name: 'ذكور', value: males, color: '#3b82f6' },
       { id: 'female', name: 'إناث', value: females, color: '#ec4899' }
     ].filter(d => d.value > 0);
 
-    const totalAttendancePercentage = participants.reduce((sum, p) => {
+    const totalAttendancePercentage = filteredParticipants.reduce((sum, p) => {
       const attendedDays = p.attendanceDays?.length || 0;
-      const percentage = totalDays > 0 ? (attendedDays / totalDays) * 100 : 0;
+      const percentage = effectiveTotalDays > 0 ? (attendedDays / effectiveTotalDays) * 100 : 0;
       return sum + (percentage > 100 ? 100 : percentage);
     }, 0);
     const averageAttendance = totalParticipants > 0 ? Math.round(totalAttendancePercentage / totalParticipants) : 0;
 
-    const topParticipants = [...participants]
+    const topParticipants = [...filteredParticipants]
       .sort((a, b) => (b.points || 0) - (a.points || 0))
       .slice(0, 5)
       .map(p => {
@@ -98,7 +135,7 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
         };
       });
 
-    const topAttendance = [...participants]
+    const topAttendance = [...filteredParticipants]
       .sort((a, b) => ((b.attendanceDays?.length || 0) - (a.attendanceDays?.length || 0)))
       .slice(0, 10)
       .map(p => ({
@@ -107,10 +144,10 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
         attendanceCount: p.attendanceDays?.length || 0
       }));
 
-    const totalPointsDistributed = participants.reduce((sum, p) => sum + (p.points || 0), 0);
+    const totalPointsDistributed = filteredParticipants.reduce((sum, p) => sum + (p.points || 0), 0);
 
     const stageMap: Record<string, { male: number; female: number; total: number }> = {};
-    participants.forEach(p => {
+    filteredParticipants.forEach(p => {
       const pdata: any = (p as any).data || {};
       const rawStage = String(pdata['educational_stage'] || pdata.educationStage || '');
       const rawYear = String(pdata['academic_year'] || pdata.educationYear || '');
@@ -140,9 +177,9 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
       total: counts.total
     }));
 
-    const allAttendanceDates = Array.from(new Set(participants.flatMap(p => p.attendanceDays || []))).sort();
+    const allAttendanceDates = Array.from(new Set(filteredParticipants.flatMap(p => p.attendanceDays || []))).sort();
     const totalAttendanceRecords = allAttendanceDates.reduce((sum, date) => {
-      return sum + participants.filter(p => (p.attendanceDays || []).includes(date)).length;
+      return sum + filteredParticipants.filter(p => (p.attendanceDays || []).includes(date)).length;
     }, 0);
 
     const avgAttendancePerDay = allAttendanceDates.length > 0
@@ -152,7 +189,7 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
     const avgPoints = totalParticipants > 0 ? Math.round(totalPointsDistributed / totalParticipants) : 0;
 
     const attendanceTimelineData = allAttendanceDates.slice(-14).map(date => {
-      const count = participants.filter(p => (p.attendanceDays || []).includes(date)).length;
+      const count = filteredParticipants.filter(p => (p.attendanceDays || []).includes(date)).length;
       const dateObj = new Date(date);
       return {
         date: `${dateObj.getDate()}/${dateObj.getMonth() + 1}`,
@@ -172,25 +209,25 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
     const pointsDistributionData = pointsRanges
       .map(({ range, min, max }) => ({
         range,
-        count: participants.filter(p => (p.points || 0) >= min && (p.points || 0) <= max).length
+        count: filteredParticipants.filter(p => (p.points || 0) >= min && (p.points || 0) <= max).length
       }))
       .filter(d => d.count > 0);
 
-    const attendanceRates = participants.map(p => ({
-      rate: totalDays > 0 ? ((p.attendanceDays?.length || 0) / totalDays) * 100 : 0
+    const attendanceRates = filteredParticipants.map(p => ({
+      rate: effectiveTotalDays > 0 ? ((p.attendanceDays?.length || 0) / effectiveTotalDays) * 100 : 0
     }));
 
     const avgAttendanceRate = attendanceRates.length > 0
       ? attendanceRates.reduce((sum, r) => sum + r.rate, 0) / attendanceRates.length
       : 0;
 
-    const highAttendance = participants.filter(p =>
-      (((p.attendanceDays?.length || 0) / Math.max(1, totalDays)) * 100) >= 80
+    const highAttendance = filteredParticipants.filter(p =>
+      (((p.attendanceDays?.length || 0) / Math.max(1, effectiveTotalDays)) * 100) >= 80
     ).length;
 
     // 6. Attendance Timeline (Curve)
     const dateCounts: Record<string, number> = {};
-    participants.forEach(p => {
+    filteredParticipants.forEach(p => {
       if (p.attendanceDays && Array.isArray(p.attendanceDays)) {
         p.attendanceDays.forEach(date => {
           dateCounts[date] = (dateCounts[date] || 0) + 1;
@@ -230,7 +267,7 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
       avgAttendancePerDay,
       avgPoints,
     };
-  }, [participants, totalDays]);
+  }, [filteredParticipants, effectiveTotalDays]);
 
   return (
     <div className="min-h-screen bg-background pb-8">
@@ -322,7 +359,7 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
                     {participant.stage}
                   </div>
                   <div className="text-[11px] text-muted-foreground">
-                    {participant.attendanceCount} يوم ({((participant.attendanceCount / Math.max(1, totalDays)) * 100).toFixed(0)}%)
+                    {participant.attendanceCount} يوم ({((participant.attendanceCount / Math.max(1, effectiveTotalDays)) * 100).toFixed(0)}%)
                   </div>
                 </div>
               </div>
@@ -466,7 +503,7 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
 
         {/* Points Statistics by Class */}
         {Object.entries(CLASS_LABELS).filter(([k]) => k !== 'other').map(([stageKey, stageLabel]) => {
-          const stageParticipants = participants.filter(
+          const stageParticipants = filteredParticipants.filter(
             p => {
               const pdata: any = (p as any).data || {};
               return getParticipantClass(
@@ -559,7 +596,7 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
                         <div className="text-right">
                           <div className="font-bold text-sm text-green-600">{participant.attendanceDays?.length || 0} يوم</div>
                           <div className="text-xs text-muted-foreground">
-                            {((((participant.attendanceDays?.length || 0)) / Math.max(1, totalDays)) * 100).toFixed(0)}%
+                            {((((participant.attendanceDays?.length || 0)) / Math.max(1, effectiveTotalDays)) * 100).toFixed(0)}%
                           </div>
                         </div>
                       </div>

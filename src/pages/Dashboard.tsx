@@ -188,6 +188,18 @@ export function Dashboard({
             </button>
           )}
 
+          {(isAdmin || isSupervisor) && (
+            <button
+              onClick={() => onNavigate('statistics')}
+              className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
+            >
+              <div className="flex items-center justify-center gap-3">
+                <BarChart3 className="w-5 h-5 text-primary" />
+                <span>إحصائيات المهرجان</span>
+              </div>
+            </button>
+          )}
+
           {/* Admin Only Buttons: Finance, Statistics, Teachers */}
           {isAdmin && (
             <>
@@ -218,16 +230,6 @@ export function Dashboard({
                 <div className="flex items-center justify-center gap-3">
                   <Wallet className="w-5 h-5 text-primary" />
                   <span>الإدارة المالية</span>
-                </div>
-              </button>
-
-              <button
-                onClick={() => onNavigate('statistics')}
-                className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
-              >
-                <div className="flex items-center justify-center gap-3">
-                  <BarChart3 className="w-5 h-5 text-primary" />
-                  <span>إحصائيات المهرجان</span>
                 </div>
               </button>
 
