@@ -25,16 +25,18 @@ const getParticipantClass = (stage: string, year: string) => {
   const y = String(year || '').toLowerCase();
 
   if (s.includes('حضانة') || s === 'kg') return 'kg';
-  if (s.includes('إعدادي') || s === 'preparatory') return 'preparatory';
-  if (s.includes('ثانوي') || s === 'secondary') return 'secondary';
-  if (s.includes('جامعي') || s.includes('خريج') || s === 'university' || s === 'graduate') return 'university_graduate';
-
+  
   if (s.includes('ابتدائي') || s === 'primary') {
     if (y.includes('أول') || y.includes('ثاني') || y.includes('1') || y.includes('2')) return 'primary_12';
     if (y.includes('ثالث') || y.includes('رابع') || y.includes('3') || y.includes('4')) return 'primary_34';
     if (y.includes('خامس') || y.includes('سادس') || y.includes('5') || y.includes('6')) return 'primary_56';
     return 'primary_12';
   }
+
+  if (s.includes('إعدادي') || s === 'preparatory') return 'preparatory';
+  if (s.includes('ثانوي') || s === 'secondary') return 'secondary';
+  if (s.includes('جامعي') || s.includes('خريج') || s === 'university' || s === 'graduate') return 'university_graduate';
+ 
   return 'other';
 };
 
@@ -260,7 +262,7 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
             </div>
           </div>
 
-          <div className="bg-card rounded-xl p-4 shadow-sm border border-border">
+          {/* <div className="bg-card rounded-xl p-4 shadow-sm border border-border">
             <div className="flex items-center justify-center mb-2">
               <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
                 <Calendar className="w-5 h-5 text-green-600" />
@@ -270,7 +272,7 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
               <div className="text-2xl mb-1 text-green-600">{stats?.totalAttendanceRecords || 0}</div>
               <div className="text-xs text-muted-foreground">إجمالي الحضور</div>
             </div>
-          </div>
+          </div> */}
 
           <div className="bg-card rounded-xl p-4 shadow-sm border border-border">
             <div className="flex items-center justify-center mb-2">
@@ -284,7 +286,7 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
             </div>
           </div>
 
-          <div className="bg-card rounded-xl p-4 shadow-sm border border-border">
+          {/* <div className="bg-card rounded-xl p-4 shadow-sm border border-border">
             <div className="flex items-center justify-center mb-2">
               <div className="w-10 h-10 bg-secondary/20 rounded-full flex items-center justify-center">
                 <Award className="w-5 h-5" style={{ color: 'var(--secondary)' }} />
@@ -294,7 +296,7 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
               <div className="text-2xl mb-1" style={{ color: 'var(--secondary)' }}>{stats?.totalPointsDistributed || 0}</div>
               <div className="text-xs text-muted-foreground">إجمالي النقاط الموزعة</div>
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* Top Participants by Points */}
@@ -440,7 +442,7 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
         )}
 
         {/* Attendance Rate Statistics */}
-        <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
+        {/* <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
           <h3 className="text-primary mb-4">إحصائيات نسبة الحضور</h3>
           <div className="space-y-3">
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
@@ -460,7 +462,7 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
               <span className="text-lg font-bold" style={{ color: 'var(--secondary)' }}>{stats?.totalPointsDistributed || 0}</span>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Points Statistics by Class */}
         {Object.entries(CLASS_LABELS).filter(([k]) => k !== 'other').map(([stageKey, stageLabel]) => {
@@ -483,22 +485,25 @@ export function StatisticsPage({ onBack, participants, totalDays }: StatisticsPa
 
           return (
             <div key={stageKey} className="bg-card rounded-xl p-5 shadow-sm border border-border">
-              <h3 className="text-primary mb-4">{stageLabel} - إحصائيات النقاط</h3>
+              <h3 className="text-primary mb-4">{stageLabel}</h3>
 
               {/* Stage Stats Grid */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="p-3 bg-muted/50 rounded-lg text-center">
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                {/* <div className="p-3 bg-muted/50 rounded-lg text-center">
                   <div className="text-xs text-muted-foreground mb-1">إجمالي النقاط</div>
                   <div className="text-lg font-bold" style={{ color: 'var(--secondary)' }}>{stageTotalPoints}</div>
-                </div>
-                <div className="p-3 bg-muted/50 rounded-lg text-center">
-                  <div className="text-xs text-muted-foreground mb-1">متوسط النقاط</div>
-                  <div className="text-lg font-bold" style={{ color: 'var(--secondary)' }}>{stageAvgPoints}</div>
-                </div>
+                </div> */}
+
                 <div className="p-3 bg-muted/50 rounded-lg text-center">
                   <div className="text-xs text-muted-foreground mb-1">أعلى نقاط</div>
                   <div className="text-lg font-bold text-green-600">{stageMaxPoints}</div>
                 </div>
+
+                <div className="p-3 bg-muted/50 rounded-lg text-center">
+                  <div className="text-xs text-muted-foreground mb-1">متوسط النقاط</div>
+                  <div className="text-lg font-bold" style={{ color: 'var(--secondary)' }}>{stageAvgPoints}</div>
+                </div>
+
                 <div className="p-3 bg-muted/50 rounded-lg text-center">
                   <div className="text-xs text-muted-foreground mb-1">أقل نقاط</div>
                   <div className="text-lg font-bold text-blue-600">{stageMinPoints}</div>
