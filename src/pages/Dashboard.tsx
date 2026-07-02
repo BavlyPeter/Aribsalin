@@ -1,7 +1,9 @@
-import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, FileText, Wallet, BarChart3, LogOut, User, UserCheck, BookOpen } from 'lucide-react';
+import { useState } from 'react';
+import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, FileText, Wallet, BarChart3, LogOut, User, UserCheck, BookOpen, Download } from 'lucide-react';
 import { ParticipantsList } from '../components/shared/ParticipantsList';
 import churchLogo from '../assets/images/new-church-logo.png';
 import festivalLogo from '../assets/images/Arebsalin-1.png';
+import { BulkIDDownloadModal } from '../components/modals/BulkIDDownloadModal';
 
 interface DashboardProps {
   onNavigate: (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers' | 'registrationRequests' | 'sessions' ) => void;
@@ -57,6 +59,7 @@ export function Dashboard({
   const roleText = roleLabels[servantRole] || 'خادم';
   const stageKey = servant?.class_stage || servant?.classStage;
   const stageText = stageKey ? (stageLabels[stageKey] || stageKey) : '';
+  const [showBulkDownload, setShowBulkDownload] = useState(false);
 
   return (
     <div className="min-h-screen bg-background pb-8">
@@ -204,6 +207,16 @@ export function Dashboard({
           {isAdmin && (
             <>
               <button
+                onClick={() => setShowBulkDownload(true)}
+                className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
+              >
+                <div className="flex items-center justify-center gap-3">
+                  <Download className="w-5 h-5 text-primary"/>
+                  <span>تحميل الكروت</span>
+                </div>
+              </button>
+
+              <button
                 onClick={() => onNavigate('registrationRequests')}
                 className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
               >
@@ -262,6 +275,13 @@ export function Dashboard({
               canDelete={canManageParticipants}
             />
           </div>
+        )}
+        {/* Bulk Download Modal */}
+        {showBulkDownload && isAdmin && (
+          <BulkIDDownloadModal
+            onClose={() => setShowBulkDownload(false)}
+            participants={participants as any}
+          />
         )}
       </div>
     </div>
