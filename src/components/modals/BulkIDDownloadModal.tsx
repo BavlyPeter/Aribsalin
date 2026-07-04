@@ -215,12 +215,18 @@ export function BulkIDDownloadModal({ participants, onClose }: BulkModalProps) {
           backgroundColor: '#ffffff', 
           padding: '20px', 
           display: 'flex', 
-          gap: '20px' 
+          gap: '20px',
+          width: '350px',   // نحدد عرض ثابت
+          height: '550px'   // نحدد طول ثابت 
         }}
       >
 
          {currentBatch.map(student => (
-             <div key={student.id} id={`bulk-id-card-${student.id}`}>
+             <div 
+              key={student.id} 
+              id={`bulk-id-card-${student.id}`}
+              style={{ position: 'absolute', top: 0, left: 0 }}
+            >
                 <IDCard student={student as any}/>
              </div>
          ))}

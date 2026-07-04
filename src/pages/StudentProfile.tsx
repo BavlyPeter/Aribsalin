@@ -422,7 +422,7 @@ export function StudentProfile({ student, totalDays, onBack, onDeleteAttendance,
             left: '-9999px',
             top: '-9999px',
             backgroundColor: '#ffffff',
-            padding: '20px'
+            // padding: '20px'
           }}
         >
           <IDCard student={student} />
