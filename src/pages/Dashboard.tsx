@@ -97,7 +97,7 @@ export function Dashboard({
               {/* Name and Role Details */}
               <div className="min-w-0">
                 <h2 className="text-lg sm:text-2xl font-bold text-foreground truncate mb-1">
-                  مرحباً بك، {currentServant.name || currentServant.full_name}
+                  {currentServant.name || currentServant.full_name}
                 </h2>
                 <p className="text-xs sm:text-sm text-muted-foreground font-medium truncate">
                   {servantRole === 'admin' 

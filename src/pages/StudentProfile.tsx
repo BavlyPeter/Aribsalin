@@ -168,7 +168,7 @@ export function StudentProfile({ student, totalDays, onBack, onDeleteAttendance,
             )}
           </div>
           <h3 className="text-xl mb-1 text-primary">{student.name}</h3>
-          <p className="text-sm text-muted-foreground mb-4">رقم المشارك: {participantSmartId}</p>
+          <p className="text-lg text-muted-foreground mb-4">رقم المشارك: <span className="font-bold text-red-500">{participantSmartId}</span></p>
 
           {/* Status Badge */}
           {student.attended && (
