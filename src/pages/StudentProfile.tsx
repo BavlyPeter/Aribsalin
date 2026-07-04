@@ -85,6 +85,9 @@ export function StudentProfile({ student, totalDays, onBack, onDeleteAttendance,
       // Wait a bit for the card to render
       await new Promise(resolve => setTimeout(resolve, 300));
 
+      const element = idCardRef.current.querySelector('#id-card') as HTMLElement;
+      if (!element) return;
+
       const canvas = await html2canvas(idCardRef.current, {
         scale: 2, // Higher quality
         backgroundColor: '#ffffff',
@@ -92,6 +95,17 @@ export function StudentProfile({ student, totalDays, onBack, onDeleteAttendance,
         useCORS: true,
         allowTaint: true,
         foreignObjectRendering: false,
+        // إجبار الـ canvas على أن يكون بنفس حجم الكارنيه تماماً
+        // width: 350,
+        // height: 550,
+        windowWidth: 350,
+        windowHeight: 550,
+        // منع أي مسافات من الـ scroll
+        scrollX: 0,
+        scrollY: 0,
+        x: 0,
+        y: 0,
+        removeContainer: true
       });
 
       // Convert to blob and download
@@ -101,7 +115,7 @@ export function StudentProfile({ student, totalDays, onBack, onDeleteAttendance,
           return;
         }
         const link = document.createElement('a');
-        link.download = `IDCard_${student.id}_${student.name}.png`;
+        link.download = `${student.name}.png`;
         link.href = URL.createObjectURL(blob);
         link.click();
         URL.revokeObjectURL(link.href);
@@ -165,7 +179,6 @@ export function StudentProfile({ student, totalDays, onBack, onDeleteAttendance,
           )}
         </div>
 
-        {/* ID Card Preview */}
 
         {/* ID Card Preview */}
         <div className="bg-card rounded-xl p-6 shadow-sm border border-border">

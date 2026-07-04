@@ -1,5 +1,4 @@
 import { QRCodeSVG } from 'qrcode.react';
-import { User } from 'lucide-react';
 import churchLogo from '../../assets/images/new-church-logo.png';
 import festivalLogo from '../../assets/images/Arebsalin-1.png';
 import { StudentData } from '../../types';
@@ -29,17 +28,20 @@ const educationStageLabels: Record<string, string> = {
 
 export function IDCard({ student }: IDCardProps) {
   const participantSmartId = student.participant_id || student.id;
-  const photoUrl = (student as any).photo_url || student.data?.photo_url || '';
 
   return (
     <div
       id="id-card"
-      className="w-[350px] h-[550px] bg-white rounded-2xl shadow-2xl overflow-hidden relative"
-      style={{ fontFamily: 'Tajawal, Cairo, sans-serif' }}
+      className="w-[350px] h-[550px] bg-white rounded-2xl shadow-2xl overflow-hidden relative flex flex-col shrink-0"
+      style={{ 
+        border: '1.7px solid #8B1538', 
+        fontFamily: 'Tajawal, Cairo, sans-serif', 
+        display: 'flex'
+      }}
     >
-      {/* Header with Logos and Background */}
+      {/* Header */}
       <div
-        className="h-[140px] relative"
+        className="h-[100px] relative shrink-0"
         style={{ background: 'linear-gradient(135deg, #8B1538 0%, #C9A961 100%)' }}
       >
         {/* Church Logo - Upper Right */}
@@ -49,93 +51,107 @@ export function IDCard({ student }: IDCardProps) {
         <img src={festivalLogo} alt="Festival Logo" className="absolute top-3 left-1/2 transform -translate-x-1/2 h-14 object-contain" />
       </div>
 
-      {/* Profile Picture Circle - Overlapping */}
-      <div className="flex justify-center" style={{ marginTop: '-50px' }}>
-        <div className="relative">
-          {/* Profile Image or Fallback User Icon */}
+      {/* Content Wrapper */}
+      <div className="relative p-4 flex flex-col flex-1 z-10">
+        
+        {/* Core Information Boxes */}
+        <div className="flex flex-col space-y-4 mt-2 mb-4">
+          
+          {/* Box 1: Participant Name */}
           <div
-            className="w-[120px] h-[120px] rounded-full overflow-hidden shadow-xl flex items-center justify-center bg-white"
+            className="rounded-xl px-4 shadow-sm flex items-center justify-center text-center"
             style={{
-              border: '4px solid #ffffff'
+              backgroundColor: 'rgba(139, 21, 56, 0.03)',
+              border: '1px solid rgba(139, 21, 56, 0.25)',
+              // height: '80px'
             }}
           >
-            {photoUrl ? (
-                <img
-                  src={photoUrl}
-                  alt={student.name}
-                  crossOrigin="anonymous"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                // SVG عادي بدون استخدام أي مكتبات أو ألوان oklch
-                <svg 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="#9ca3af" /* لون رمادي صريح */
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  className="w-16 h-16"
-                >
-                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
-            )}
+            <div 
+              className="text-2xl font-black" 
+              style={{ color: '#8B1538', lineHeight: '1.2' }} 
+              dir="rtl"
+            >
+              {student.name}
+              {/* bavly peter barsoum kamel sefen */}
+              {/* بافلي بيتر برسوم كامل سيفن */}
+              
+              
+              <br/>
+              <br/>
+
+            </div>
           </div>
 
-          {/* ID Badge */}
+          {/* Box 2: Education Stage & Year */}
           <div
-            className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-white px-3 py-1 rounded-full shadow-md"
-            style={{ border: '2px solid rgba(139, 21, 56, 0.2)' }}
+            className="rounded-xl px-4 shadow-sm flex flex-col justify-center items-center text-center"
+            style={{
+              backgroundColor: 'rgba(201, 169, 97, 0.08)',
+              border: '2.5px solid rgba(201, 169, 97, 0.35)',
+              // height: '70px'
+            }}
           >
-            <span className="text-xs font-medium" style={{ color: '#8B1538' }}>{participantSmartId}</span>
+            <div 
+              className="text-sm font-bold" 
+              style={{ color: '#6B5744', lineHeight: '1.2' }}
+            >
+              {educationStageLabels[student.data.educationStage] || student.data.educationStage}
+            </div>
+
+            {student.data.educationYear && (
+              <div 
+                className="text-lg font-bold mt-0.5" 
+                style={{ color: '#8B1538', lineHeight: '1.2' }} 
+                dir="rtl"
+              >
+                {student.data.educationYear}
+              </div>
+            )}
+
+            <br/>
           </div>
-        </div>
-      </div>
 
-      {/* Student Information */}
-      <div className="px-6 mt-8 text-center">
-        {/* Name */}
-        <h2 className="text-xl font-bold mb-1" style={{ color: '#8B1538' }} dir="rtl">
-          {student.name}
-        </h2>
-
-        {/* Class Information */}
-        <div
-          className="rounded-lg px-4 py-3 mb-4"
-          style={{
-            backgroundColor: 'rgba(201, 169, 97, 0.1)',
-            border: '1px solid rgba(201, 169, 97, 0.2)'
-          }}
-        >
-          <div className="text-xs mb-1" style={{ color: '#6B5744' }}>المرحلة الدراسية</div>
-          <div className="text-base font-medium" style={{ color: '#C9A961' }} dir="rtl">
-            {educationStageLabels[student.data.educationStage]}
-            {student.data.educationYear && ` - ${student.data.educationYear}`}
-          </div>
-        </div>
-
-        {/* QR Code */}
-        <div className="flex justify-center mb-3">
+          {/* Box 3: Participant ID */}
           <div
-            className="bg-white p-3 rounded-xl shadow-md"
+          //   flex-col 
+            
+            className="w-fit mx-auto rounded-full px-4 py-0 shadow-sm flex items-center justify-center text-center"
+            style={{
+              backgroundColor: 'rgba(201, 169, 97, 0.08)',
+              border: '2px solid rgba(139, 21, 56, 0.25)',
+              // height: '46px'
+            }}
+          >
+            <div 
+              className="text-2xl font-black tracking-widest" 
+              style={{ color: '#C9A961', lineHeight: '1.1' }} 
+              dir="ltr"
+            >
+              {participantSmartId}
+
+              <br/>
+              <br/>
+            </div>
+          </div>
+
+        </div>
+
+        {/* QR Code Container */}
+        <div className="flex flex-col items-center mt-auto pb-2">
+          <div
+            className="bg-white p-2 rounded-2xl shadow-md"
             style={{ border: '2px solid rgba(139, 21, 56, 0.2)' }}
           >
             <QRCodeSVG
               value={String(participantSmartId)}
-              size={140}
+              size={130}
               level="H"
               includeMargin={true}
             />
           </div>
         </div>
-
-        {/* QR Code Label */}
-        <div className="text-xs" style={{ color: '#6B5744' }}>
-          امسح الكود للحضور والنقاط
-        </div>
       </div>
-
+    
       {/* Footer Decoration */}
       <div
         className="absolute bottom-0 left-0 right-0 h-2"

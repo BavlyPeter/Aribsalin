@@ -98,7 +98,24 @@ export function BulkIDDownloadModal({ participants, onClose }: BulkModalProps) {
               scale: 2, // Scale 2 for high quality print without bloating RAM
               useCORS: true,
               allowTaint: true,
-              backgroundColor: '#ffffff'
+              backgroundColor: '#ffffff',
+              // إضافة هذه الخصائص تمنع المسافات الزائدة
+              width: 350,
+              height: 550,
+              windowWidth: 350,
+              windowHeight: 550,
+              x: 0,
+              y: 0,
+              scrollX: 0,
+              scrollY: -window.scrollY,
+
+              // إضافة هذه الخاصية تمنع تجاهل الـ styles
+              ignoreElements: (node) => false, 
+              onclone: (clonedDoc) => {
+                // تجربة: تأكد أن الـ cloned element لديه نفس خصائص الـ CSS
+                const el = clonedDoc.getElementById(`bulk-id-card-${student.id}`);
+                if(el) el.style.display = 'block';
+              }
             });
             
             const imgData = canvas.toDataURL('image/jpeg', 0.95);
@@ -188,7 +205,20 @@ export function BulkIDDownloadModal({ participants, onClose }: BulkModalProps) {
       </div>
 
       {/* Hidden element for rendering BATCH of ID Cards */}
-      <div style={{ position: 'fixed', left: '200vw', top: 0, pointerEvents: 'none', backgroundColor: '#ffffff', padding: '20px', display: 'flex', gap: '20px' }}>
+      <div 
+        style={{
+          position: 'fixed', 
+          //  left: '200vw', 
+          left: '-9999px',
+          top: 0, 
+          pointerEvents: 'none', 
+          backgroundColor: '#ffffff', 
+          padding: '20px', 
+          display: 'flex', 
+          gap: '20px' 
+        }}
+      >
+
          {currentBatch.map(student => (
              <div key={student.id} id={`bulk-id-card-${student.id}`}>
                 <IDCard student={student as any}/>
