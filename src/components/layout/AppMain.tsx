@@ -103,7 +103,8 @@ export default function AppMain() {
         const { data: logsData, error: logsError } = await supabase
           .from('attendance_logs')
           .select('participant_id, scanned_at, attendance_date')
-          .in('participant_id', pIds);
+          // .in('participant_id', pIds);
+          .limit(10000);
 
         if (logsError) {
           console.warn('Could not fetch attendance logs, continuing without them:', logsError);
