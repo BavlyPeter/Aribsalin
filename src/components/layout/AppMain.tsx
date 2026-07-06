@@ -104,13 +104,22 @@ export default function AppMain() {
           .from('attendance_logs')
           .select('participant_id, scanned_at, attendance_date')
           // .in('participant_id', pIds);
-          .limit(10000);
+          .limit(50000);
 
         if (logsError) {
           console.warn('Could not fetch attendance logs, continuing without them:', logsError);
         }
 
         const today = new Date().toISOString().split('T')[0];
+
+        // حساب تاريخ اليوم بتوقيت مصر لتجنب مشكلة منتصف الليل
+        // const formatter = new Intl.DateTimeFormat('en-CA', { 
+        //   timeZone: 'Africa/Cairo', 
+        //   year: 'numeric', 
+        //   month: '2-digit', 
+        //   day: '2-digit' 
+        // });
+        // const today = formatter.format(new Date());
 
         // Step 3: Merge them in memory
         const mapped = pData.map(p => {
