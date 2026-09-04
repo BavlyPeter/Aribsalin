@@ -28,11 +28,11 @@ const educationStages = [
 
 export function FinancePage({ onBack }: FinancePageProps) {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Lifted form state so we can reset it from parent after successful save
-  const [formData, setFormData] = useState({
+  const initialFormData = {
     type: 'revenue' as 'expense' | 'revenue',
     title: '',
     amount: '',
@@ -40,7 +40,28 @@ export function FinancePage({ onBack }: FinancePageProps) {
     educationStage: 'all',
     personName: '',
     description: ''
-  });
+  };
+
+  // Lifted form state so we can reset it from parent after successful save
+  const [formData, setFormData] = useState(initialFormData);
+
+  const resetFormData = () => {
+    setEditingTransactionId(null);
+    setFormData({
+      type: 'revenue',
+      title: '',
+      amount: '',
+      date: new Date().toISOString().split('T')[0],
+      educationStage: 'all',
+      personName: '',
+      description: ''
+    });
+  };
+
+  const handleCloseModal = () => {
+    setShowAddForm(false);
+    resetFormData();
+  };
 
   // Fetch real data on mount
   useEffect(() => {
@@ -156,22 +177,78 @@ export function FinancePage({ onBack }: FinancePageProps) {
 
       setTransactions(prev => [newTransaction, ...prev]);
       setShowAddForm(false);
-
-      // Reset form state for the next entry
-      setFormData({
-        type: 'revenue',
-        title: '',
-        amount: '',
-        date: new Date().toISOString().split('T')[0],
-        educationStage: 'all',
-        personName: '',
-        description: ''
-      });
+      resetFormData();
 
       toast.success('تم تسجيل المعاملة بنجاح');
     } catch (error) {
       console.error('Error saving transaction:', error);
       toast.error('فشل في حفظ المعاملة');
+    }
+  };
+
+  const handleUpdateTransaction = async (data: Omit<Transaction, 'id'>) => {
+    if (!editingTransactionId) return;
+
+    try {
+      const { data: updated, error } = await supabase
+        .from('financial_transactions')
+        .update({
+          type: data.type,
+          title: data.title,
+          amount: Number(data.amount),
+          transaction_date: data.date,
+          education_stage: data.educationStage,
+          person_name: data.personName,
+          description: data.description
+        })
+        .eq('id', editingTransactionId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const mappedUpdated: Transaction = {
+        id: updated.id,
+        type: updated.type as 'expense' | 'revenue',
+        title: updated.title,
+        amount: updated.amount,
+        date: updated.transaction_date,
+        educationStage: updated.education_stage,
+        personName: updated.person_name,
+        description: updated.description
+      };
+
+      setTransactions(prev =>
+        prev.map(t => (t.id === editingTransactionId ? mappedUpdated : t))
+      );
+      setShowAddForm(false);
+      resetFormData();
+
+      toast.success('تم تحديث المعاملة بنجاح');
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+      toast.error('فشل في تحديث المعاملة');
+    }
+  };
+
+  const handleDeleteTransaction = async (id: string) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذه المعاملة؟')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('financial_transactions')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setTransactions(prev => prev.filter(t => t.id !== id));
+      toast.success('تم حذف المعاملة بنجاح');
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      toast.error('فشل في حذف المعاملة');
     }
   };
 
@@ -198,7 +275,10 @@ export function FinancePage({ onBack }: FinancePageProps) {
             <h2 className="text-xl">الإدارة المالية</h2>
           </div>
           <button
-            onClick={() => setShowAddForm(true)}
+            onClick={() => {
+              resetFormData();
+              setShowAddForm(true);
+            }}
             className="p-2 bg-white/20 rounded-lg hover:bg-white/30 active:scale-95 transition-transform"
           >
             <Plus className="w-6 h-6" />
@@ -342,10 +422,42 @@ export function FinancePage({ onBack }: FinancePageProps) {
                   </div>
                   <p className="text-xs text-muted-foreground mb-2">{transaction.description}</p>
                 </div>
-                <div className={`text-lg font-bold ${
-                  transaction.type === 'revenue' ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {transaction.type === 'revenue' ? '+' : '-'}{transaction.amount}
+                <div className="flex flex-col items-end gap-1">
+                  <div className={`text-lg font-bold ${
+                    transaction.type === 'revenue' ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {transaction.type === 'revenue' ? '+' : '-'}{transaction.amount}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({
+                          type: transaction.type,
+                          title: transaction.title,
+                          amount: String(transaction.amount),
+                          date: transaction.date ? transaction.date.split('T')[0] : new Date().toISOString().split('T')[0],
+                          educationStage: transaction.educationStage,
+                          personName: transaction.personName,
+                          description: transaction.description || ''
+                        });
+                        setEditingTransactionId(transaction.id);
+                        setShowAddForm(true);
+                      }}
+                      className="p-1.5 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors"
+                      title="تعديل"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTransaction(transaction.id)}
+                      className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
+                      title="حذف"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -368,11 +480,12 @@ export function FinancePage({ onBack }: FinancePageProps) {
         </div>
       </div>
 
-      {/* Add Transaction Modal */}
+      {/* Add / Edit Transaction Modal */}
       {showAddForm && (
         <AddTransactionModal
-          onClose={() => setShowAddForm(false)}
-          onSubmit={handleAddTransaction}
+          onClose={handleCloseModal}
+          onSubmit={editingTransactionId ? handleUpdateTransaction : handleAddTransaction}
+          isEditMode={Boolean(editingTransactionId)}
           formData={formData}
           setFormData={setFormData}
         />
@@ -384,6 +497,7 @@ export function FinancePage({ onBack }: FinancePageProps) {
 interface AddTransactionModalProps {
   onClose: () => void;
   onSubmit: (data: Omit<Transaction, 'id'>) => void;
+  isEditMode: boolean;
   formData: {
     type: 'expense' | 'revenue';
     title: string;
@@ -404,7 +518,7 @@ interface AddTransactionModalProps {
   }>>;
 }
 
-function AddTransactionModal({ onClose, onSubmit, formData, setFormData }: AddTransactionModalProps) {
+function AddTransactionModal({ onClose, onSubmit, isEditMode, formData, setFormData }: AddTransactionModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
@@ -419,7 +533,9 @@ function AddTransactionModal({ onClose, onSubmit, formData, setFormData }: AddTr
 
       <div className="relative bg-card rounded-t-3xl sm:rounded-2xl w-full max-w-md mx-auto shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-card border-b border-border p-4 z-10">
-          <h3 className="text-xl text-primary text-center">إضافة معاملة مالية</h3>
+          <h3 className="text-xl text-primary text-center">
+            {isEditMode ? 'تعديل معاملة مالية' : 'إضافة معاملة مالية'}
+          </h3>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
@@ -542,7 +658,7 @@ function AddTransactionModal({ onClose, onSubmit, formData, setFormData }: AddTr
               type="submit"
               className="flex-1 bg-primary text-primary-foreground rounded-xl py-3 active:scale-[0.98] transition-transform"
             >
-              حفظ
+              {isEditMode ? 'تحديث' : 'حفظ'}
             </button>
             <button
               type="button"
