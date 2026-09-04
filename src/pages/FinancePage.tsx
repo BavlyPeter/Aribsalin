@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowRight, Plus, TrendingUp, TrendingDown, DollarSign, Calendar, User, FileText } from 'lucide-react';
+import { ArrowRight, Plus, TrendingUp, TrendingDown, DollarSign, Calendar, User, FileText, Edit, Trash2 } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { stageLabels } from '../app/utils/stageHelpers';
 import { supabase } from '../lib/supabase';
