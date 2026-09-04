@@ -18,10 +18,11 @@ import { ServantProfile } from '../../pages/ServantProfile';
 import { StudentPortalLogin } from '../../pages/StudentPortalLogin';
 import { RegistrationRequestsPage } from '../../pages/RegistrationRequestsPage';
 import { SessionsManagementPage } from '../../pages/SessionsManagementPage';
+import { ParticipantsPage } from '../../pages/ParticipantsPage';
 import { Participant, StudentData, TeacherData } from '../../types';
 import { toast, Toaster } from 'sonner';
 
-type View       =  'roleSelection' | 'login' | 'signup' | 'studentPortal' | 'studentScanner' | 'dashboard' | 'registration' | 'scanner' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'finance' | 'statistics' | 'teachers' | 'servantProfile' | 'registrationRequests' | 'sessions';
+type View       =  'roleSelection' | 'login' | 'signup' | 'studentPortal' | 'studentScanner' | 'dashboard' | 'registration' | 'scanner' | 'market' | 'addPoints' | 'manualPoints' | 'profile' | 'finance' | 'statistics' | 'teachers' | 'servantProfile' | 'registrationRequests' | 'sessions' | 'participantsPage';
 
 type ScanMode   =  'attendance' | 'market' | 'addPoints' | 'viewDetails';
 type ViewerRole =  'servant' | 'student';
@@ -289,7 +290,7 @@ export default function AppMain() {
     setCurrentView('studentScanner');
   };
 
-  const handleNavigate = (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers' | 'registrationRequests' | 'sessions') => {
+  const handleNavigate = (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers' | 'registrationRequests' | 'sessions' | 'participantsPage') => {
     if (view === 'scanner') {
       setScanMode('attendance');
       setCurrentView('scanner');
@@ -312,6 +313,8 @@ export default function AppMain() {
       setCurrentView('registrationRequests');
     } else if (view === 'sessions') {
       setCurrentView('sessions');
+    } else if (view === 'participantsPage') {
+      setCurrentView('participantsPage');
     } else {
       setCurrentView(view);
     }
@@ -854,6 +857,7 @@ export default function AppMain() {
     : null;
 
   const canViewStatistics = ['admin', 'supervisor'].includes(currentServant?.role || '');
+  const canManageParticipants = ['admin', 'supervisor'].includes(currentServant?.role || '');
 
   const handleProfileBack = () => {
     if (viewerRole === 'student') {
@@ -1178,6 +1182,31 @@ export default function AppMain() {
               setCurrentView('dashboard');
               fetchFestivalData();
             }}
+          />
+        )}
+
+        {currentView === 'participantsPage' && (
+          <ParticipantsPage
+            participants={participants.map(p => ({
+              id: p.participant_id || p.id,
+              participant_id: p.participant_id,
+              dbId: p.id,
+              name: p.name,
+              points: p.points,
+              attended: p.attended,
+              data: p.data,
+              photo_url: p.photo_url
+            }))}
+            onBack={() => setCurrentView('dashboard')}
+            onViewProfile={handleViewProfile}
+            onEdit={(rec) => handleEditRequest(rec, 'participant')}
+            onEditRequest={(rec) => handleEditRequest(rec, 'participant')}
+            onManagePoints={(rec) => handleManagePointsRequest(rec)}
+            onDelete={handleDeleteParticipant}
+            onDeleteParticipant={handleDeleteParticipant}
+            onManualAttendance={handleManualAttendance}
+            canEdit={canManageParticipants}
+            canDelete={canManageParticipants}
           />
         )}
       </div>

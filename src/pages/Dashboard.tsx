@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, FileText, Wallet, BarChart3, LogOut, User, UserCheck, BookOpen, Download } from 'lucide-react';
-import { ParticipantsList } from '../components/shared/ParticipantsList';
 import churchLogo from '../assets/images/new-church-logo.png';
 import festivalLogo from '../assets/images/Arebsalin-1.png';
 import { BulkIDDownloadModal } from '../components/modals/BulkIDDownloadModal';
 
 interface DashboardProps {
-  onNavigate: (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers' | 'registrationRequests' | 'sessions' ) => void;
+  onNavigate: (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers' | 'registrationRequests' | 'sessions' | 'participantsPage') => void;
   onViewProfile: (participantId: string) => void;
   onViewServantProfile?: (id: string) => void; // <-- ADD THIS
   onLogout: () => void | Promise<void>;
@@ -191,6 +190,19 @@ export function Dashboard({
             </button>
           )}
 
+          {/* Manage Participants Button - Only Admin & Supervisor */}
+          {canManageParticipants && (
+            <button
+              onClick={() => onNavigate('participantsPage')}
+              className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
+            >
+              <div className="flex items-center justify-center gap-3">
+                <Users className="w-5 h-5 text-primary" />
+                <span>إدارة المشاركين</span>
+              </div>
+            </button>
+          )}
+
           {(isAdmin || isSupervisor) && (
             <button
               onClick={() => onNavigate('statistics')}
@@ -258,24 +270,6 @@ export function Dashboard({
             </>
           )}
         </div>
-
-        {/* Participants List */}
-        {participants.length > 0 && (
-          <div>
-            <ParticipantsList
-              participants={participants.map(p => ({
-                ...p,
-                onClick: () => onViewProfile(p.id)
-              }))}
-              onEdit={(p) => onEditRequest?.(p)}
-              onManagePoints={(p) => onManagePoints?.(p)}
-              onDelete={(id) => onDeleteParticipant?.(id)}
-              onManualAttendance={onManualAttendance}
-              canEdit={canManageParticipants}
-              canDelete={canManageParticipants}
-            />
-          </div>
-        )}
         {/* Bulk Download Modal */}
         {showBulkDownload && isAdmin && (
           <BulkIDDownloadModal
