@@ -857,7 +857,7 @@ export default function AppMain() {
     : null;
 
   const canViewStatistics = ['admin', 'supervisor'].includes(currentServant?.role || '');
-  const canManageParticipants = ['admin', 'supervisor'].includes(currentServant?.role || '');
+  const canManageParticipants = ['admin', 'supervisor'].includes(currentServant?.role);
 
   const handleProfileBack = () => {
     if (viewerRole === 'student') {
@@ -1199,10 +1199,8 @@ export default function AppMain() {
             }))}
             onBack={() => setCurrentView('dashboard')}
             onViewProfile={handleViewProfile}
-            onEdit={(rec) => handleEditRequest(rec, 'participant')}
             onEditRequest={(rec) => handleEditRequest(rec, 'participant')}
-            onManagePoints={(rec) => handleManagePointsRequest(rec)}
-            onDelete={handleDeleteParticipant}
+            onManagePoints={handleManagePointsRequest}
             onDeleteParticipant={handleDeleteParticipant}
             onManualAttendance={handleManualAttendance}
             canEdit={canManageParticipants}

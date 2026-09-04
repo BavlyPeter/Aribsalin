@@ -190,18 +190,16 @@ export function Dashboard({
             </button>
           )}
 
-          {/* Manage Participants Button - Only Admin & Supervisor */}
-          {canManageParticipants && (
-            <button
-              onClick={() => onNavigate('participantsPage')}
-              className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
-            >
-              <div className="flex items-center justify-center gap-3">
-                <Users className="w-5 h-5 text-primary" />
-                <span>إدارة المشاركين</span>
-              </div>
-            </button>
-          )}
+          {/* Participants Directory Button - Visible to ALL users */}
+          <button
+            onClick={() => onNavigate('participantsPage')}
+            className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
+          >
+            <div className="flex items-center justify-center gap-3">
+              <Users className="w-5 h-5 text-primary" />
+              <span>سجل المشاركين</span>
+            </div>
+          </button>
 
           {(isAdmin || isSupervisor) && (
             <button
