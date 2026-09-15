@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Trash2, Calendar, BookOpen, AlertCircle, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
+import { useFestivalStore } from '../store/useFestivalStore';
 
 interface SessionData {
   date: string;
@@ -16,7 +18,7 @@ interface StageSessions {
 }
 
 interface SessionsManagementPageProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 const CLASS_LABELS: Record<string, string> = {
@@ -50,8 +52,20 @@ const getStageKey = (stageStr: string, yearStr: string) => {
   return 'other';
 };
 
-export function SessionsManagementPage({ onBack }: SessionsManagementPageProps) {
+export function SessionsManagementPage({ onBack }: SessionsManagementPageProps = {}) {
+  const navigate = useNavigate();
+  const { fetchData } = useFestivalStore();
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      fetchData();
+      navigate('/dashboard');
+    }
+  };
+
   const [stageSessions, setStageSessions] = useState<StageSessions[]>([]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -149,7 +163,7 @@ export function SessionsManagementPage({ onBack }: SessionsManagementPageProps) 
       <div className="bg-primary text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-lg active:scale-95 transition-transform">
+            <button onClick={handleBack} className="p-2 hover:bg-white/10 rounded-lg active:scale-95 transition-transform">
               <ArrowRight className="w-6 h-6" />
             </button>
             <h2 className="text-xl font-bold flex items-center gap-2">

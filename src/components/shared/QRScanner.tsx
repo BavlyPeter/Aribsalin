@@ -1,14 +1,29 @@
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { ArrowRight, Flashlight, FlashlightOff, CheckCircle2, XCircle, Camera, Upload } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useFestivalStore } from '../../store/useFestivalStore';
+import { supabase } from '../../lib/supabase';
+import { toast } from 'sonner';
+import { MarketModal } from '../modals/MarketModal';
+import { AddPointsModal } from '../modals/AddPointsModal';
 
-interface QRScannerProps {
-  onBack: () => void;
-  onScanSuccess: (decodedText: string) => boolean | Promise<boolean> | void;
-  mode: 'attendance' | 'market' | 'viewDetails' | 'addPoints';
+export interface QRScannerProps {
+  onBack?: () => void;
+  onScanSuccess?: (decodedText: string) => boolean | Promise<boolean> | void;
+  mode?: 'attendance' | 'market' | 'viewDetails' | 'addPoints';
 }
 
-export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
+export function QRScanner({ onBack, onScanSuccess, mode: propsMode }: QRScannerProps = {}) {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { currentServant, participants, setParticipants, viewerRole } = useFestivalStore();
+
+  const mode = propsMode || (searchParams.get('mode') as any) || 'attendance';
+
+  const [selectedParticipantForModal, setSelectedParticipantForModal] = useState<any | null>(null);
+  const [activeModal, setActiveModal] = useState<'market' | 'addPoints' | null>(null);
+
   const [isScannerActive, setIsScannerActive] = useState(false);
   const [isScanning, setIsScanning] = useState(false); // Used to prevent duplicate scans during processing
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -21,6 +36,88 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
   const scanLockRef = useRef(false);
   const lastScannedCodeRef = useRef<string | null>(null);
 
+  const resolveParticipantUuid = async (identifier: string) => {
+    if (!identifier) return null;
+    const maybeUuid = identifier.includes('-');
+    if (maybeUuid) {
+      const { data, error } = await supabase.from('participants').select('id, participant_id, points_balance').eq('id', identifier).single();
+      if (!error && data) return data;
+    }
+    const { data, error } = await supabase.from('participants').select('id, participant_id, points_balance').eq('participant_id', identifier).single();
+    if (!error && data) return data;
+    return null;
+  };
+
+  const defaultScanHandler = async (decodedText: string): Promise<boolean> => {
+    const scanned = String(decodedText).trim().toLowerCase();
+    if (!scanned) return false;
+
+    const participant = participants.find(p =>
+      String(p.id || '').trim().toLowerCase() === scanned ||
+      String(p.participant_id || '').trim().toLowerCase() === scanned ||
+      String((p as any).dbId || '').trim().toLowerCase() === scanned
+    );
+
+    if (!participant) {
+      toast.error('هذا الكود غير مسجل في النظام');
+      return false;
+    }
+
+    const targetParticipant = participant;
+
+    if (mode === 'attendance') {
+      if (!currentServant || !currentServant.id) {
+        toast.error('يجب تسجيل الدخول كخادم قبل تسجيل الحضور');
+        return false;
+      }
+
+      try {
+        const participantUuid = targetParticipant.id as string;
+        const { error: attendError } = await supabase.from('attendance_logs').insert([{
+          participant_id: participantUuid,
+          servant_id: currentServant.id,
+          attendance_date: new Date().toISOString().split('T')[0]
+        }]);
+
+        if (attendError) {
+          toast.info('تم تسجيل حضور هذا المشارك مسبقاً اليوم');
+          return true;
+        }
+
+        const currentPoints = Number(targetParticipant.points || 0);
+        const newPoints = currentPoints + 10;
+        await supabase.from('participants').update({ points_balance: newPoints }).eq('id', participantUuid);
+        await supabase.from('points_transactions').insert([{
+          participant_id: participantUuid,
+          servant_id: currentServant.id,
+          transaction_type: 'attendance_bonus',
+          points_amount: 10,
+          description: 'مكافأة حضور اليوم'
+        }]);
+
+        setParticipants((prev: any[]) => prev.map(p => (String(p.id) === String(participantUuid)) ? { ...p, points: newPoints, attended: true, attendanceDays: [...p.attendanceDays, new Date().toISOString().split('T')[0]] } : p));
+        toast.success('تم تسجيل الحضور بنجاح وإضافة 10 نقاط');
+        return true;
+      } catch (err) {
+        toast.error('حدث خطأ أثناء تسجيل الحضور');
+        return false;
+      }
+    } else {
+      setTimeout(() => {
+        if (mode === 'market') {
+          setSelectedParticipantForModal(targetParticipant);
+          setActiveModal('market');
+        } else if (mode === 'addPoints') {
+          setSelectedParticipantForModal(targetParticipant);
+          setActiveModal('addPoints');
+        } else if (mode === 'viewDetails') {
+          navigate(`/profile/${targetParticipant.id}`);
+        }
+      }, 500);
+      return true;
+    }
+  };
+
   const handleScanSuccess = async (decodedText: string) => {
     if (scanLockRef.current) return;
     const cleanText = decodedText.trim();
@@ -31,10 +128,10 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
     scanLockRef.current = true;
     lastScannedCodeRef.current = cleanText;
 
-    // VIBRATION REMOVED: navigator.vibrate causes iOS Safari to suspend the video track!
-    
-    // Call parent and await validation
-    const isValid = await onScanSuccess(cleanText);
+    // Call parent or default handler and await validation
+    const isValid = onScanSuccess
+      ? await onScanSuccess(cleanText)
+      : await defaultScanHandler(cleanText);
 
     if (isValid === false) {
       // Invalid Code: Keep camera running smoothly. Unlock after delay.
@@ -60,24 +157,30 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
     }
   };
 
+
+  const doBack = onBack || (() => {
+    if (viewerRole === 'student') navigate('/student-portal');
+    else navigate('/dashboard');
+  });
+
   const handleSafeBack = () => {
     scanLockRef.current = true; // Prevent new scans while backing out
     if (scannerRef.current) {
       // Fallback: Force back navigation after 500ms even if stop() hangs
       const forceBackTimer = setTimeout(() => {
-        onBack();
+        doBack();
       }, 500);
 
       scannerRef.current.stop().then(() => {
         clearTimeout(forceBackTimer);
         try { scannerRef.current?.clear(); } catch(e) {}
-        onBack();
+        doBack();
       }).catch(() => {
         clearTimeout(forceBackTimer);
-        onBack();
+        doBack();
       });
     } else {
-      onBack();
+      doBack();
     }
   };
 
@@ -415,6 +518,110 @@ export function QRScanner({ onBack, onScanSuccess, mode }: QRScannerProps) {
             <span className="text-lg">{notification.message}</span>
           </div>
         </div>
+      )}
+
+      {/* Market Modal */}
+      {activeModal === 'market' && selectedParticipantForModal && (
+        <MarketModal
+          participantName={selectedParticipantForModal.name}
+          currentPoints={selectedParticipantForModal.points}
+          onConfirm={async (pointsToDeduct: number) => {
+            if (!currentServant || !currentServant.id) {
+              toast.error('يجب تسجيل الدخول كخادم قبل تنفيذ العملية');
+              return;
+            }
+            try {
+              const participantRow: any = await resolveParticipantUuid(selectedParticipantForModal.id);
+              if (!participantRow) {
+                toast.error('المشارك غير موجود في النظام');
+                return;
+              }
+              const participantUuid = participantRow.id;
+              const currentPoints = Number(participantRow.points_balance || 0);
+              const deduct = Math.abs(Math.floor(pointsToDeduct));
+              const newPoints = Math.max(0, currentPoints - deduct);
+
+              const { error: updateError } = await supabase.from('participants').update({ points_balance: newPoints }).eq('id', participantUuid);
+              if (updateError) {
+                toast.error('حدث خطأ أثناء تحديث النقاط');
+                return;
+              }
+
+              await supabase.from('points_transactions').insert([{
+                participant_id: participantUuid,
+                servant_id: currentServant.id,
+                transaction_type: 'market_deduct',
+                points_amount: -Math.abs(deduct),
+                description: 'خصم من السوق'
+              }]);
+
+              setParticipants((prev: any[]) => prev.map(p => (p.id === selectedParticipantForModal.id || p.id === participantUuid) ? { ...p, points: newPoints } : p));
+              toast.success('تم خصم النقاط بنجاح');
+              setActiveModal(null);
+              setSelectedParticipantForModal(null);
+              navigate('/dashboard');
+            } catch (err) {
+              toast.error('حدث خطأ أثناء خصم النقاط');
+            }
+          }}
+          onCancel={() => {
+            setActiveModal(null);
+            setSelectedParticipantForModal(null);
+            navigate('/dashboard');
+          }}
+        />
+      )}
+
+      {/* Add Points Modal */}
+      {activeModal === 'addPoints' && selectedParticipantForModal && (
+        <AddPointsModal
+          participantName={selectedParticipantForModal.name}
+          currentPoints={selectedParticipantForModal.points}
+          onConfirm={async (pointsToAdd: number) => {
+            if (!currentServant || !currentServant.id) {
+              toast.error('يجب تسجيل الدخول كخادم قبل تنفيذ العملية');
+              return;
+            }
+            try {
+              const participantRow: any = await resolveParticipantUuid(selectedParticipantForModal.id);
+              if (!participantRow) {
+                toast.error('المشارك غير موجود في النظام');
+                return;
+              }
+              const participantUuid = participantRow.id;
+              const currentPoints = Number(participantRow.points_balance || 0);
+              const add = Math.abs(Math.floor(pointsToAdd));
+              const newPoints = currentPoints + add;
+
+              const { error: updateError } = await supabase.from('participants').update({ points_balance: newPoints }).eq('id', participantUuid);
+              if (updateError) {
+                toast.error('حدث خطأ أثناء تحديث النقاط');
+                return;
+              }
+
+              await supabase.from('points_transactions').insert([{
+                participant_id: participantUuid,
+                servant_id: currentServant.id,
+                transaction_type: 'bonus_add',
+                points_amount: Math.abs(add),
+                description: 'إضافة نقاط إضافية'
+              }]);
+
+              setParticipants((prev: any[]) => prev.map(p => (p.id === selectedParticipantForModal.id || p.id === participantUuid) ? { ...p, points: newPoints } : p));
+              toast.success('تم إضافة النقاط بنجاح');
+              setActiveModal(null);
+              setSelectedParticipantForModal(null);
+              navigate('/dashboard');
+            } catch (err) {
+              toast.error('حدث خطأ أثناء إضافة النقاط');
+            }
+          }}
+          onCancel={() => {
+            setActiveModal(null);
+            setSelectedParticipantForModal(null);
+            navigate('/dashboard');
+          }}
+        />
       )}
     </div>
   );

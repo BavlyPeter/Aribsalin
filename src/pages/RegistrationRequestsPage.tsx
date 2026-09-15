@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, X, User, Shield, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 
 interface RegistrationRequestsPageProps {
-  onBack: () => void;
-  onViewProfile: (id: string) => void;
+  onBack?: () => void;
+  onViewProfile?: (id: string) => void;
 }
 
-export function RegistrationRequestsPage({ onBack, onViewProfile }: RegistrationRequestsPageProps) {
+export function RegistrationRequestsPage({ onBack, onViewProfile }: RegistrationRequestsPageProps = {}) {
+  const navigate = useNavigate();
+  const handleBack = onBack || (() => navigate('/dashboard'));
+  const handleViewProfile = onViewProfile || ((id: string) => navigate(`/servant-profile/${id}`));
   const [requests, setRequests] = useState<any[]>([]);
+
   const [isLoading, setIsLoading] = useState(true);
 
   const roleLabels: Record<string, string> = {
@@ -85,7 +90,7 @@ export function RegistrationRequestsPage({ onBack, onViewProfile }: Registration
     <div className="min-h-screen bg-background">
       <div className="bg-primary text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-lg active:scale-95 transition-transform">
+          <button onClick={handleBack} className="p-2 hover:bg-white/10 rounded-lg active:scale-95 transition-transform">
             <ArrowRight className="w-6 h-6" />
           </button>
           <h2 className="text-xl font-bold">طلبات التسجيل</h2>
@@ -104,7 +109,7 @@ export function RegistrationRequestsPage({ onBack, onViewProfile }: Registration
             {requests.map(request => (
               <div key={request.id} className="bg-card p-5 rounded-2xl border border-border shadow-sm flex flex-col gap-4">
                 <div 
-                  onClick={() => onViewProfile(request.id)}
+                  onClick={() => handleViewProfile(request.id)}
                   className="flex items-start gap-4 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-xl transition-colors"
                   title="عرض الملف الشخصي"
                 >

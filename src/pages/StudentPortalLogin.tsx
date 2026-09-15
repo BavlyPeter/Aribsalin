@@ -1,27 +1,63 @@
 import { ArrowRight, QrCode, Search } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useFestivalStore } from '../store/useFestivalStore';
+import { toast } from 'sonner';
 
 interface StudentPortalLoginProps {
-  onBack: () => void;
-  onLoginById: (id: string) => void;
-  onOpenScanner: () => void;
+  onBack?: () => void;
+  onLoginById?: (id: string) => void;
+  onOpenScanner?: () => void;
 }
 
-export function StudentPortalLogin({ onBack, onLoginById, onOpenScanner }: StudentPortalLoginProps) {
+export function StudentPortalLogin({ onBack, onLoginById, onOpenScanner }: StudentPortalLoginProps = {}) {
+  const navigate = useNavigate();
+  const { participants, setViewerRole } = useFestivalStore();
   const [studentId, setStudentId] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (studentId.trim()) {
-      onLoginById(studentId.trim().toUpperCase());
+    const cleanId = studentId.trim().toUpperCase();
+    if (!cleanId) return;
+
+    if (onLoginById) {
+      onLoginById(cleanId);
+    } else {
+      const normalized = cleanId;
+      const participant = participants.find(p =>
+        String(p.id || '').trim().toUpperCase() === normalized ||
+        String(p.participant_id || '').trim().toUpperCase() === normalized
+      );
+
+      if (!participant) {
+        toast.error('لم يتم العثور على المشارك', {
+          description: `الرقم ${cleanId} غير موجود`
+        });
+        return;
+      }
+
+      setViewerRole('student');
+      navigate(`/profile/${participant.id}`);
     }
   };
+
+  const handleBack = onBack || (() => navigate('/'));
+
+  const handleOpenScanner = () => {
+    setViewerRole('student');
+    if (onOpenScanner) {
+      onOpenScanner();
+    } else {
+      navigate('/scanner?mode=viewDetails');
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-background">
       <div className="bg-primary text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-lg active:scale-95 transition-transform">
+          <button onClick={handleBack} className="p-2 hover:bg-white/10 rounded-lg active:scale-95 transition-transform">
             <ArrowRight className="w-6 h-6" />
           </button>
           <h2 className="text-xl">دخول المخدومين</h2>
@@ -45,7 +81,7 @@ export function StudentPortalLogin({ onBack, onLoginById, onOpenScanner }: Stude
             <span className="mx-4 text-sm text-muted-foreground">أو</span>
             <div className="flex-grow border-t border-border"></div>
           </div>
-          <button onClick={onOpenScanner} className="w-full flex items-center justify-center gap-3 bg-card border-2 border-secondary text-secondary-foreground rounded-xl py-4 shadow-sm active:scale-95 transition-transform hover:bg-secondary/10" style={{ borderColor: 'var(--secondary)', color: 'var(--secondary-foreground)' }}>
+          <button onClick={handleOpenScanner} className="w-full flex items-center justify-center gap-3 bg-card border-2 border-secondary text-secondary-foreground rounded-xl py-4 shadow-sm active:scale-95 transition-transform hover:bg-secondary/10" style={{ borderColor: 'var(--secondary)', color: 'var(--secondary-foreground)' }}>
             <QrCode className="w-6 h-6" />
             <span className="text-lg font-medium">امسح الكود (QR Code)</span>
           </button>

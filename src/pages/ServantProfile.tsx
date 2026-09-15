@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowRight, User, Phone, MapPin, Book, Crown, Calendar, Info } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 
 interface ServantProfileProps {
-  servantId: string;
-  onBack: () => void;
+  servantId?: string;
+  onBack?: () => void;
 }
 
 const roleLabels: Record<string, string> = {
@@ -33,8 +34,13 @@ const educationStages: Record<string, string> = {
   'graduate': 'خريجين'
 };
 
-export function ServantProfile({ servantId, onBack }: ServantProfileProps) {
+export function ServantProfile({ servantId: propsServantId, onBack }: ServantProfileProps = {}) {
+  const navigate = useNavigate();
+  const { id: paramId } = useParams();
+  const servantId = propsServantId || paramId || '';
+  const handleBack = onBack || (() => navigate(-1));
   const [servant, setServant] = useState<any>(null);
+
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -66,7 +72,7 @@ export function ServantProfile({ servantId, onBack }: ServantProfileProps) {
       <div className="min-h-screen bg-background flex flex-col">
         <div className="bg-primary text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
           <div className="flex items-center gap-3">
-            <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-lg">
+            <button onClick={handleBack} className="p-2 hover:bg-white/10 rounded-lg">
               <ArrowRight className="w-6 h-6" />
             </button>
             <h2 className="text-xl">ملف الخادم</h2>
@@ -87,7 +93,7 @@ export function ServantProfile({ servantId, onBack }: ServantProfileProps) {
       <div className="bg-primary text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
         <div className="flex items-center gap-3">
           <button
-            onClick={onBack}
+            onClick={handleBack}
             className="p-2 hover:bg-white/10 rounded-lg active:scale-95 transition-transform"
           >
             <ArrowRight className="w-6 h-6" />

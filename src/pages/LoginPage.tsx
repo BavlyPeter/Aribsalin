@@ -1,16 +1,20 @@
 import { FormEvent, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { LogIn } from 'lucide-react';
 import churchLogo from '../assets/images/new-church-logo.png';
 import festivalLogo from '../assets/images/Arebsalin-1.png';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
+import { useFestivalStore } from '../store/useFestivalStore';
 
 interface LoginPageProps {
-  onLogin: (servantData: any) => void;
-  onNavigateToSignup: () => void;
+  onLogin?: (servantData: any) => void;
+  onNavigateToSignup?: () => void;
 }
 
-export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps) {
+export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps = {}) {
+  const navigate = useNavigate();
+  const { setAuth, setCurrentServant, setViewerRole } = useFestivalStore();
   const [teacherId, setTeacherId] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +55,15 @@ export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps) {
         return;
       }
 
-      onLogin(servantData);
+      setAuth(true);
+      setCurrentServant(servantData);
+      setViewerRole('servant');
+
+      if (onLogin) {
+        onLogin(servantData);
+      } else {
+        navigate('/dashboard');
+      }
       toast.success('تم تسجيل الدخول بنجاح');
     } catch (error) {
       console.error(error);
@@ -60,6 +72,7 @@ export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps) {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -126,7 +139,10 @@ export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps) {
                 ليس لديك حساب؟
               </p>
               <button
-                onClick={onNavigateToSignup}
+                onClick={() => {
+                  if (onNavigateToSignup) onNavigateToSignup();
+                  else navigate('/signup');
+                }}
                 className="text-primary hover:underline"
               >
                 إنشاء حساب جديد

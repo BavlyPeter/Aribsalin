@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Plus, TrendingUp, TrendingDown, DollarSign, Calendar, User, FileText, Edit, Trash2 } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { stageLabels } from '../app/utils/stageHelpers';
@@ -17,7 +18,7 @@ interface Transaction {
 }
 
 interface FinancePageProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 const educationStages = [
@@ -26,7 +27,10 @@ const educationStages = [
   ...Object.entries(stageLabels).map(([value, label]) => ({ value, label }))
 ];
 
-export function FinancePage({ onBack }: FinancePageProps) {
+export function FinancePage({ onBack }: FinancePageProps = {}) {
+  const navigate = useNavigate();
+  const handleBack = onBack || (() => navigate('/dashboard'));
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -267,7 +271,7 @@ export function FinancePage({ onBack }: FinancePageProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={onBack}
+              onClick={handleBack}
               className="p-2 hover:bg-white/10 rounded-lg active:scale-95 transition-transform"
             >
               <ArrowRight className="w-6 h-6" />

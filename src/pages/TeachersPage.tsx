@@ -1,5 +1,6 @@
 import { ArrowRight, Users, Crown, Trash2, Edit, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 
@@ -20,7 +21,7 @@ interface ClassData {
 }
 
 interface TeachersPageProps {
-  onBack: () => void;
+  onBack?: () => void;
   onEdit?: (teacher: Teacher, type: 'servant') => void;
   onViewProfile?: (id: string) => void;
 }
@@ -37,8 +38,14 @@ const servingStages: Record<string, string> = {
   other: 'غير محدد / أخرى'
 };
 
-export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProps) {
+export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProps = {}) {
+  const navigate = useNavigate();
+  const handleBack = onBack || (() => navigate('/dashboard'));
+  const handleViewProfile = onViewProfile || ((id: string) => navigate(`/servant-profile/${id}`));
+  const handleEdit = onEdit || ((teacher: Teacher) => navigate(`/signup?edit=${teacher.id}`));
+
   const [classesData, setClassesData] = useState<ClassData[]>([]);
+
   const [isLoading, setIsLoading] = useState(true);
 
   const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
@@ -161,7 +168,7 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
       <div className="bg-primary text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
         <div className="flex items-center gap-3">
           <button
-            onClick={onBack}
+            onClick={handleBack}
             className="p-2 hover:bg-white/10 rounded-lg active:scale-95 transition-transform"
           >
             <ArrowRight className="w-6 h-6" />
@@ -238,7 +245,7 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
                               )}
                             </div>
 
-                            <div className="space-y-1 min-w-0 flex-1 text-right" onClick={() => onViewProfile?.(teacher.id)}>
+                            <div className="space-y-1 min-w-0 flex-1 text-right" onClick={() => handleViewProfile(teacher.id)}>
                               <div className="flex items-center gap-2 flex-wrap">
                                 {teacher.isSupervisor && (
                                   <Crown className="w-4 h-4 shrink-0 text-yellow-500" title="أمين فصل" />
@@ -262,7 +269,7 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
                               title="تعديل"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onEdit?.(teacher, 'servant');
+                                handleEdit(teacher, 'servant');
                               }}
                               className="p-2 rounded-lg bg-white/10 text-slate-700 hover:bg-muted"
                             >

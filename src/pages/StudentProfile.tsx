@@ -1,19 +1,79 @@
 import { ArrowRight, Calendar, Phone, MapPin, Book, Award, CheckCircle2, User, School, Download, CreditCard, Trash2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Participant } from '../types';
-import { useRef, useState } from 'react';
+import { useRef, useState, useMemo } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { IDCard } from '../components/shared/IDCard';
+import { useFestivalStore } from '../store/useFestivalStore';
+import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
 
 interface StudentProfileProps {
-  student: Participant;
-  totalDays: number;
-  onBack: () => void;
+  student?: Participant;
+  totalDays?: number;
+  onBack?: () => void;
   onDeleteAttendance?: (participantId: string, date: string) => Promise<void>; // ADDED
   viewerRole?: string; // ADDED
 }
 
-export function StudentProfile({ student, totalDays, onBack, onDeleteAttendance, viewerRole }: StudentProfileProps) {
+export function StudentProfile({
+  student: propsStudent,
+  totalDays: propsTotalDays,
+  onBack,
+  onDeleteAttendance,
+  viewerRole: propsViewerRole
+}: StudentProfileProps = {}) {
+  const navigate = useNavigate();
+  const { id: paramId } = useParams();
+  const { participants, currentServant, viewerRole: storeViewerRole, fetchData } = useFestivalStore();
+
+  const viewerRole = propsViewerRole || currentServant?.role || storeViewerRole;
+
+  const foundStudent = useMemo(() => {
+    if (propsStudent) return propsStudent;
+    if (!paramId) return null;
+    const normalized = String(paramId).trim().toUpperCase();
+    return participants.find(p =>
+      String(p.id || '').trim().toUpperCase() === normalized ||
+      String(p.participant_id || '').trim().toUpperCase() === normalized
+    ) || null;
+  }, [propsStudent, paramId, participants]);
+
+  const student = foundStudent;
+
+  const calculatedTotalDays = useMemo(() => {
+    if (!participants || participants.length === 0) return 1;
+    const uniqueDates = new Set<string>();
+    participants.forEach((p: any) => {
+      if (p.attendanceDays && Array.isArray(p.attendanceDays)) {
+        p.attendanceDays.forEach((date: string) => uniqueDates.add(date));
+      }
+    });
+    return Math.max(1, uniqueDates.size);
+  }, [participants]);
+
+  const totalDays = propsTotalDays !== undefined ? propsTotalDays : calculatedTotalDays;
+  const handleBack = onBack || (() => {
+    if (viewerRole === 'student') navigate('/student-portal');
+    else navigate('/dashboard');
+  });
+
+  if (!student) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center" dir="rtl">
+        <h2 className="text-lg font-semibold mb-4">حدث خطأ: لم يتم العثور على بيانات المشارك</h2>
+        <p className="mb-6 text-muted-foreground">الرجاء المحاولة مرة أخرى أو العودة.</p>
+        <button
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
+          onClick={handleBack}
+        >
+          العودة
+        </button>
+      </div>
+    );
+  }
+
   const [isDeletingDate, setIsDeletingDate] = useState<string | null>(null);
   const attendancePercentage = totalDays > 0 ? Math.round((student.attendanceDays.length / totalDays) * 100) : 0;
   const qrRef = useRef<HTMLDivElement>(null);
@@ -132,7 +192,49 @@ export function StudentProfile({ student, totalDays, onBack, onDeleteAttendance,
     
     setIsDeletingDate(date);
     try {
-      await onDeleteAttendance?.(student.id, date);
+      if (onDeleteAttendance) {
+        await onDeleteAttendance(student.id, date);
+      } else {
+        const { error: deleteError } = await supabase
+          .from('attendance_logs')
+          .delete()
+          .match({ 
+            participant_id: student.id, 
+            attendance_date: date 
+          });
+
+        if (deleteError) throw deleteError;
+
+        const { data: pData } = await supabase
+          .from('participants')
+          .select('points_balance')
+          .eq('id', student.id)
+          .single();
+          
+        const currentBalance = pData?.points_balance || 0;
+        const newBalance = Math.max(0, currentBalance - 10); 
+
+        await supabase
+          .from('participants')
+          .update({ points_balance: newBalance })
+          .eq('id', student.id);
+
+        await supabase
+          .from('points_transactions')
+          .insert({
+            participant_id: student.id,
+            servant_id: currentServant?.id,
+            transaction_type: 'deduction',
+            points_amount: 10,
+            description: `إلغاء مكافأة حضور يوم ${date}`
+          });
+
+        toast.success(`تم حذف حضور يوم ${date} وخصم 10 نقاط بنجاح`);
+        await fetchData();
+      }
+    } catch (error) {
+      console.error('Error deleting specific attendance:', error);
+      toast.error('حدث خطأ أثناء حذف الحصة');
     } finally {
       setIsDeletingDate(null);
     }
@@ -144,7 +246,7 @@ export function StudentProfile({ student, totalDays, onBack, onDeleteAttendance,
       <div className="bg-primary text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
         <div className="flex items-center gap-3">
           <button
-            onClick={onBack}
+            onClick={handleBack}
             className="p-2 hover:bg-white/10 rounded-lg active:scale-95 transition-transform"
           >
             <ArrowRight className="w-6 h-6" />

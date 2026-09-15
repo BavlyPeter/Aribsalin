@@ -1,13 +1,15 @@
 import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Users, Calendar, TrendingUp, Award, BarChart3 } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Participant } from '../types';
+import { useFestivalStore } from '../store/useFestivalStore';
 
 interface StatisticsPageProps {
-  onBack: () => void;
-  participants: Participant[];
-  totalDays: number;
-  currentServant?: any; // ADDED
+  onBack?: () => void;
+  participants?: Participant[];
+  totalDays?: number;
+  currentServant?: any;
 }
 
 const CLASS_LABELS: Record<string, string> = {
@@ -65,7 +67,31 @@ const getStageKey = (dbStage: string, academicYear?: string) => {
   return 'other';
 };
 
-export function StatisticsPage({ onBack, participants, totalDays, currentServant }: StatisticsPageProps) {
+export function StatisticsPage({
+  onBack,
+  participants: propsParticipants,
+  totalDays: propsTotalDays,
+  currentServant: propsCurrentServant
+}: StatisticsPageProps = {}) {
+  const navigate = useNavigate();
+  const store = useFestivalStore();
+  const participants = propsParticipants || store.participants;
+  const currentServant = propsCurrentServant || store.currentServant;
+  const handleBack = onBack || (() => navigate('/dashboard'));
+
+  const calculatedTotalDays = useMemo(() => {
+    if (!participants || participants.length === 0) return 1;
+    const uniqueDates = new Set<string>();
+    participants.forEach((p: any) => {
+      if (p.attendanceDays && Array.isArray(p.attendanceDays)) {
+        p.attendanceDays.forEach((date: string) => uniqueDates.add(date));
+      }
+    });
+    return Math.max(1, uniqueDates.size);
+  }, [participants]);
+
+  const totalDays = propsTotalDays !== undefined ? propsTotalDays : calculatedTotalDays;
+
   const isSupervisor = currentServant?.role === 'supervisor';
   const supervisorStageKey = isSupervisor ? getStageKey(currentServant.class_stage || '') : null;
 
@@ -77,6 +103,7 @@ export function StatisticsPage({ onBack, participants, totalDays, currentServant
   // 2. Recalculate total days for the specific class (so averages are correct)
   const uniqueClassDates = new Set(filteredParticipants.flatMap(p => p.attendanceDays || p.data?.attendanceDates || []));
   const effectiveTotalDays = isSupervisor ? uniqueClassDates.size : totalDays;
+
 
   const stats = useMemo(() => {
     const defaultStats = {
@@ -275,7 +302,7 @@ export function StatisticsPage({ onBack, participants, totalDays, currentServant
       <div className="bg-primary text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
         <div className="flex items-center gap-3">
           <button
-            onClick={onBack}
+            onClick={handleBack}
             className="p-2 hover:bg-white/10 rounded-lg active:scale-95 transition-transform"
           >
             <ArrowRight className="w-6 h-6" />

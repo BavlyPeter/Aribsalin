@@ -1,15 +1,16 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, FileText, Wallet, BarChart3, LogOut, User, UserCheck, BookOpen, Download } from 'lucide-react';
 import churchLogo from '../assets/images/new-church-logo.png';
 import festivalLogo from '../assets/images/Arebsalin-1.png';
 import { BulkIDDownloadModal } from '../components/modals/BulkIDDownloadModal';
+import { useFestivalStore } from '../store/useFestivalStore';
 
 interface DashboardProps {
-  onNavigate: (view: 'scanner' | 'registration' | 'market' | 'addPoints' | 'profile' | 'viewDetails' | 'finance' | 'statistics' | 'teachers' | 'registrationRequests' | 'sessions' | 'participantsPage') => void;
-  onViewProfile: (participantId: string) => void;
-  onViewServantProfile?: (id: string) => void; // <-- ADD THIS
-  onLogout: () => void | Promise<void>;
-  currentServant: any;
+  onViewProfile?: (participantId: string) => void;
+  onViewServantProfile?: (id: string) => void;
+  onLogout?: () => void | Promise<void>;
+  currentServant?: any;
   participants?: Array<{ id: string; participant_id?: string; dbId?: string; name: string; points: number; attended: boolean; data?: any; photo_url?: string }>;
   onEditRequest?: (rec: any) => void;
   onManagePoints?: (rec: any) => void;
@@ -18,17 +19,21 @@ interface DashboardProps {
 }
 
 export function Dashboard({
-  onNavigate,
   onViewProfile,
   onViewServantProfile,
   onLogout,
-  currentServant,
-  participants = [],
+  currentServant: propsCurrentServant,
+  participants: propsParticipants,
   onEditRequest,
   onManagePoints,
   onDeleteParticipant,
   onManualAttendance
-}: DashboardProps) {
+}: DashboardProps = {}) {
+  const navigate = useNavigate();
+  const { currentServant: storeServant, participants: storeParticipants, logout } = useFestivalStore();
+  const currentServant = propsCurrentServant || storeServant;
+  const participants = propsParticipants && propsParticipants.length > 0 ? propsParticipants : storeParticipants;
+
   
   // Define roles based on currentServant.role
   const userRole = currentServant?.role || 'normal';
@@ -79,8 +84,12 @@ export function Dashboard({
             <div 
               className="flex items-center gap-3 text-right min-w-0 flex-1 cursor-pointer hover:opacity-80 transition-opacity"
               onClick={() => {
-                if (currentServant?.id && onViewServantProfile) {
-                  onViewServantProfile(currentServant.id);
+                if (currentServant?.id) {
+                  if (onViewServantProfile) {
+                    onViewServantProfile(currentServant.id);
+                  } else {
+                    navigate(`/servant-profile/${currentServant.id}`);
+                  }
                 }
               }}
             >
@@ -111,9 +120,14 @@ export function Dashboard({
 
             {/* Part 2 (Pushed Right): Small Logout Button directly across from the name */}
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (window.confirm('هل أنت متأكد من تسجيل الخروج؟')) {
-                  void onLogout();
+                  if (onLogout) {
+                    await onLogout();
+                  } else {
+                    await logout();
+                    navigate('/login');
+                  }
                 }
               }}
               className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors flex items-center gap-1.5 text-xs font-medium active:scale-95 shrink-0"
@@ -128,7 +142,7 @@ export function Dashboard({
         {/* Main Action Buttons */}
         <div className="space-y-3 mb-6">
           <button
-            onClick={() => onNavigate('scanner')}
+            onClick={() => navigate('/scanner')}
             className="w-full bg-primary text-primary-foreground rounded-xl p-5 shadow-lg active:scale-[0.98] transition-transform"
           >
             <div className="flex items-center justify-center gap-3 mb-2">
@@ -140,7 +154,7 @@ export function Dashboard({
 
           <div className="grid grid-cols-3 gap-3">
             <button
-              onClick={() => onNavigate('market')}
+              onClick={() => navigate('/scanner?mode=market')}
               className="rounded-xl p-5 shadow-lg active:scale-[0.98] transition-transform"
               style={{ backgroundColor: 'var(--secondary)', color: 'var(--secondary-foreground)' }}
             >
@@ -152,7 +166,7 @@ export function Dashboard({
             </button>
 
             <button
-              onClick={() => onNavigate('addPoints')}
+              onClick={() => navigate('/scanner?mode=addPoints')}
               className="rounded-xl p-5 shadow-lg active:scale-[0.98] transition-transform bg-green-600 text-white"
             >
               <div className="flex items-center justify-center mb-3">
@@ -163,7 +177,7 @@ export function Dashboard({
             </button>
 
             <button
-              onClick={() => onNavigate('viewDetails')}
+              onClick={() => navigate('/scanner?mode=viewDetails')}
               className="rounded-xl p-5 shadow-lg active:scale-[0.98] transition-transform bg-blue-600 text-white"
             >
               <div className="flex items-center justify-center mb-3">
@@ -180,7 +194,7 @@ export function Dashboard({
           {/* Add Participant Button - Only Admin & Supervisor */}
           {canManageParticipants && (
             <button
-              onClick={() => onNavigate('registration')}
+              onClick={() => navigate('/registration')}
               className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
             >
               <div className="flex items-center justify-center gap-3">
@@ -192,7 +206,7 @@ export function Dashboard({
 
           {/* Participants Directory Button - Visible to ALL users */}
           <button
-            onClick={() => onNavigate('participantsPage')}
+            onClick={() => navigate('/participants')}
             className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
           >
             <div className="flex items-center justify-center gap-3">
@@ -203,7 +217,7 @@ export function Dashboard({
 
           {(isAdmin || isSupervisor) && (
             <button
-              onClick={() => onNavigate('statistics')}
+              onClick={() => navigate('/statistics')}
               className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
             >
               <div className="flex items-center justify-center gap-3">
@@ -227,7 +241,7 @@ export function Dashboard({
               </button>
 
               <button
-                onClick={() => onNavigate('registrationRequests')}
+                onClick={() => navigate('/requests')}
                 className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
               >
                 <div className="flex items-center justify-center gap-3">
@@ -237,7 +251,7 @@ export function Dashboard({
               </button>
 
               <button
-                onClick={() => onNavigate('sessions')}
+                onClick={() => navigate('/sessions')}
                 className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
               >
                 <div className="flex items-center justify-center gap-3">
@@ -247,7 +261,7 @@ export function Dashboard({
               </button>
 
               <button
-                onClick={() => onNavigate('finance')}
+                onClick={() => navigate('/finance')}
                 className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
               >
                 <div className="flex items-center justify-center gap-3">
@@ -257,7 +271,7 @@ export function Dashboard({
               </button>
 
               <button
-                onClick={() => onNavigate('teachers')}
+                onClick={() => navigate('/teachers')}
                 className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
               >
                 <div className="flex items-center justify-center gap-3">
