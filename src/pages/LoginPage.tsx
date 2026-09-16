@@ -1,6 +1,6 @@
-import { FormEvent, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { LogIn } from 'lucide-react';
+import { FormEvent, useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { LogIn, ArrowLeft } from 'lucide-react';
 import churchLogo from '../assets/images/new-church-logo.png';
 import festivalLogo from '../assets/images/Arebsalin-1.png';
 import { supabase } from '../lib/supabase';
@@ -14,10 +14,18 @@ interface LoginPageProps {
 
 export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps = {}) {
   const navigate = useNavigate();
-  const { setAuth, setCurrentServant, setViewerRole } = useFestivalStore();
+  const location = useLocation();
+  const from = (location.state as any)?.from?.pathname || '/dashboard';
+  const { setAuth, setCurrentServant, setViewerRole, isAuthenticated, isInitialized } = useFestivalStore();
   const [teacherId, setTeacherId] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isInitialized && isAuthenticated) {
+      navigate(from, { replace: true });
+    }
+  }, [isInitialized, isAuthenticated, from, navigate]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -62,7 +70,7 @@ export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps = {}) 
       if (onLogin) {
         onLogin(servantData);
       } else {
-        navigate('/dashboard');
+        navigate(from, { replace: true });
       }
       toast.success('تم تسجيل الدخول بنجاح');
     } catch (error) {
@@ -77,11 +85,19 @@ export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps = {}) 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header with Logos */}
-      <div className="bg-card border-b-2 border-primary/20 py-4 px-4">
+      <div className="bg-card border-b-2 border-primary/20 py-4 px-4 sticky top-0 z-10 shadow-sm">
         <div className="flex items-center justify-between">
-          <img src={churchLogo} alt="Church Logo" className="w-14 h-14 object-contain" />
-          <img src={festivalLogo} alt="Festival Logo" className="h-14 object-contain" />
-          <div className="w-14" /> {/* Spacer for centering */}
+          <div className="flex items-center gap-3">
+            <img src={churchLogo} alt="Church Logo" className="w-14 h-14 object-contain" />
+          </div>
+            <img src={festivalLogo} alt="Festival Logo" className="h-14 object-contain" />
+          <button
+            onClick={() => navigate('/')}
+            className="p-2 hover:bg-muted rounded-lg active:scale-95 transition-transform text-foreground"
+            title="الرجوع للرئيسية"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
         </div>
       </div>
 

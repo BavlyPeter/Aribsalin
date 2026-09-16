@@ -54,7 +54,7 @@ const getStageKey = (stageStr: string, yearStr: string) => {
 
 export function SessionsManagementPage({ onBack }: SessionsManagementPageProps = {}) {
   const navigate = useNavigate();
-  const { fetchData } = useFestivalStore();
+  const { fetchData, currentServant } = useFestivalStore();
   const handleBack = () => {
     if (onBack) {
       onBack();
@@ -65,9 +65,20 @@ export function SessionsManagementPage({ onBack }: SessionsManagementPageProps =
   };
 
   const [stageSessions, setStageSessions] = useState<StageSessions[]>([]);
+  const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
 
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const toggleStage = (stageKey: string) => {
+    const newExpanded = new Set(expandedStages);
+    if (newExpanded.has(stageKey)) {
+      newExpanded.delete(stageKey);
+    } else {
+      newExpanded.add(stageKey);
+    }
+    setExpandedStages(newExpanded);
+  };
 
   const fetchSessions = async () => {
     setIsLoading(true);
@@ -130,25 +141,69 @@ export function SessionsManagementPage({ onBack }: SessionsManagementPageProps =
   }, []);
 
   const handleDeleteSession = async (stageLabel: string, date: string, logIds: string[]) => {
-    if (!confirm(`هل أنت متأكد من حذف حصة يوم ${date} لفصل ${stageLabel} نهائياً؟\nسيتم مسح غياب ${logIds.length} مخدوم ولن تحسب هذه الحصة في إحصائياتهم.`)) {
+    if (!confirm(`هل أنت متأكد من حذف حصة يوم ${date} لفصل ${stageLabel} نهائياً؟\nسيتم مسح غياب ${logIds.length} مخدوم وخصم 10 نقاط من كل مخدوم ولن تحسب هذه الحصة في إحصائياتهم.`)) {
       return;
     }
 
     setIsDeleting(true);
     try {
-      // Chunk deletion to avoid URL length limits in Supabase/PostgREST if a class is very large
+      // Chunk processing to avoid URL length limits in Supabase/PostgREST if a class is very large
       const chunkSize = 200;
       for (let i = 0; i < logIds.length; i += chunkSize) {
         const chunk = logIds.slice(i, i + chunkSize);
-        const { error } = await supabase
+
+        // 1. SELECT participant_id FROM attendance_logs WHERE id IN (chunk)
+        const { data: logs, error: logsError } = await supabase
+          .from('attendance_logs')
+          .select('participant_id')
+          .in('id', chunk);
+
+        if (logsError) throw logsError;
+
+        if (logs && logs.length > 0) {
+          const participantIds = logs.map(l => l.participant_id).filter(Boolean);
+
+          for (const participantId of participantIds) {
+            // Deduct 10 points from their points_balance
+            const { data: pData } = await supabase
+              .from('participants')
+              .select('points_balance')
+              .eq('id', participantId)
+              .single();
+
+            const current = pData?.points_balance || 0;
+            const newBalance = Math.max(0, current - 10);
+
+            await supabase
+              .from('participants')
+              .update({ points_balance: newBalance })
+              .eq('id', participantId);
+
+            // Insert row into points_transactions representing deduction
+            await supabase
+              .from('points_transactions')
+              .insert({
+                participant_id: participantId,
+                servant_id: currentServant?.id || null,
+                transaction_type: 'deduction',
+                points_amount: 10,
+                description: `إلغاء مكافأة حضور حصة ${stageLabel} يوم ${date}`
+              });
+          }
+        }
+
+        // 3. Only then, delete the logs
+        const { error: deleteError } = await supabase
           .from('attendance_logs')
           .delete()
           .in('id', chunk);
         
-        if (error) throw error;
+        if (deleteError) throw deleteError;
       }
 
-      toast.success(`تم حذف حصة ${date} بنجاح`);
+      toast.success(`تم حذف حصة ${date} وخصم النقاط بنجاح`);
+      // 4. Call fetchData() from Zustand after completion
+      await fetchData();
       fetchSessions();
     } catch (error) {
       console.error('Error deleting session:', error);
@@ -178,7 +233,7 @@ export function SessionsManagementPage({ onBack }: SessionsManagementPageProps =
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex gap-3 text-blue-800">
           <AlertCircle className="w-6 h-6 shrink-0 mt-0.5" />
           <div className="text-sm">
-            <strong>تنبيه هام:</strong> حذف أي حصة من هنا سيقوم بمسح سجلات الحضور الخاصة بها تماماً من قاعدة البيانات، ولن يتم احتساب هذا اليوم ضمن إجمالي أيام الحضور للمخدومين في هذا الفصل.
+            <strong>تنبيه هام:</strong> حذف أي حصة من هنا سيقوم بمسح سجلات الحضور الخاصة بها تماماً من قاعدة البيانات وخصم 10 نقاط من كل مخدوم حضر الحصة، ولن يتم احتساب هذا اليوم ضمن إجمالي أيام الحضور للمخدومين في هذا الفصل.
           </div>
         </div>
 
@@ -187,43 +242,54 @@ export function SessionsManagementPage({ onBack }: SessionsManagementPageProps =
         ) : stageSessions.length === 0 ? (
           <div className="text-center py-10 text-muted-foreground bg-card rounded-2xl border border-border">لا توجد أي حصص مسجلة حالياً</div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {stageSessions.map((stage) => (
               <div key={stage.stageKey} className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-                <div className="bg-muted/30 p-4 border-b border-border flex items-center gap-2">
-                  <Users className="w-5 h-5 text-primary" />
-                  <h3 className="font-bold text-lg text-foreground">{stage.stageLabel}</h3>
-                  <span className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full mr-auto">
-                    {stage.sessions.length} حصص
-                  </span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleStage(stage.stageKey)}
+                  className="w-full bg-muted/30 p-4 border-b border-border flex items-center justify-between hover:bg-muted/50 transition-colors text-right"
+                >
+                  <div className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-primary" />
+                    <h3 className="font-bold text-lg text-foreground">{stage.stageLabel}</h3>
+                    <span className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full mr-2">
+                      {stage.sessions.length} حصص
+                    </span>
+                  </div>
+                  <div className="text-muted-foreground text-sm font-bold">
+                    {expandedStages.has(stage.stageKey) ? '▼' : '◄'}
+                  </div>
+                </button>
                 
-                <div className="divide-y divide-border">
-                  {stage.sessions.map((session) => (
-                    <div key={session.date} className="p-4 flex items-center justify-between hover:bg-muted/10 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-                          <Calendar className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <div className="font-bold text-foreground" dir="ltr">{session.date}</div>
-                          <div className="text-sm text-muted-foreground mt-1">
-                            تم تسجيل غياب <span className="font-bold text-primary">{session.attendanceCount}</span> مخدوم
+                {expandedStages.has(stage.stageKey) && (
+                  <div className="divide-y divide-border">
+                    {stage.sessions.map((session) => (
+                      <div key={session.date} className="p-4 flex items-center justify-between hover:bg-muted/10 transition-colors">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                            <Calendar className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <div className="font-bold text-foreground" dir="ltr">{session.date}</div>
+                            <div className="text-sm text-muted-foreground mt-1">
+                              تم تسجيل حضور <span className="font-bold text-primary">{session.attendanceCount}</span> مخدوم
+                            </div>
                           </div>
                         </div>
+                        
+                        <button
+                          onClick={() => handleDeleteSession(stage.stageLabel, session.date, session.logIds)}
+                          disabled={isDeleting}
+                          className="p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
+                          title="حذف الحصة نهائياً"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
                       </div>
-                      
-                      <button
-                        onClick={() => handleDeleteSession(stage.stageLabel, session.date, session.logIds)}
-                        disabled={isDeleting}
-                        className="p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
-                        title="حذف الحصة نهائياً"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

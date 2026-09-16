@@ -1,7 +1,7 @@
 import { ArrowRight, Calendar, Phone, MapPin, Book, Award, CheckCircle2, User, School, Download, CreditCard, Trash2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Participant } from '../types';
-import { useRef, useState, useMemo } from 'react';
+import { useRef, useState, useMemo, startTransition } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { IDCard } from '../components/shared/IDCard';
@@ -43,21 +43,48 @@ export function StudentProfile({
   const student = foundStudent;
 
   const calculatedTotalDays = useMemo(() => {
-    if (!participants || participants.length === 0) return 1;
+    if (!participants || participants.length === 0 || !student) return 1;
+
+    const studentStage = student?.data?.educationStage || (student as any)?.educational_stage || '';
+    const studentYear = student?.data?.educationYear || (student as any)?.academic_year || '';
+    const studentClassKey = `${studentStage}_${studentYear}`.trim();
+
+    const filteredParticipants = participants.filter((p: any) => {
+      const pStage = p?.data?.educationStage || p?.educational_stage || '';
+      const pYear = p?.data?.educationYear || p?.academic_year || '';
+      const pClassKey = `${pStage}_${pYear}`.trim();
+      return pClassKey === studentClassKey;
+    });
+
     const uniqueDates = new Set<string>();
-    participants.forEach((p: any) => {
-      if (p.attendanceDays && Array.isArray(p.attendanceDays)) {
+    filteredParticipants.forEach((p: any) => {
+      if (p?.attendanceDays && Array.isArray(p.attendanceDays)) {
         p.attendanceDays.forEach((date: string) => uniqueDates.add(date));
       }
     });
+
     return Math.max(1, uniqueDates.size);
-  }, [participants]);
+  }, [participants, student]);
 
   const totalDays = propsTotalDays !== undefined ? propsTotalDays : calculatedTotalDays;
   const handleBack = onBack || (() => {
-    if (viewerRole === 'student') navigate('/student-portal');
-    else navigate('/dashboard');
+    setTimeout(() => {
+      startTransition(() => {
+        navigate(-1);
+      });
+    }, 10);
   });
+
+  if (!student && (!participants || participants.length === 0)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background" dir="rtl">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground font-medium text-lg">جاري التحميل...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!student) {
     return (
@@ -75,15 +102,17 @@ export function StudentProfile({
   }
 
   const [isDeletingDate, setIsDeletingDate] = useState<string | null>(null);
-  const attendancePercentage = totalDays > 0 ? Math.round((student.attendanceDays.length / totalDays) * 100) : 0;
+  const attendancePercentage = totalDays > 0 && student?.attendanceDays ? Math.round((student.attendanceDays.length / totalDays) * 100) : 0;
   const qrRef = useRef<HTMLDivElement>(null);
   const idCardRef = useRef<HTMLDivElement>(null);
   const [isDownloadingCard, setIsDownloadingCard] = useState(false);
-  const participantSmartId = student.participant_id || 'غير متوفر';
+  const participantSmartId = student?.participant_id || 'غير متوفر';
 
-  const calculateAge = (dateOfBirth: string) => {
+  const calculateAge = (dateOfBirth?: string) => {
+    if (!dateOfBirth) return 0;
     const today = new Date();
     const birthDate = new Date(dateOfBirth);
+    if (isNaN(birthDate.getTime())) return 0;
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
 
@@ -192,14 +221,15 @@ export function StudentProfile({
     
     setIsDeletingDate(date);
     try {
+      const targetId = student.dbId || student.id;
       if (onDeleteAttendance) {
-        await onDeleteAttendance(student.id, date);
+        await onDeleteAttendance(targetId, date);
       } else {
         const { error: deleteError } = await supabase
           .from('attendance_logs')
           .delete()
           .match({ 
-            participant_id: student.id, 
+            participant_id: targetId, 
             attendance_date: date 
           });
 
@@ -208,7 +238,7 @@ export function StudentProfile({
         const { data: pData } = await supabase
           .from('participants')
           .select('points_balance')
-          .eq('id', student.id)
+          .eq('id', targetId)
           .single();
           
         const currentBalance = pData?.points_balance || 0;
@@ -217,12 +247,12 @@ export function StudentProfile({
         await supabase
           .from('participants')
           .update({ points_balance: newBalance })
-          .eq('id', student.id);
+          .eq('id', targetId);
 
         await supabase
           .from('points_transactions')
           .insert({
-            participant_id: student.id,
+            participant_id: targetId,
             servant_id: currentServant?.id,
             transaction_type: 'deduction',
             points_amount: 10,
@@ -259,21 +289,21 @@ export function StudentProfile({
         {/* Profile Header Card */}
         <div className="bg-card rounded-xl p-6 shadow-sm border border-border text-center">
           <div className="w-24 h-24 bg-primary/10 rounded-full mx-auto mb-4 overflow-hidden flex items-center justify-center border-4 border-white shadow-xl">
-            {student.data?.photo_url || (student as any).photo_url ? (
+            {student?.data?.photo_url || (student as any)?.photo_url ? (
               <img
-                src={student.data?.photo_url || (student as any).photo_url}
-                alt={student.name}
+                src={student?.data?.photo_url || (student as any)?.photo_url}
+                alt={student?.name}
                 className="w-full h-full object-cover"
               />
             ) : (
               <User className="w-12 h-12 text-primary" />
             )}
           </div>
-          <h3 className="text-xl mb-1 text-primary">{student.name}</h3>
+          <h3 className="text-xl mb-1 text-primary">{student?.name}</h3>
           <p className="text-lg text-muted-foreground mb-4">رقم المشارك: <span className="font-bold text-red-500">{participantSmartId}</span></p>
 
           {/* Status Badge */}
-          {student.attended && (
+          {student?.attended && (
             <div className="inline-flex items-center gap-2 bg-green-500/10 text-green-700 px-4 py-2 rounded-lg">
               <CheckCircle2 className="w-4 h-4" />
               <span className="text-sm">حاضر اليوم</span>
@@ -320,7 +350,7 @@ export function StudentProfile({
             <div className="w-12 h-12 bg-secondary/20 rounded-full mx-auto mb-3 flex items-center justify-center">
               <Award className="w-6 h-6" style={{ color: 'var(--secondary)' }} />
             </div>
-            <div className="text-2xl mb-1" style={{ color: 'var(--primary)' }}>{student.points}</div>
+            <div className="text-2xl mb-1" style={{ color: 'var(--primary)' }}>{student?.points || 0}</div>
             <div className="text-sm text-muted-foreground">النقاط المتاحة</div>
           </div>
 
@@ -339,7 +369,7 @@ export function StudentProfile({
           <div className="space-y-3">
             <div className="flex items-center justify-between py-2 border-b border-border">
               <span className="text-sm text-muted-foreground">عدد أيام الحضور</span>
-              <span className="font-medium">{student.attendanceDays.length} يوم</span>
+              <span className="font-medium">{student?.attendanceDays?.length || 0} يوم</span>
             </div>
             <div className="flex items-center justify-between py-2 border-b border-border">
               <span className="text-sm text-muted-foreground">إجمالي أيام المهرجان</span>
@@ -353,7 +383,7 @@ export function StudentProfile({
 
           <div className="space-y-3 mt-4">
             <h4 className="text-sm text-muted-foreground mb-1">أيام الحضور:</h4>
-            {student.attendanceDays?.length > 0 ? (
+            {student?.attendanceDays && student.attendanceDays.length > 0 ? (
               student.attendanceDays.map((date, index) => (
                 <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/20">
                   <div className="flex items-center gap-3">
@@ -392,16 +422,20 @@ export function StudentProfile({
               <Calendar className="w-5 h-5 text-muted-foreground mt-0.5" />
               <div className="flex-1">
                 <div className="text-sm text-muted-foreground">تاريخ الميلاد</div>
-                <div className="font-medium">
-                  {new Date(student.data.dateOfBirth).toLocaleDateString('ar-EG', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                  <span className="text-sm text-muted-foreground mr-2">
-                    ({calculateAge(student.data.dateOfBirth)} سنة)
-                  </span>
-                </div>
+                {student?.data?.dateOfBirth ? (
+                  <div className="font-medium">
+                    {new Date(student.data.dateOfBirth).toLocaleDateString('ar-EG', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                    <span className="text-sm text-muted-foreground mr-2">
+                      ({calculateAge(student.data.dateOfBirth)} سنة)
+                    </span>
+                  </div>
+                ) : (
+                  <div className="font-medium text-muted-foreground">غير مسجل</div>
+                )}
               </div>
             </div>
 
@@ -409,7 +443,9 @@ export function StudentProfile({
               <User className="w-5 h-5 text-muted-foreground mt-0.5" />
               <div className="flex-1">
                 <div className="text-sm text-muted-foreground">النوع</div>
-                <div className="font-medium">{student.data.gender === 'male' ? 'ذكر' : 'أنثى'}</div>
+                <div className="font-medium">
+                  {student?.data?.gender === 'male' ? 'ذكر' : student?.data?.gender === 'female' ? 'أنثى' : 'غير محدد'}
+                </div>
               </div>
             </div>
 
@@ -417,7 +453,7 @@ export function StudentProfile({
               <Book className="w-5 h-5 text-muted-foreground mt-0.5" />
               <div className="flex-1">
                 <div className="text-sm text-muted-foreground">أب الإعتراف</div>
-                <div className="font-medium">{student.data.confessionFather}</div>
+                <div className="font-medium">{student?.data?.confessionFather || 'غير محدد'}</div>
               </div>
             </div>
           </div>
@@ -431,39 +467,39 @@ export function StudentProfile({
               <School className="w-5 h-5 text-muted-foreground mt-0.5" />
               <div className="flex-1">
                 <div className="text-sm text-muted-foreground">المرحلة الدراسية</div>
-                <div className="font-medium">{student.data.educationStage}</div>
+                <div className="font-medium">{student?.data?.educationStage || 'غير محدد'}</div>
               </div>
             </div>
 
-            {student.data.educationYear && (
+            {student?.data?.educationYear && (
               <div className="flex items-start gap-3">
                 <Book className="w-5 h-5 text-muted-foreground mt-0.5" />
                 <div className="flex-1">
                   <div className="text-sm text-muted-foreground">السنة الدراسية</div>
-                  <div className="font-medium">{student.data.educationYear}</div>
+                  <div className="font-medium">{student?.data?.educationYear}</div>
                 </div>
               </div>
             )}
 
-            {(student.data?.studyOrWorkPlace || (student as any).class_or_job) && (
+            {(student?.data?.studyOrWorkPlace || (student as any)?.class_or_job) && (
               <div className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
                 <div className="flex-1">
                   <div className="text-sm text-muted-foreground">
-                    {student.data?.educationStage === 'graduate' ? 'جهة العمل / الوظيفة' : 
-                     (['kg', 'primary', 'preparatory', 'secondary'].includes(student.data?.educationStage || '')) ? 'المدرسة' : 'الجامعة / الكلية'}
+                    {student?.data?.educationStage === 'graduate' ? 'جهة العمل / الوظيفة' : 
+                     (['kg', 'primary', 'preparatory', 'secondary'].includes(student?.data?.educationStage || '')) ? 'المدرسة' : 'الجامعة / الكلية'}
                   </div>
-                  <div className="font-medium">{student.data?.studyOrWorkPlace || (student as any).class_or_job}</div>
+                  <div className="font-medium">{student?.data?.studyOrWorkPlace || (student as any)?.class_or_job}</div>
                 </div>
               </div>
             )}
 
-            {student.data.jobTitle && (
+            {student?.data?.jobTitle && (
               <div className="flex items-start gap-3">
                 <Award className="w-5 h-5 text-muted-foreground mt-0.5" />
                 <div className="flex-1">
                   <div className="text-sm text-muted-foreground">الوظيفة</div>
-                  <div className="font-medium">{student.data.jobTitle}</div>
+                  <div className="font-medium">{student?.data?.jobTitle}</div>
                 </div>
               </div>
             )}
@@ -474,7 +510,7 @@ export function StudentProfile({
         <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
           <h3 className="mb-4 text-primary">بيانات التواصل</h3>
           <div className="space-y-3">
-            {student.data.personalMobile && (
+            {student?.data?.personalMobile && (
               <div className="flex items-center gap-3">
                 <Phone className="w-5 h-5 text-muted-foreground" />
                 <div className="flex-1">
@@ -486,33 +522,41 @@ export function StudentProfile({
               </div>
             )}
 
-            <div className="flex items-center gap-3">
-              <Phone className="w-5 h-5 text-muted-foreground" />
-              <div className="flex-1">
-                <div className="text-sm text-muted-foreground">موبايل الأب</div>
-                <a href={`tel:${student.data.fatherMobile}`} className="font-medium text-primary">
-                  {student.data.fatherMobile}
-                </a>
+            {student?.data?.fatherMobile && (
+              <div className="flex items-center gap-3">
+                <Phone className="w-5 h-5 text-muted-foreground" />
+                <div className="flex-1">
+                  <div className="text-sm text-muted-foreground">موبايل الأب</div>
+                  <a href={`tel:${student.data.fatherMobile}`} className="font-medium text-primary">
+                    {student.data.fatherMobile}
+                  </a>
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="flex items-center gap-3">
-              <Phone className="w-5 h-5 text-muted-foreground" />
-              <div className="flex-1">
-                <div className="text-sm text-muted-foreground">موبايل الأم</div>
-                <a href={`tel:${student.data.motherMobile}`} className="font-medium text-primary">
-                  {student.data.motherMobile}
-                </a>
+            {student?.data?.motherMobile && (
+              <div className="flex items-center gap-3">
+                <Phone className="w-5 h-5 text-muted-foreground" />
+                <div className="flex-1">
+                  <div className="text-sm text-muted-foreground">موبايل الأم</div>
+                  <a href={`tel:${student.data.motherMobile}`} className="font-medium text-primary">
+                    {student.data.motherMobile}
+                  </a>
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="flex items-start gap-3 pt-2 border-t border-border">
-              <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
-              <div className="flex-1">
-                <div className="text-sm text-muted-foreground">العنوان</div>
-                <div className="font-medium">{student.data.area} - {student.data.address}</div>
+            {(student?.data?.area || student?.data?.address) && (
+              <div className="flex items-start gap-3 pt-2 border-t border-border">
+                <MapPin className="w-5 h-5 text-muted-foreground mt-0.5" />
+                <div className="flex-1">
+                  <div className="text-sm text-muted-foreground">العنوان</div>
+                  <div className="font-medium">
+                    {[student?.data?.area, student?.data?.address].filter(Boolean).join(' - ')}
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

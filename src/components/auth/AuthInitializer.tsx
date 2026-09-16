@@ -16,11 +16,13 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
     initializeAuth();
     fetchData();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
         setAuth(false);
         setCurrentServant(null);
         setViewerRole('servant');
+      } else if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+        initializeAuth();
       }
     });
 

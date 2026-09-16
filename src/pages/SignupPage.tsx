@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Eye, EyeOff, Save } from 'lucide-react';
 import { TeacherData } from '../types';
 import { supabase } from '../lib/supabase';
 import { uploadProfileImage } from '../lib/uploadHelper';
 import { toast } from 'sonner';
+import { useFestivalStore } from '../store/useFestivalStore';
 import churchLogo from '../assets/images/new-church-logo.png';
 import festivalLogo from '../assets/images/Arebsalin-1.png';
 
 interface SignupPageProps {
-  onSignup: (data: TeacherData) => void;
-  onBack: () => void;
+  onSignup?: (data: TeacherData) => void;
+  onBack?: () => void;
 }
 
 interface SignupPageWithEditProps extends SignupPageProps {
@@ -50,7 +52,31 @@ const educationYears = {
   ]
 };
 
-export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPageWithEditProps) {
+export function SignupPage({ onSignup, onBack, editData: propsEditData, clearEdit }: Partial<SignupPageWithEditProps> = {}) {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit') || propsEditData?.id;
+  const editData = propsEditData || (editId ? { id: editId } : null);
+  const { currentServant, isInitialized } = useFestivalStore();
+
+  useEffect(() => {
+    if (isInitialized && editId && currentServant?.role !== 'admin') {
+      toast.error('غير مصرح لك');
+      navigate('/');
+    }
+  }, [isInitialized, editId, currentServant, navigate]);
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
+  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [areas, setAreas] = useState<string[]>([]);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -92,18 +118,20 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
   // Fetch full data for editing from Supabase to ensure all fields populate
   useEffect(() => {
     const fetchFullServantData = async () => {
-      if (!editData || !editData.id) return;
+      const targetId = editId || editData?.id;
+      if (!targetId) return;
+      if (!isInitialized || currentServant?.role !== 'admin') return;
 
       try {
         setIsLoading(true);
         // Regex to check if the ID is a valid UUID or a Smart ID like T01
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(editData.id);
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId);
 
         let query = supabase.from('servants').select('*');
         if (isUuid) {
-          query = query.eq('id', editData.id);
+          query = query.eq('id', targetId);
         } else {
-          query = query.eq('teacher_id', editData.id);
+          query = query.eq('teacher_id', targetId);
         }
 
         const { data: source, error } = await query.single();
@@ -140,8 +168,7 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
     };
 
     fetchFullServantData();
-  }, [editData]);
-  const [isLoading, setIsLoading] = useState(false);
+  }, [editId, isInitialized, currentServant]);
 
   useEffect(() => {
     return () => {
@@ -319,7 +346,7 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
         await supabase.auth.signOut();
 
         toast.success(`تم تسجيل الحساب بنجاح! كود الدخول الخاص بك هو: ${finalTeacherId} - يرجى الاحتفاظ به وانتظار موافقة أمين الخدمة.`, { duration: 15000 });
-        onBack(); // Go back to login/role selection instead of auto-logging in
+        handleBack(); // Go back to login/role selection instead of auto-logging in
         return; // Stop here to prevent calling onSignup
       }
 
@@ -329,6 +356,7 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
       }
 
       clearEdit?.();
+      handleBack();
     } catch (error: any) {
       console.error('Error saving servant:', error);
       toast.error('حدث خطأ أثناء حفظ البيانات: ' + error.message);
@@ -386,7 +414,7 @@ export function SignupPage({ onSignup, onBack, editData, clearEdit }: SignupPage
       <div className="bg-primary text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
         <div className="flex items-center gap-3">
           <button
-            onClick={onBack}
+            onClick={handleBack}
             className="p-2 hover:bg-white/10 rounded-lg active:scale-95 transition-transform"
           >
             <ArrowRight className="w-6 h-6" />

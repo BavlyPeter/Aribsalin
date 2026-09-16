@@ -36,6 +36,7 @@ export interface ParticipantData {
 
 export interface Participant {
   id: string;
+  dbId?: string;
   participant_id?: string | number;
   name: string;
   points: number;

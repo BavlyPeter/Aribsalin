@@ -10,8 +10,14 @@ export function RegistrationPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get('edit');
-  const { fetchData } = useFestivalStore();
+  const { fetchData, currentServant, isInitialized } = useFestivalStore();
   const [editData, setEditData] = useState<any | null>(editId ? { id: editId } : null);
+
+  useEffect(() => {
+    if (isInitialized && (!currentServant || !['admin', 'supervisor'].includes(currentServant.role))) {
+      navigate('/login');
+    }
+  }, [isInitialized, currentServant, navigate]);
 
   useEffect(() => {
     if (editId) {

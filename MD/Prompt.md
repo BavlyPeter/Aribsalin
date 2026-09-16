@@ -1,6 +1,6 @@
 <!-- this a prompt to Update the `ARIBSALIN-DOCUMENTATION.md` file. -->
 
-Act as an Expert Software Architect and Technical Writer. Your task is to deeply analyze the entire codebase of this workspace and Update a comprehensive, definitive master documentation file named `ARIBSALIN-DOCUMENTATION.md`. in `MD/ARIBSALIN-DOCUMENTATION.md`.
+Act as an Expert Software Architect and Technical Writer. Your task is to deeply analyze the entire codebase of this workspace and Update a comprehensive, definitive master documentation file named `ARIBSALIN-DOCUMENTATION.md` in `MD/ARIBSALIN-DOCUMENTATION.md`.
 
 This documentation must be exhaustive, serving as the ultimate guide for any new human developer or AI model joining the project. Do not hallucinate; base all your explanations strictly on the actual files, code, and configuration present in this workspace.
 

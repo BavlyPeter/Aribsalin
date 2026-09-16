@@ -454,17 +454,36 @@ export function ParticipantsPage({
             <div className="p-4 border-t border-border flex gap-3">
               <button
                 onClick={async () => {
-                  const targetId = attendanceParticipant.dbId || attendanceParticipant.id;
+                  const matched = storeParticipants.find((p: any) =>
+                    p.id === attendanceParticipant.dbId ||
+                    p.id === attendanceParticipant.id ||
+                    p.participant_id === attendanceParticipant.participant_id ||
+                    p.participant_id === attendanceParticipant.id
+                  );
+                  const targetCandidate = matched?.id || attendanceParticipant.dbId || attendanceParticipant.id;
+                  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetCandidate);
+                  let targetId = targetCandidate;
+                  if (!isUuid) {
+                    const fallback = storeParticipants.find((p: any) => p.participant_id === targetCandidate || p.id === targetCandidate);
+                    if (fallback?.id) {
+                      targetId = fallback.id;
+                    }
+                  }
+
                   if (onManualAttendance) {
                     onManualAttendance(targetId, attendanceDate);
                   } else {
                     try {
-                      const { data: existingAttendance } = await supabase
+                      const { data: existingAttendance, error: checkError } = await supabase
                         .from('attendance_logs')
                         .select('id')
                         .eq('participant_id', targetId)
                         .eq('attendance_date', attendanceDate)
-                        .single();
+                        .maybeSingle();
+
+                      if (checkError) {
+                        console.error('Error checking existing attendance log:', checkError);
+                      }
 
                       if (existingAttendance) {
                         toast.info('تم تسجيل حضور هذا المخدوم في هذا اليوم مسبقاً');
@@ -476,40 +495,91 @@ export function ParticipantsPage({
                         .from('attendance_logs')
                         .insert({
                           participant_id: targetId,
-                          servant_id: currentServant?.id,
+                          servant_id: currentServant?.id || null,
                           attendance_date: attendanceDate,
                         });
 
-                      if (attendanceError) throw attendanceError;
+                      if (attendanceError) {
+                        console.error('Error inserting attendance log into Supabase:', attendanceError);
+                        throw attendanceError;
+                      }
 
-                      const { data: pData } = await supabase
+                      const { data: pData, error: balanceError } = await supabase
                         .from('participants')
                         .select('points_balance')
                         .eq('id', targetId)
                         .single();
+
+                      if (balanceError) {
+                        console.error('Error fetching participant balance from Supabase:', balanceError);
+                      }
                         
                       const currentBalance = pData?.points_balance || 0;
+                      const newBalance = currentBalance + 10;
 
-                      await supabase
+                      const { error: updateError } = await supabase
                         .from('participants')
-                        .update({ points_balance: currentBalance + 10 })
+                        .update({ points_balance: newBalance })
                         .eq('id', targetId);
 
-                      await supabase
+                      if (updateError) {
+                        console.error('Error updating participant points balance:', updateError);
+                        throw updateError;
+                      }
+
+                      const { error: txError } = await supabase
                         .from('points_transactions')
                         .insert({
                           participant_id: targetId,
-                          servant_id: currentServant?.id,
+                          servant_id: currentServant?.id || null,
                           transaction_type: 'addition',
                           points_amount: 10,
                           description: `مكافأة حضور يوم ${attendanceDate}`
                         });
 
+                      if (txError) {
+                        console.error('Error recording points transaction:', txError);
+                      }
+
+                      const today = new Date().toISOString().split('T')[0];
+
+                      // Zustand state mutation using callback signature ensuring no undefined is returned
+                      setParticipants((prev: any[]) =>
+                        (prev || []).map((p: any) => {
+                          if (p?.id === targetId || p?.participant_id === targetId) {
+                            const existingDays = Array.isArray(p.attendanceDays) ? p.attendanceDays : [];
+                            const updatedDays = existingDays.includes(attendanceDate)
+                              ? existingDays
+                              : [...existingDays, attendanceDate];
+                            return {
+                              ...p,
+                              points: newBalance,
+                              attendanceDays: updatedDays,
+                              attended: updatedDays.includes(today),
+                            };
+                          }
+                          return p;
+                        })
+                      );
+
+                      setItems((prev: ParticipantItem[]) =>
+                        (prev || []).map((p: ParticipantItem) => {
+                          if (p?.dbId === targetId || p?.id === targetId) {
+                            return {
+                              ...p,
+                              points: newBalance,
+                              attended: attendanceDate === today ? true : p.attended,
+                            };
+                          }
+                          return p;
+                        })
+                      );
+
                       toast.success('تم تسجيل الحضور وإضافة 10 نقاط بنجاح');
                       await fetchData();
-                    } catch (err) {
-                      console.error(err);
-                      toast.error('حدث خطأ أثناء تسجيل الحضور');
+                    } catch (err: any) {
+                      console.error('Manual attendance error in ParticipantsPage:', err);
+                      toast.error(`حدث خطأ أثناء تسجيل الحضور: ${err?.message || 'خطأ غير متوقع'}`);
                     }
                   }
                   setAttendanceModalOpen(false);
