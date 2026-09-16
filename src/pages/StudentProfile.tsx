@@ -75,6 +75,11 @@ export function StudentProfile({
     }, 10);
   });
 
+  const [isDeletingDate, setIsDeletingDate] = useState<string | null>(null);
+  const qrRef = useRef<HTMLDivElement>(null);
+  const idCardRef = useRef<HTMLDivElement>(null);
+  const [isDownloadingCard, setIsDownloadingCard] = useState(false);
+
   if (!student && (!participants || participants.length === 0)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background" dir="rtl">
@@ -101,11 +106,7 @@ export function StudentProfile({
     );
   }
 
-  const [isDeletingDate, setIsDeletingDate] = useState<string | null>(null);
   const attendancePercentage = totalDays > 0 && student?.attendanceDays ? Math.round((student.attendanceDays.length / totalDays) * 100) : 0;
-  const qrRef = useRef<HTMLDivElement>(null);
-  const idCardRef = useRef<HTMLDivElement>(null);
-  const [isDownloadingCard, setIsDownloadingCard] = useState(false);
   const participantSmartId = student?.participant_id || 'غير متوفر';
 
   const calculateAge = (dateOfBirth?: string) => {
