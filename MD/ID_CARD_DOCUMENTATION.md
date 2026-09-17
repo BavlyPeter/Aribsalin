@@ -56,14 +56,14 @@ interface IDCardProps {
 - **Church Logo:**
   - Position: Absolute top-3 right-3
   - Size: 56x56px (w-14 h-14)
-  - File: `new-church-logo.png`
-  - Import: `import churchLogo from '../../imports/new-church-logo.png';`
+  - File: `AVA Mina Church.png`
+  - Import: `import churchLogo from '../../imports/AVA Mina Church.png';`
   
 - **Festival Logo:**
   - Position: Absolute top-3, horizontally centered
   - Height: 56px, auto width
-  - File: `Arebsalin-1.png`
-  - Import: `import festivalLogo from '../../imports/Arebsalin-1.png';`
+  - File: `Arebsalin Logo.png`
+  - Import: `import festivalLogo from '../../imports/Arebsalin Logo.png';`
 
 ---
 
@@ -255,8 +255,8 @@ const downloadIDCard = async () => {
 
 ```typescript
 // At top of file
-import churchLogo from '../../imports/new-church-logo.png';
-import festivalLogo from '../../imports/Arebsalin-1.png';
+import churchLogo from '../../imports/AVA Mina Church.png';
+import festivalLogo from '../../imports/Arebsalin Logo.png';
 
 // In JSX
 <img src={churchLogo} alt="Church Logo" className="..." />
@@ -267,16 +267,16 @@ import festivalLogo from '../../imports/Arebsalin-1.png';
 
 ```typescript
 // ❌ Dynamic URL construction
-const logoPath = new URL('../../imports/new-church-logo.png', import.meta.url).href;
+const logoPath = new URL('../../imports/AVA Mina Church.png', import.meta.url).href;
 
 // ❌ String path
-<img src="../../imports/new-church-logo.png" alt="Logo" />
+<img src="../../imports/AVA Mina Church.png" alt="Logo" />
 
 // ❌ ?url suffix
-import logo from '../../imports/new-church-logo.png?url';
+import logo from '../../imports/AVA Mina Church.png?url';
 
 // ❌ require() syntax
-const logo = require('../../imports/new-church-logo.png');
+const logo = require('../../imports/AVA Mina Church.png');
 ```
 
 ### Why Direct Import Works
@@ -345,7 +345,7 @@ import { IDCard } from './IDCard';
 
 **Problem:**
 - Church and festival logos not displaying
-- Error: `Failed to load: /src/imports/new-church-logo.png`
+- Error: `Failed to load: /src/imports/AVA Mina Church.png`
 
 **Root Cause:**
 - Used dynamic URL construction with `new URL()`
@@ -354,8 +354,8 @@ import { IDCard } from './IDCard';
 **Solution:**
 ```typescript
 // Changed from dynamic URL to static import
-import churchLogo from '../../imports/new-church-logo.png';
-import festivalLogo from '../../imports/Arebsalin-1.png';
+import churchLogo from '../../imports/AVA Mina Church.png';
+import festivalLogo from '../../imports/Arebsalin Logo.png';
 ```
 
 **Result:**

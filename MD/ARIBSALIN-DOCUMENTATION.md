@@ -615,10 +615,10 @@ src/
 │       └── stageHelpers.ts         # Stage normalization & sub-stage mapping (e.g. primary_34)
 ├── assets/
 │   └── images/                     # Church crests, festival insignias, brand assets
-│       ├── Arebsalin-1.png         # Primary festival emblem
+│       ├── Arebsalin Logo.png         # Primary festival emblem
 │       ├── aribsalin.jpeg          # Alternative festival banner
 │       ├── meni_Logo.png           # St. Mina Church historical insignia
-│       └── new-church-logo.png     # Official St. Mina & Pope Kyrillos VI church crest
+│       └── AVA Mina Church.png     # Official St. Mina & Pope Kyrillos VI church crest
 ├── components/
 │   ├── auth/
 │   │   ├── AuthInitializer.tsx     # Session listener, Sonner Toaster & WelcomeScreen trigger
@@ -696,8 +696,8 @@ src/
 
 #### 📂 `src/assets/images/`
 Contains the static visual identity assets of the parish and festival:
-* `Arebsalin-1.png`: The official circular festival emblem.
-* `new-church-logo.png`: High-resolution crest of the Church of St. Mina & Pope Kyrillos VI.
+* `Arebsalin Logo.png`: The official circular festival emblem.
+* `AVA Mina Church.png`: High-resolution crest of the Church of St. Mina & Pope Kyrillos VI.
 * `aribsalin.jpeg` & `meni_Logo.png`: Supplementary historical brand assets.
 
 #### 📂 `src/components/auth/`

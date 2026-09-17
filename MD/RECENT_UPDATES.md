@@ -40,8 +40,8 @@ We've added a professional ID card generation system that creates downloadable, 
 
 Church and festival logos were not appearing on ID cards, showing this error:
 ```
-❌ Festival logo failed to load: /src/imports/Arebsalin-1.png
-❌ Church logo failed to load: /src/imports/new-church-logo.png
+❌ Festival logo failed to load: /src/imports/Arebsalin Logo.png
+❌ Church logo failed to load: /src/imports/AVA Mina Church.png
 ```
 
 ### The Solution
@@ -50,15 +50,15 @@ Changed image import strategy from dynamic URLs to static ES module imports:
 
 **Before (Broken):**
 ```typescript
-const churchLogoPath = new URL('../../imports/new-church-logo.png', import.meta.url).href;
-const festivalLogoPath = new URL('../../imports/Arebsalin-1.png', import.meta.url).href;
+const churchLogoPath = new URL('../../imports/AVA Mina Church.png', import.meta.url).href;
+const festivalLogoPath = new URL('../../imports/Arebsalin Logo.png', import.meta.url).href;
 <img src={churchLogoPath} alt="Church Logo" />
 ```
 
 **After (Fixed):**
 ```typescript
-import churchLogo from '../../imports/new-church-logo.png';
-import festivalLogo from '../../imports/Arebsalin-1.png';
+import churchLogo from '../../imports/AVA Mina Church.png';
+import festivalLogo from '../../imports/Arebsalin Logo.png';
 <img src={churchLogo} alt="Church Logo" />
 <img src={festivalLogo} alt="Festival Logo" />
 ```

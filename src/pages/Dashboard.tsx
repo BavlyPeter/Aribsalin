@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, FileText, Wallet, BarChart3, LogOut, User, UserCheck, BookOpen, Download } from 'lucide-react';
-import churchLogo from '../assets/images/new-church-logo.png';
-import festivalLogo from '../assets/images/Arebsalin-1.png';
+import churchLogo from '../assets/images/AVA Mina Church.png';
+import festivalLogo from '../assets/images/Arebsalin Logo.png';
 import { BulkIDDownloadModal } from '../components/modals/BulkIDDownloadModal';
 import { useFestivalStore } from '../store/useFestivalStore';
 

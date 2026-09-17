@@ -1,8 +1,8 @@
 import { FormEvent, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, ArrowLeft } from 'lucide-react';
-import churchLogo from '../assets/images/new-church-logo.png';
-import festivalLogo from '../assets/images/Arebsalin-1.png';
+import churchLogo from '../assets/images/AVA Mina Church.png';
+import festivalLogo from '../assets/images/Arebsalin Logo.png';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import { useFestivalStore } from '../store/useFestivalStore';
