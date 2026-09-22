@@ -28,8 +28,8 @@ CREATE TABLE public.attendance_logs (
   servant_id uuid,
   attendance_date date DEFAULT CURRENT_DATE,
   CONSTRAINT attendance_logs_pkey PRIMARY KEY (id),
-  CONSTRAINT attendance_logs_servant_id_fkey FOREIGN KEY (servant_id) REFERENCES public.servants(id),
-  CONSTRAINT attendance_logs_participant_id_fkey FOREIGN KEY (participant_id) REFERENCES public.participants(id)
+  CONSTRAINT attendance_logs_participant_id_fkey FOREIGN KEY (participant_id) REFERENCES public.participants(id),
+  CONSTRAINT attendance_logs_servant_id_fkey FOREIGN KEY (servant_id) REFERENCES public.servants(id)
 );
 CREATE TABLE public.servants (
   created_at timestamp with time zone DEFAULT now(),
@@ -67,8 +67,8 @@ CREATE TABLE public.points_transactions (
   description text,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
   CONSTRAINT points_transactions_pkey PRIMARY KEY (id),
-  CONSTRAINT points_transactions_servant_id_fkey FOREIGN KEY (servant_id) REFERENCES public.servants(id),
-  CONSTRAINT points_transactions_participant_id_fkey FOREIGN KEY (participant_id) REFERENCES public.participants(id)
+  CONSTRAINT points_transactions_participant_id_fkey FOREIGN KEY (participant_id) REFERENCES public.participants(id),
+  CONSTRAINT points_transactions_servant_id_fkey FOREIGN KEY (servant_id) REFERENCES public.servants(id)
 );
 CREATE TABLE public.financial_transactions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
