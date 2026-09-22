@@ -94,17 +94,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 #### Logo Display Issue (CRITICAL)
-- **Problem:** Church logo (`AVA Mina Church.png`) and festival logo (`Arebsalin Logo.png`) not displaying in ID card component
-- **Error Message:** `❌ Festival logo failed to load: /src/imports/Arebsalin Logo.png`
+- **Problem:** Church logo (`church logo.png`) and festival logo (`service logo.png`) not displaying in ID card component
+- **Error Message:** `❌ Festival logo failed to load: /src/imports/service logo.png`
 - **Root Cause:** Used dynamic URL construction with `new URL(path, import.meta.url).href` which resolved to source path instead of processed asset path
 - **Solution:** Changed to static ES module imports matching pattern in EnhancedDashboard and LoginPage
   ```typescript
   // Before (broken)
-  const churchLogoPath = new URL('../../imports/AVA Mina Church.png', import.meta.url).href;
+  const churchLogoPath = new URL('../../imports/church logo.png', import.meta.url).href;
   
   // After (fixed)
-  import churchLogo from '../../imports/AVA Mina Church.png';
-  import festivalLogo from '../../imports/Arebsalin Logo.png';
+  import churchLogo from '../../imports/church logo.png';
+  import festivalLogo from '../../imports/service logo.png';
   ```
 - **Impact:** Logos now display correctly in development and production builds
 - **Testing:** Verified consistency across all components using logos

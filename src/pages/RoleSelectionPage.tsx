@@ -1,6 +1,6 @@
 import { Crown, Users } from 'lucide-react';
-import churchLogo from '../assets/images/AVA Mina Church.png';
-import festivalLogo from '../assets/images/Arebsalin Logo.png';
+import churchLogo from '../assets/images/church logo.png';
+import festivalLogo from '../assets/images/service logo.png';
 
 import { useNavigate } from 'react-router-dom';
 import { useFestivalStore } from '../store/useFestivalStore';

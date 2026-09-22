@@ -1,6 +1,6 @@
 import { QRCodeSVG } from 'qrcode.react';
-import churchLogo from '../../assets/images/AVA Mina Church.png';
-import festivalLogo from '../../assets/images/Arebsalin Logo.png';
+import churchLogo from '../../assets/images/church logo.png';
+import festivalLogo from '../../assets/images/service logo.png';
 import { StudentData } from '../../types';
 
 interface IDCardProps {

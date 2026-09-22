@@ -10,8 +10,8 @@
 ### 1. Logos Not Displaying on ID Cards
 
 #### Symptoms
-- Church logo (`AVA Mina Church.png`) not visible on ID card
-- Festival logo (`Arebsalin Logo.png`) not visible on ID card
+- Church logo (`church logo.png`) not visible on ID card
+- Festival logo (`service logo.png`) not visible on ID card
 - Broken image icon appears where logos should be
 - Console error: `Failed to load: /src/imports/...`
 
@@ -24,8 +24,8 @@ Using dynamic URL construction instead of static ES module imports.
 
 ```typescript
 // ✅ CORRECT - Do this
-import churchLogo from '../../imports/AVA Mina Church.png';
-import festivalLogo from '../../imports/Arebsalin Logo.png';
+import churchLogo from '../../imports/church logo.png';
+import festivalLogo from '../../imports/service logo.png';
 
 <img src={churchLogo} alt="Church Logo" className="..." />
 <img src={festivalLogo} alt="Festival Logo" className="..." />
@@ -35,16 +35,16 @@ import festivalLogo from '../../imports/Arebsalin Logo.png';
 
 ```typescript
 // ❌ WRONG - Don't do this
-const logoPath = new URL('../../imports/AVA Mina Church.png', import.meta.url).href;
+const logoPath = new URL('../../imports/church logo.png', import.meta.url).href;
 
 // ❌ WRONG - Don't do this
-<img src="../../imports/AVA Mina Church.png" alt="Logo" />
+<img src="../../imports/church logo.png" alt="Logo" />
 
 // ❌ WRONG - Don't do this
-import logo from '../../imports/AVA Mina Church.png?url';
+import logo from '../../imports/church logo.png?url';
 
 // ❌ WRONG - Don't do this (not ES modules)
-const logo = require('../../imports/AVA Mina Church.png');
+const logo = require('../../imports/church logo.png');
 ```
 
 #### Why This Works

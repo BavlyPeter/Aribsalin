@@ -6,8 +6,8 @@ import { supabase } from '../lib/supabase';
 import { uploadProfileImage } from '../lib/uploadHelper';
 import { toast } from 'sonner';
 import { useFestivalStore } from '../store/useFestivalStore';
-import churchLogo from '../assets/images/AVA Mina Church.png';
-import festivalLogo from '../assets/images/Arebsalin Logo.png';
+import churchLogo from '../assets/images/church logo.png';
+import festivalLogo from '../assets/images/service logo.png';
 
 interface SignupPageProps {
   onSignup?: (data: TeacherData) => void;
