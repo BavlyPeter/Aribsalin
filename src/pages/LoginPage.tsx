@@ -17,7 +17,7 @@ export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps = {}) 
   const location = useLocation();
   const from = (location.state as any)?.from?.pathname || '/dashboard';
   const { setAuth, setCurrentServant, setViewerRole, isAuthenticated, isInitialized } = useFestivalStore();
-  const [teacherId, setTeacherId] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -32,7 +32,30 @@ export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps = {}) 
     setIsLoading(true);
 
     try {
-      const email = `${teacherId.trim().toLowerCase()}@aribsalin.com`;
+      let finalTeacherId = identifier.trim();
+      const cleanPhone = identifier.replace(/[\s-]/g, ''); // Clean spaces or dashes
+
+      // Check if the input is an Egyptian mobile number format (11 digits starting with 01)
+      const isPhoneNumber = /^01[0-9]{9}$/.test(cleanPhone);
+
+      if (isPhoneNumber) {
+        // Resolve phone number to teacher_id
+        const { data: servant, error: fetchError } = await supabase
+          .from('servants')
+          .select('teacher_id')
+          .eq('mobile_personal', cleanPhone)
+          .maybeSingle();
+
+        if (fetchError || !servant) {
+          toast.error('رقم الهاتف هذا غير مسجل لأي خادم في النظام');
+          setIsLoading(false);
+          return;
+        }
+        finalTeacherId = servant.teacher_id;
+      }
+
+      // Construct the synthetic email using the resolved teacher_id
+      const email = `${finalTeacherId.toLowerCase()}@aribsalin.com`;
 
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
@@ -114,15 +137,15 @@ export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps = {}) 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block mb-2 text-sm text-foreground">
-                  رقم الدخول (ID)
+                  رقم الدخول (ID) أو رقم الموبايل
                 </label>
                 <input
                   type="text"
                   required
-                  value={teacherId}
-                  onChange={(e) => setTeacherId(e.target.value.toUpperCase())}
-                  className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring uppercase"
-                  placeholder="مثال: T001"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder="مثال: T001 أو 01XXXXXXXXX"
                 />
               </div>
 

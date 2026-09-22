@@ -41,7 +41,7 @@ CREATE TABLE public.servants (
   class_or_job text,
   birth_date date,
   father_of_confession text,
-  mobile_personal text,
+  mobile_personal text UNIQUE,
   address_area text,
   address_details text,
   photo_url text,

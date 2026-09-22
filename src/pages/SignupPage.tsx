@@ -226,6 +226,39 @@ export function SignupPage({ onSignup, onBack, editData: propsEditData, clearEdi
     setIsLoading(true);
 
     try {
+      // Validate mobile number length
+      if (formData.mobile && formData.mobile.length !== 11) {
+        toast.error('رقم الموبايل يجب أن يتكون من 11 رقم بالضبط');
+        setIsLoading(false);
+        return;
+      }
+
+      // Check for duplicate mobile number in the system
+      if (formData.mobile) {
+        let mobileQuery = supabase
+          .from('servants')
+          .select('id')
+          .eq('mobile_personal', formData.mobile)
+          .limit(1);
+        
+        // If editing, exclude the current servant's record from the check
+        if (editData && editData.id) {
+          mobileQuery = mobileQuery.neq('id', editData.id);
+        }
+
+        const { data: existingMobile, error: mobileErr } = await mobileQuery.maybeSingle();
+
+        if (mobileErr) {
+          console.error('Error checking mobile:', mobileErr);
+        }
+
+        if (existingMobile) {
+          toast.error('رقم الهاتف هذا مسجل بالفعل لخادم آخر في النظام!');
+          setIsLoading(false);
+          return;
+        }
+      }
+
       let finalTeacherId = formData.teacherId || '';
       let finalPhotoUrl = formData.photo_url || editData?.photo_url || null;
 
