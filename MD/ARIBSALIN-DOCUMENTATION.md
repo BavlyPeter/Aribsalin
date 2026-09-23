@@ -1,10 +1,10 @@
 # اريبصالين (Aribsalin) - Church Festival & Sunday School Management System
 ## Definitive Master Technical Architecture & Developer Reference Manual
 
-**System Version:** `2.1.0` (Dual-Login Engine, URL-Based Routing, Global Zustand Store, Granular RBAC, Smart ID Gap-Filling, Phone Uniqueness Guard, Offline-Safe QR Scanning & Digital Badging)  
+**System Version:** `2.2.0` (Dual-Login Engine, Developer God-Mode RBAC, Actionable WhatsApp & Phone Links, URL-Based Routing, Global Zustand Store, Smart ID Gap-Filling, Phone Uniqueness Guard, Offline-Safe QR Scanning & Digital Badging)  
 **Target Platform:** Mobile-First Responsive Web Application / PWA-Ready  
 **Primary Language & Direction:** Arabic (`ar`) / Right-to-Left (`dir="rtl"`)  
-**Parish / Organization:** Church of the Great Martyr St. Mina the Wonderworker & Pope Kyrillos VI - Aswan, Egypt  
+**Parish / Organization:** Church of the Great Martyr St. Mina the Wonderworker & Pope Kyrillos VI - Aswan, Egypt (كنيسة الشهيد العظيم مارمينا العجائبي والبابا كيرلس السادس بأسوان)  
 **Repository Working Directory:** `D:\Aribsalin\Aribsalin`  
 **Documentation Path:** `MD/ARIBSALIN-DOCUMENTATION.md`  
 **Last Updated:** September 2026  
@@ -39,7 +39,7 @@
    - [Strict Frontend Implementation Rules](#strict-frontend-implementation-rules)
    - [Local Development Setup](#local-development-setup)
    - [Production Build & Verification](#production-build--verification)
-   - [The 8 Critical Architectural Invariants & Edge Cases](#the-8-critical-architectural-invariants--edge-cases)
+   - [The 9 Critical Architectural Invariants & Edge Cases](#the-9-critical-architectural-invariants--edge-cases)
    - [Document Maintenance Policy](#document-maintenance-policy)
 
 ---
@@ -63,10 +63,11 @@ The name **Aribsalin** originates in the Coptic hymnological tradition (from Cop
 +-------------------------------+                         +-------------------------------+
 |       Student Portal          |                         |       Servant Portal          |
 |  - Zero-password Smart ID/QR  |                         |  - Dual Login (ID or Mobile)  |
-|  - Real-time Points Gauge     |                         |  - Granular RBAC Tiers        |
+|  - Real-time Points Gauge     |                         |  - 4-Tier RBAC + Developer    |
 |  - Circular Attendance %      |                         |  - High-Speed QR Scanner      |
-|  - Full Transaction Ledger    |                         |  - Treasury, Sessions & Stats |
-|  - Digital ID Card PNG Export |                         |  - Bulk Card Deck PDF Engine  |
+|  - Full Transaction Ledger    |                         |  - Actionable WhatsApp & Tel  |
+|  - Digital ID Card PNG Export |                         |  - Treasury, Sessions & Stats |
+|  - Actionable WhatsApp & Tel  |                         |  - Bulk Card Deck PDF Engine  |
 +-------------------------------+                         +-------------------------------+
 ```
 
@@ -87,6 +88,8 @@ Traditional parish festivals, youth camps, and Sunday schools operate under inte
    Tracking expenses (catering, transport, audio gear, trophies, prizes) against donations and enrollment fees was historically done on disjointed paper receipts. The integrated **Treasury Ledger (`/finance`)** links financial records directly to specific educational stages, transaction dates, and responsible servants.
 7. **Servant Login Friction & Forgotten Codes:**  
    Servants frequently forget their auto-generated alphanumeric Smart IDs on mobile devices. Aribsalin provides a **Dual-Login Mechanism** in `LoginPage.tsx` that seamlessly accepts either a Smart ID (e.g., `NP101`) or an 11-digit Egyptian mobile phone number (`01XXXXXXXXX`), backed by pre-flight uniqueness validation in `SignupPage.tsx` and a unique constraint on `servants.mobile_personal`.
+8. **Communication Gaps with Parents and Servants:**  
+   Quick follow-ups with parents or servants previously required leaving the application and manually typing 11-digit numbers into external phone dialers or WhatsApp. Aribsalin integrates **Actionable Contact Links** directly into profile screens, offering native one-tap dialing (`tel:`) and instant WhatsApp chat opening (`https://wa.me/201XXXXXXXXX`) with the Egyptian country code automatically formatted.
 
 ### Domain Mechanics & Gamification Engine
 
@@ -171,31 +174,33 @@ Traditional parish festivals, youth camps, and Sunday schools operate under inte
 
 ### User Roles Inventory & RBAC Matrix
 
-The system enforces four distinct user tiers across all views and data mutations:
+The system enforces five distinct user tiers across all views and data mutations:
 
-| Feature / Capability | Student / Participant (`student`) | Normal Servant (`normal`) | Class Supervisor (`supervisor`) | Service Administrator (`admin`) |
-|---|:---:|:---:|:---:|:---:|
-| **Entry Gateway** | `/student-portal` | `/login` | `/login` | `/login` |
-| **Authentication Credential** | Smart ID or Badge QR | `T-ID` OR Mobile + Pass | `T-ID` OR Mobile + Pass | `T-ID` OR Mobile + Pass |
-| **Dual-Login by Mobile Supported** | No | Yes | Yes | Yes |
-| **View Personal Points & Attendance** | Read-Only | Read-Only | Read-Only | Read-Only |
-| **Export Personal Digital ID Card (PNG)** | Yes (`/profile/:id`) | Yes | Yes | Yes |
-| **QR Attendance Scanning (+10 pts)** | No | Yes (All Stages) | Yes (All Stages) | Yes (All Stages) |
-| **QR Marketplace Point Deductions** | No | Yes (Balance Checked) | Yes (Balance Checked) | Yes (Balance Checked) |
-| **QR Bonus Points Allocation** | No | Yes | Yes | Yes |
-| **Browse Participants Directory (`/participants`)** | No | Yes (Read / Attendance / Points) | Yes (Full CRUD) | Yes (Full CRUD) |
-| **Manual Points Adjustment Modal** | No | Yes (via Directory) | Yes | Yes |
-| **Manual Retroactive Attendance Check-in** | No | Yes (via Directory) | Yes | Yes |
-| **Register New Participants (`/registration`)** | No | No | Yes (Class Scoped) | Yes (All Stages) |
-| **Edit Participant Information (`?edit=:id`)** | No | No | Yes (Class Scoped) | Yes (All Stages) |
-| **Delete Participant Record** | No | No | Yes (Class Scoped) | Yes (All Stages) |
-| **Delete Single Attendance Log (Rollback)** | No | No | Yes (Compensating -10 pts) | Yes (Compensating -10 pts) |
-| **View Analytics & Demographics (`/statistics`)** | No | No | Yes (Stage Filtered) | Yes (Global Festival) |
-| **Manage Treasury & Cash Flow (`/finance`)** | No | No | No | Yes (Revenues / Expenses) |
-| **Macro Session Attendance Wipe (`/sessions`)** | No | No | No | Yes (200-Batch Safe) |
-| **Servant Registration Review (`/requests`)** | No | No | No | Yes (Approve / Reject) |
-| **Servants Directory (`/teachers`)** | No | No | No | Yes (Grouped by Stage) |
-| **Bulk Printable ID Cards PDF Export** | No | No | No | Yes (Multi-Stage Batch) |
+| Feature / Capability | Student / Participant (`student`) | Normal Servant (`normal`) | Class Supervisor (`supervisor`) | Service Administrator (`admin`) | System Developer (`developer`) |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **Entry Gateway** | `/student-portal` | `/login` | `/login` | `/login` | `/login` |
+| **Authentication Credential** | Smart ID or Badge QR | `T-ID` OR Mobile + Pass | `T-ID` OR Mobile + Pass | `T-ID` OR Mobile + Pass | `T-ID` OR Mobile + Pass |
+| **Dual-Login by Mobile Supported** | No | Yes | Yes | Yes | Yes |
+| **View Personal Points & Attendance** | Read-Only | Read-Only | Read-Only | Read-Only | Read-Only |
+| **Export Personal Digital ID Card (PNG)** | Yes (`/profile/:id`) | Yes | Yes | Yes | Yes |
+| **Actionable Contact (Tel & WhatsApp)** | Yes (`/profile/:id`) | Yes | Yes | Yes | Yes |
+| **QR Attendance Scanning (+10 pts)** | No | Yes (All Stages) | Yes (All Stages) | Yes (All Stages) | Yes (All Stages) |
+| **QR Marketplace Point Deductions** | No | Yes (Balance Checked) | Yes (Balance Checked) | Yes (Balance Checked) | Yes (Balance Checked) |
+| **QR Bonus Points Allocation** | No | Yes | Yes | Yes | Yes |
+| **Browse Participants Directory (`/participants`)** | No | Yes (Read / Attendance / Points) | Yes (Full CRUD) | Yes (Full CRUD) | Yes (Full CRUD) |
+| **Manual Points Adjustment Modal** | No | Yes (via Directory) | Yes | Yes | Yes |
+| **Manual Retroactive Attendance Check-in** | No | Yes (via Directory) | Yes | Yes | Yes |
+| **Register New Participants (`/registration`)** | No | No | Yes (Class Scoped) | Yes (All Stages) | Yes (All Stages) |
+| **Edit Participant Information (`?edit=:id`)** | No | No | Yes (Class Scoped) | Yes (All Stages) | Yes (All Stages) |
+| **Delete Participant Record** | No | No | Yes (Class Scoped) | Yes (All Stages) | Yes (All Stages) |
+| **Delete Single Attendance Log (Rollback)** | No | No | Yes (Compensating -10 pts) | Yes (Compensating -10 pts) | Yes (Compensating -10 pts) |
+| **View Analytics & Demographics (`/statistics`)** | No | No | Yes (Stage Filtered) | Yes (Global Festival) | Yes (Global Festival) |
+| **Manage Treasury & Cash Flow (`/finance`)** | No | No | No | Yes (Revenues / Expenses) | Yes (Full Access) |
+| **Macro Session Attendance Wipe (`/sessions`)** | No | No | No | Yes (200-Batch Safe) | Yes (Full Access) |
+| **Servant Registration Review (`/requests`)** | No | No | No | Yes (Approve / Reject) | Yes (Full Access) |
+| **Servants Directory (`/teachers`)** | No | No | No | Yes (Grouped by Stage) | Yes (Full Access) |
+| **Bulk Printable ID Cards PDF Export** | No | No | No | Yes (Multi-Stage Batch) | Yes (Full Access) |
+| **Universal Route Bypass (God Mode)** | No | No | No | No | **Yes (Full Bypass)** |
 
 ---
 
@@ -205,7 +210,7 @@ The system enforces four distinct user tiers across all views and data mutations
 * **Primary Route:** `/student-portal`  
 * **Target Audience:** Sunday school children, youth participants, and their parents.
 * **Access Model:** Zero-friction login requiring no password. The student enters their human-readable Smart ID (e.g., `P301`, `K002`) or scans their printed badge via webcam (`/scanner?mode=viewDetails`).
-* **Experience (`/profile/:id`):** Displays the student's avatar photo, age, confession father, educational stage, real-time points gauge, circular attendance percentage gauge, chronological attendance history, and an action to download their digital badge as a high-resolution PNG.
+* **Experience (`/profile/:id`):** Displays the student's avatar photo, age, confession father, educational stage, real-time points gauge, circular attendance percentage gauge, chronological attendance history, actionable contact information with WhatsApp and direct calling, and an action to download their digital badge as a high-resolution PNG.
 
 #### 2. Normal Servant Portal
 * **Primary Route:** `/login` -> `/dashboard`  
@@ -219,11 +224,17 @@ The system enforces four distinct user tiers across all views and data mutations
 * **Access Model:** Authenticates via Supervisor Smart ID (e.g., `SP301`) or Egyptian Mobile Number.
 * **Experience:** All Normal Servant scanning tools plus enrollment access (`/registration`), editing rights, deletion capabilities, attendance log deletion with automated 10-point rollback, and a dedicated **Statistics Page (`/statistics`)** that automatically isolates metrics to their assigned educational stage (`class_stage`).
 
-#### 4. Administrator Portal
+#### 4. Service Administrator Portal
 * **Primary Route:** `/login` -> `/dashboard`  
 * **Target Audience:** General Sunday school leaders (أمين الخدمة), parish priests, and head coordinators.
 * **Access Model:** Authenticates via Admin Smart ID (e.g., `A01`) or Egyptian Mobile Number.
 * **Experience:** Full system management suite containing the **Financial Ledger (`/finance`)**, **Staff Approvals Board (`/requests`)**, **Staff Directory (`/teachers`)**, **Macro Session Wipe Manager (`/sessions`)**, and **Bulk Printable PDF ID Generator (`BulkIDDownloadModal`)**.
+
+#### 5. System Developer Portal (Super Admin / God Mode)
+* **Primary Route:** `/login` -> `/dashboard`  
+* **Target Audience:** System Architects, Lead Developers, and Technical Administrators.
+* **Access Model:** Authenticates via Developer Smart ID or registered Egyptian Mobile Number.
+* **Experience:** Universal bypass in `RoleGuard.tsx` (`userRole === 'developer'`). Grants unrestricted access across all application routes, financial transactions, session managers, approval boards, and raw profile configurations without stage constraints.
 
 ---
 
@@ -417,6 +428,15 @@ sequenceDiagram
     Modal-->>Admin: Download triggers automatically in browser
 ```
 
+#### Workflow G: Actionable Contact Interaction (WhatsApp & Native Dialer)
+
+```mermaid
+flowchart LR
+    Profile[Student or Servant Profile] --> NumberBlock[Contact Block: Personal / Father / Mother]
+    NumberBlock -->|Click Number| NativeDialer[tel:01XXXXXXXXX -> Device Native Phone Dialer]
+    NumberBlock -->|Click WhatsApp Icon| WAUrl[https://wa.me/201XXXXXXXXX -> Open WhatsApp Chat]
+```
+
 ---
 
 ## 4. Architecture & State Management
@@ -496,6 +516,7 @@ export interface FestivalState {
    Secures role-restricted routes (`/statistics`, `/registration`, `/finance`, `/sessions`, `/requests`, `/teachers`):
    - If `!isInitialized`, displays a branded loading spinner.
    - If `!isAuthenticated`, redirects the client to `/login` preserving intended destination in router state.
+   - **Developer Bypass:** If `currentServant.role === 'developer'`, the check immediately passes, bypassing all role restrictions.
    - If `allowedRoles` does not include `currentServant.role`, displays an unauthorized toast and redirects to `/dashboard`.
 3. **`AuthGuard` (`src/components/auth/RoleGuard.tsx`):**  
    A specialized convenience wrapper around `RoleGuard` with no role restrictions, securing routes that require any logged-in servant (`/dashboard`, `/participants`, `/servant-profile/:id`).
@@ -550,7 +571,7 @@ CREATE TABLE public.servants (
   teacher_id text NOT NULL UNIQUE,                -- Smart ID (e.g., A01, SP301, NP101)
   full_name text NOT NULL,                        -- Servant full name
   gender text CHECK (gender IN ('male', 'female')),
-  role text CHECK (role IN ('normal', 'supervisor', 'admin')),
+  role text CHECK (role IN ('normal', 'supervisor', 'admin', 'developer')),
   class_stage text,                              -- Serving stage (e.g., primary_34)
   educational_stage text,                        -- Servant's personal education
   academic_year text,                            -- Servant's personal academic year
@@ -646,7 +667,7 @@ src/
 ├── components/
 │   ├── auth/
 │   │   ├── AuthInitializer.tsx     # Session listener, Sonner Toaster & WelcomeScreen trigger
-│   │   └── RoleGuard.tsx           # Route guards (RoleGuard & AuthGuard) for RBAC enforcement
+│   │   └── RoleGuard.tsx           # Route guards (RoleGuard & AuthGuard) with Developer God-Mode bypass
 │   ├── forms/
 │   │   └── RegistrationForm.tsx    # Participant registration/edit form with duplicate validation
 │   ├── layout/
@@ -684,12 +705,12 @@ src/
 │   ├── RegistrationPage.tsx        # Full-page participant registration & edit container
 │   ├── RegistrationRequestsPage.tsx# Review board for pending servant accounts
 │   ├── RoleSelectionPage.tsx       # Root gateway (Servant vs. Participant selection)
-│   ├── ServantProfile.tsx          # Servant profile details and avatar viewer
+│   ├── ServantProfile.tsx          # Servant profile details, avatar viewer & actionable contact links
 │   ├── SessionsManagementPage.tsx  # Macro attendance session manager with 200-chunk deletion
 │   ├── SignupPage.tsx              # Servant onboarding with Smart ID generation & phone uniqueness
 │   ├── StatisticsPage.tsx          # Analytics dashboard with supervisor stage scoping
 │   ├── StudentPortalLogin.tsx      # Participant login portal via Smart ID or QR
-│   ├── StudentProfile.tsx          # Participant profile, points ledger & PNG ID card export
+│   ├── StudentProfile.tsx          # Participant profile, points ledger, PNG ID card & actionable contact links
 │   └── TeachersPage.tsx            # Servant directory grouped by stage with supervisor flags
 ├── store/
 │   └── useFestivalStore.ts         # Global Zustand store managing roster, auth & sync
@@ -700,7 +721,7 @@ src/
 │   ├── tailwind.css                # Tailwind CSS v4 compiler entry (@import "tailwindcss")
 │   └── theme.css                   # Coptic design tokens, CSS variables & typography rules
 ├── types/
-│   └── index.ts                    # TypeScript interfaces (StudentData, Participant, TeacherData)
+│   └── index.ts                    # TypeScript interfaces (StudentData, Participant, TeacherData with Developer role)
 ├── utils/
 │   └── textUtils.ts                # Arabic text normalizer (strips diacritics, unifies Alef/Haa)
 ├── main.tsx                        # DOM mount point (createRoot)
@@ -717,12 +738,12 @@ src/
 
 #### 📂 `src/assets/images/`
 Stores brand assets imported as static ES modules:
-* `church logo.png`: Crest of the Church of St. Mina & Pope Kyrillos VI in Aswan.
-* `service logo.png`: Official circular emblem of the Aribsalin Service / Festival.
+* `church logo.png`: Official crest of the Church of St. Mina & Pope Kyrillos VI in Aswan.
+* `service logo.png`: Official circular emblem of the Aribsalin Service / Festival (updated from festival logo).
 
 #### 📂 `src/components/auth/`
 * **`AuthInitializer.tsx`:** Orchestrates session startup. Calls `initializeAuth()` and `fetchData()`, attaches Supabase `onAuthStateChange` listeners, renders the global `<Toaster />`, and opens `<WelcomeScreen />` on initial visits.
-* **`RoleGuard.tsx`:** Implements route-level security. Evaluates whether the user's role satisfies `allowedRoles` and redirects unauthorized requests to `/dashboard` with an error toast. Contains the `AuthGuard` sub-component.
+* **`RoleGuard.tsx`:** Implements route-level security. Evaluates whether the user's role satisfies `allowedRoles`. Contains an explicit bypass for `userRole === 'developer'` acting as Super Admin / God Mode. Contains the `AuthGuard` sub-component.
 
 #### 📂 `src/components/forms/`
 * **`RegistrationForm.tsx`:** Reusable participant enrollment form. Handles real-time photo selection with preview, fetches neighborhood names from the `areas` table, enforces strict 11-digit phone formatting, and validates against duplicate names.
@@ -750,11 +771,12 @@ A library of 48 atomic, headless UI components built on Radix UI and Tailwind CS
 * **`ParticipantsPage.tsx`:** Full-screen participant directory accessible to all servants via Dashboard ("سجل المشاركين"). Features real-time search, multi-faceted filtering (Academic Year, Gender, Area), manual attendance dialog, points management, and dynamic permissions (`canEdit` and `canDelete` dynamically passed based on role).
 * **`RegistrationPage.tsx`:** Handles new participant enrollment and modifications via `?edit=:id`. Calculates Smart IDs using gap-filling and updates the global roster.
 * **`FinancePage.tsx`:** Treasury accounting ledger. Records Revenues and Expenses, categorizes entries by educational stage, and visualizes cash flow using Recharts.
-* **`StatisticsPage.tsx`:** Analytics dashboard. For supervisors, it strictly isolates metrics, leaderboards, and attendance timelines to their assigned `class_stage`. For admins, it presents global festival metrics.
+* **`StatisticsPage.tsx`:** Analytics dashboard. For supervisors, it strictly isolates metrics, leaderboards, and attendance timelines to their assigned `class_stage`. For admins and developers, it presents global festival metrics.
 * **`SessionsManagementPage.tsx`:** Macro attendance session manager. Groups check-in logs by date and stage. Enables admins to wipe an entire day's session for a stage, executing deletions in batches of 200 logs to circumvent PostgREST URL length limits.
 * **`RegistrationRequestsPage.tsx`:** Administrative review board for pending servant signups (`status = 'pending'`).
 * **`TeachersPage.tsx`:** Staff directory grouping approved servants by educational stage, highlighting designated class supervisors with crown icons.
-* **`StudentProfile.tsx` & `ServantProfile.tsx`:** Detailed personal records. `StudentProfile` includes individual PNG badge download and granular attendance deletion with point rollbacks. `ServantProfile` displays personal and service details.
+* **`StudentProfile.tsx`:** Participant profile detailing personal, educational, and contact information. Features clickable `tel:` links and authentic brand WhatsApp buttons (`https://wa.me/201XXXXXXXXX`), individual PNG badge downloads, and attendance cancellation with point rollback.
+* **`ServantProfile.tsx`:** Detailed servant record. Features actionable contact links with `tel:` and authentic WhatsApp chat button, personal education, service stage, and role badge (`خادم`, `أمين فصل`, `أمين الخدمة`, `مطور النظام`).
 * **`StudentPortalLogin.tsx`:** Login screen for students via Smart ID input or QR camera scanning.
 * **`RoleSelectionPage.tsx`:** Initial entry screen allowing visitors to choose between Student Portal or Servant Portal.
 * **`LoginPage.tsx`:** Servant credentials authentication interface with dual-login (Smart ID or Egyptian Mobile Number) and synthetic email construction.
@@ -770,7 +792,7 @@ A library of 48 atomic, headless UI components built on Radix UI and Tailwind CS
 * **`index.css` & `globals.css`:** Aggregates fonts, Tailwind, and theme imports with base resets.
 
 #### 📂 `src/types/`
-* **`index.ts`:** TypeScript interfaces for `StudentData`, `Participant`, and `TeacherData`.
+* **`index.ts`:** TypeScript interfaces for `StudentData`, `Participant`, and `TeacherData` (including `'developer'` role definition).
 
 #### 📂 `src/utils/`
 * **`textUtils.ts`:** Provides `normalizeArabicText(text: string)`. Strips Arabic diacritics (التشكيل), unifies Alef variants (`أ`, `إ`, `آ` -> `ا`), converts Taa Marbouta to Haa (`ة` -> `ه`), converts Alef Maksoura to Yaa (`ى` -> `ي`), and normalizes Hamzas (`ؤ` -> `و`, `ئ` -> `ي`).
@@ -790,7 +812,7 @@ The application adheres to **The Coptic Heritage Palette**, a disciplined visual
 | **Warm Parchment** | `var(--background)` | `#FAF7F2` | Application background, subtle card contrast. |
 | **Deep Walnut** | `var(--foreground)` | `#3D2817` | High-contrast typography for sunlight readability. |
 | **Muted Sand** | `var(--muted)` | `#E8DCC8` | Disabled controls, inactive borders, subtle dividers. |
-| **Emerald Green** | `var(--success)` | `#10B981` | Points bonus confirmations, check-in success badges. |
+| **Emerald Green** | `var(--success)` | `#10B981` | Points bonus confirmations, check-in success badges, WhatsApp buttons (`text-green-600`, `bg-green-50`). |
 | **Crimson Red** | `var(--destructive)` | `#D4183D` | Expenses, delete actions, attendance cancellations. |
 | **Sky Blue** | `--male` | `#3B82F6` | Male student badge accents and demographic charts. |
 | **Rose Pink** | `--female` | `#EC4899` | Female student badge accents and demographic charts. |
@@ -809,6 +831,8 @@ The application adheres to **The Coptic Heritage Palette**, a disciplined visual
    Never call `window.alert()` in production code. Always use the `sonner` toast engine: `toast.success()`, `toast.error()`, `toast.info()`.
 6. **Static Image Imports Only:**  
    Never use dynamic URL resolution (`new URL(..., import.meta.url)`) for images. Always use static ES module imports (`import churchLogo from '../assets/images/church logo.png'`).
+7. **Actionable Contact Links Formatting:**  
+   All phone numbers displayed in profile views must be rendered as clickable `tel:` anchors with `dir="ltr"` and `hover:underline`. Adjacent WhatsApp buttons must link to `https://wa.me/2${cleanPhone}` with `target="_blank"`, `rel="noopener noreferrer"`, title `"مراسلة عبر واتساب"`, and render the authentic WhatsApp brand SVG with `fill="currentColor"`.
 
 ---
 
@@ -816,7 +840,7 @@ The application adheres to **The Coptic Heritage Palette**, a disciplined visual
 
 #### Prerequisites
 * **Node.js:** `v18.18.0` or higher (Node 20 LTS recommended).
-* **Package Manager:** `pnpm` (v8 or v9 recommended).
+* **Package Manager:** `pnpm` (v8 or v9 recommended) or `npm`.
 * **Hardware:** Webcam or mobile camera access enabled in browser settings for QR testing.
 
 #### Installation & Execution Commands
@@ -856,7 +880,7 @@ Deployments are managed automatically via **Vercel** configured with `@vercel/st
 
 ---
 
-### The 8 Critical Architectural Invariants & Edge Cases
+### The 9 Critical Architectural Invariants & Edge Cases
 
 When developing or modifying this codebase, developers and AI agents must preserve the following architectural invariants:
 
@@ -895,10 +919,28 @@ const { data, error } = await supabase.auth.signInWithPassword({ email, password
 - Database table `servants` enforces `mobile_personal UNIQUE`.
 *Never remove pre-flight phone validation or permit duplicate mobile numbers in the servants table.*
 
-#### 4. iOS Safari Camera Freeze Prevention
+#### 4. Developer God-Mode RBAC Bypass
+In `src/components/auth/RoleGuard.tsx`, the `developer` role acts as a universal bypass:
+```typescript
+const userRole = currentServant.role || 'normal';
+// The 'developer' role acts as a Super Admin / God Mode and bypasses all restrictions
+if (userRole !== 'developer' && !allowedRoles.includes(userRole)) {
+  toast.error('غير مصرح لك بالدخول لهذه الصفحة');
+  return <Navigate to="/dashboard" replace />;
+}
+```
+*Never restrict a `developer` role from accessing administrative, financial, or session management views.*
+
+#### 5. Actionable WhatsApp & Dialer Links Protocol
+Phone numbers displayed in profiles (`StudentProfile.tsx`, `ServantProfile.tsx`) must always provide dual actionability:
+1. Native dialer: `<a href="tel:${mobile}" dir="ltr" className="hover:underline">...</a>`
+2. WhatsApp chat: `<a href="https://wa.me/2${mobile}" target="_blank" rel="noopener noreferrer">...</a>`
+Note that Egyptian phone numbers (`01XXXXXXXXX`) require appending `2` (the country code `+20` with the leading zero: `2` + `01...` = `201...`) to construct valid international `wa.me` links. The WhatsApp SVG icon must use `fill="currentColor"` to inherit the `text-green-600` styling.
+
+#### 6. iOS Safari Camera Freeze Prevention
 On iOS devices running Mobile Safari, calling the standard `navigator.vibrate()` API causes the active camera stream (`MediaStreamTrack`) to freeze indefinitely. In `src/components/shared/QRScanner.tsx`, all vibration triggers have been intentionally removed. *Never reintroduce `navigator.vibrate()` inside scanner callbacks.*
 
-#### 5. Supabase PostgREST URL Length Limits (200-Chunk Batches)
+#### 7. Supabase PostgREST URL Length Limits (200-Chunk Batches)
 When an administrator deletes an entire session containing hundreds of attendance records in `SessionsManagementPage.tsx`, executing `.in('id', longArrayOfUuids)` will cause HTTP 414 (URI Too Long) errors in PostgREST. The codebase chunks all array deletions into batches of 200:
 ```typescript
 const chunkSize = 200;
@@ -909,14 +951,14 @@ for (let i = 0; i < logIds.length; i += chunkSize) {
 ```
 *Always maintain chunking on bulk delete or update operations.*
 
-#### 6. `html2canvas` Color Space & Rendering Constraints
+#### 8. `html2canvas` Color Space & Rendering Constraints
 When rasterizing the digital ID card in `html2canvas`, modern CSS color spaces like OKLCH (`oklch(...)`) can cause mobile canvas rendering to crash or produce black boxes. `src/components/shared/IDCard.tsx` uses static hexadecimal color codes (`#8B1538`, `#C9A961`, `#FAF7F2`) on exported nodes to ensure rendering fidelity across all mobile devices.
 
-#### 7. Universal Directory Access with Granular Scoped RBAC
+#### 9. Universal Directory Access with Granular Scoped RBAC
 The Participants Directory (`/participants`) is universally accessible to all authenticated servants via the Dashboard button **"سجل المشاركين"**. However, mutation rights must strictly depend on the user's role:
 ```tsx
 const userRole = currentServant?.role || 'normal';
-const canManage = ['admin', 'supervisor'].includes(userRole);
+const canManage = ['admin', 'supervisor', 'developer'].includes(userRole);
 
 <ParticipantsPage
   canEdit={canManage}
@@ -926,9 +968,6 @@ const canManage = ['admin', 'supervisor'].includes(userRole);
 />
 ```
 *Never restrict access to the Participants Directory from normal servants; restrict only the edit and delete mutation actions.*
-
-#### 8. URL-Based Routing & Global Store Architectural Decoupling
-The codebase has migrated from the legacy monolithic `AppMain.tsx` controller to **React Router v7** and **Zustand 5**. Do not re-introduce large state hubs or nested context wrappers into `AppMain.tsx`. New features should be added as modular routed pages under `src/pages/` and interact with the centralized store via `useFestivalStore()`.
 
 ---
 
