@@ -84,3 +84,14 @@ CREATE TABLE public.financial_transactions (
   CONSTRAINT financial_transactions_pkey PRIMARY KEY (id),
   CONSTRAINT financial_transactions_servant_id_fkey FOREIGN KEY (servant_id) REFERENCES public.servants(id)
 );
+CREATE TABLE public.servant_attendance_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  servant_id uuid NOT NULL,
+  scanned_by uuid,
+  meeting_type text NOT NULL CHECK (meeting_type = ANY (ARRAY['class'::text, 'service_meeting'::text])),
+  attendance_date date DEFAULT CURRENT_DATE,
+  scanned_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT servant_attendance_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT servant_attendance_logs_servant_id_fkey FOREIGN KEY (servant_id) REFERENCES public.servants(id),
+  CONSTRAINT servant_attendance_logs_scanned_by_fkey FOREIGN KEY (scanned_by) REFERENCES public.servants(id)
+);
