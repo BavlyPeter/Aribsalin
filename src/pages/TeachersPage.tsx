@@ -86,7 +86,8 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
       const { data, error } = await supabase
         .from('servants')
         .select('*')
-        .eq('status', 'approved');
+        .eq('status', 'approved')
+        .neq('role', 'developer'); // Stealth Mode: Hide developers from UI
 
       if (error) throw error;
 

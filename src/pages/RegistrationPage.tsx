@@ -14,7 +14,7 @@ export function RegistrationPage() {
   const [editData, setEditData] = useState<any | null>(editId ? { id: editId } : null);
 
   useEffect(() => {
-    if (isInitialized && (!currentServant || !['admin', 'supervisor'].includes(currentServant.role))) {
+    if (isInitialized && (!currentServant || !['admin', 'supervisor', 'developer'].includes(currentServant.role))) {
       navigate('/login');
     }
   }, [isInitialized, currentServant, navigate]);

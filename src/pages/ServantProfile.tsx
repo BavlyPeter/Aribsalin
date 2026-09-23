@@ -12,7 +12,8 @@ interface ServantProfileProps {
 const roleLabels: Record<string, string> = {
   'normal': 'خادم',
   'supervisor': 'أمين فصل',
-  'admin': 'أمين الخدمة'
+  'admin': 'أمين الخدمة',
+  'developer': 'مطور النظام'
 };
 
 const servingStages: Record<string, string> = {
@@ -108,7 +109,7 @@ export function ServantProfile({ servantId: propsServantId, onBack }: ServantPro
           <div className="w-24 h-24 rounded-full mx-auto mb-4 overflow-hidden border-4 border-white shadow-xl bg-primary/10 flex items-center justify-center">
             {servant.photo_url ? (
               <img src={servant.photo_url} alt={servant.full_name} className="w-full h-full object-cover" />
-            ) : servant.role === 'supervisor' || servant.role === 'admin' ? (
+            ) : servant.role === 'supervisor' || servant.role === 'admin' || servant.role === 'developer' ? (
               <Crown className="w-12 h-12" style={{ color: 'var(--secondary)' }} />
             ) : (
               <User className="w-12 h-12 text-primary" />
@@ -120,7 +121,7 @@ export function ServantProfile({ servantId: propsServantId, onBack }: ServantPro
           <div className="inline-flex items-center gap-2 bg-secondary/10 px-4 py-2 rounded-lg" style={{ color: 'var(--secondary)' }}>
             <span className="text-sm font-medium">
               {roleLabels[servant.role || 'normal']} 
-              {servant.role !== 'admin' && servant.class_stage ? ` - ${servingStages[servant.class_stage] || servant.class_stage}` : ''}
+              {servant.role !== 'admin' && servant.role !== 'developer' && servant.class_stage ? ` - ${servingStages[servant.class_stage] || servant.class_stage}` : ''}
             </span>
           </div>
         </div>

@@ -41,7 +41,8 @@ export function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
     }
 
     const userRole = currentServant.role || 'normal';
-    if (!allowedRoles.includes(userRole)) {
+    // The 'developer' role acts as a Super Admin / God Mode and bypasses all restrictions
+    if (userRole !== 'developer' && !allowedRoles.includes(userRole)) {
       if (!toastShownRef.current) {
         toast.error('غير مصرح لك بالدخول لهذه الصفحة');
         toastShownRef.current = true;

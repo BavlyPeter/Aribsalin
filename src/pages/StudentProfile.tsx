@@ -394,8 +394,8 @@ export function StudentProfile({
                     <span className="font-medium text-foreground" dir="ltr">{date}</span>
                   </div>
                   
-                  {/* Delete Button (Only for Admin/Supervisor) */}
-                  {(viewerRole === 'admin' || viewerRole === 'supervisor') && (
+                  {/* Delete Button (Only for Admin/Supervisor/Developer) */}
+                  {(viewerRole === 'admin' || viewerRole === 'supervisor' || viewerRole === 'developer') && (
                     <button
                       onClick={() => handleDeleteDate(date)}
                       disabled={isDeletingDate === date}

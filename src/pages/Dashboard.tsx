@@ -37,14 +37,15 @@ export function Dashboard({
   
   // Define roles based on currentServant.role
   const userRole = currentServant?.role || 'normal';
-  const isAdmin = userRole === 'admin';
+  const isAdmin = userRole === 'admin' || userRole === 'developer';
   const isSupervisor = userRole === 'supervisor';
-  const canManageParticipants = isAdmin || isSupervisor; // Admin & Supervisor can add, edit, delete
+  const canManageParticipants = isAdmin || isSupervisor; // Admin, Supervisor & Developer can add, edit, delete
 
   const roleLabels: Record<string, string> = {
     'normal': 'خادم',
     'supervisor': 'أمين فصل',
-    'admin': 'أمين الخدمة'
+    'admin': 'أمين الخدمة',
+    'developer': 'مطور النظام'
   };
 
   const stageLabels: Record<string, string> = {

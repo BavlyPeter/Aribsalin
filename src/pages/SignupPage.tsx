@@ -60,7 +60,7 @@ export function SignupPage({ onSignup, onBack, editData: propsEditData, clearEdi
   const { currentServant, isInitialized } = useFestivalStore();
 
   useEffect(() => {
-    if (isInitialized && editId && currentServant?.role !== 'admin') {
+    if (isInitialized && editId && currentServant?.role !== 'admin' && currentServant?.role !== 'developer') {
       toast.error('غير مصرح لك');
       navigate('/');
     }
@@ -120,7 +120,7 @@ export function SignupPage({ onSignup, onBack, editData: propsEditData, clearEdi
     const fetchFullServantData = async () => {
       const targetId = editId || editData?.id;
       if (!targetId) return;
-      if (!isInitialized || currentServant?.role !== 'admin') return;
+      if (!isInitialized || (currentServant?.role !== 'admin' && currentServant?.role !== 'developer')) return;
 
       try {
         setIsLoading(true);

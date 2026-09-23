@@ -68,7 +68,7 @@ export function ParticipantsPage({
   const { participants: storeParticipants, currentServant, setParticipants, fetchData } = useFestivalStore();
 
   const userRole = currentServant?.role || 'normal';
-  const canManage = ['admin', 'supervisor'].includes(userRole);
+  const canManage = ['admin', 'supervisor', 'developer'].includes(userRole);
   const canEdit = propsCanEdit !== undefined ? propsCanEdit : canManage;
   const canDelete = propsCanDelete !== undefined ? propsCanDelete : canManage;
 

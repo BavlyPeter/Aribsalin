@@ -60,7 +60,7 @@ export interface TeacherData {
   // Authentication & RBAC
   teacherId: string;
   password: string;
-  role: 'normal' | 'supervisor' | 'admin' | '';
+  role: 'normal' | 'supervisor' | 'admin' | 'developer' | '';
   classStage: string;
   mobile: string;
   area: string;
