@@ -55,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **New Component:** `/src/app/components/IDCard.tsx`
   - Professional ID card design with church branding
   - 350x550px dimensions (standard ID card proportions)
-  - Dual logo display (church + festival logos)
+  - Dual logo display (church + service Logos)
   - Gender-based color theming:
     - Male: Blue gradient (#3B82F6 → #2563EB)
     - Female: Pink gradient (#EC4899 → #DB2777)
@@ -94,8 +94,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 #### Logo Display Issue (CRITICAL)
-- **Problem:** Church logo (`church logo.png`) and festival logo (`service logo.png`) not displaying in ID card component
-- **Error Message:** `❌ Festival logo failed to load: /src/imports/service logo.png`
+- **Problem:** Church logo (`church logo.png`) and service Logo (`service logo.png`) not displaying in ID card component
+- **Error Message:** `❌ service Logo failed to load: /src/imports/service logo.png`
 - **Root Cause:** Used dynamic URL construction with `new URL(path, import.meta.url).href` which resolved to source path instead of processed asset path
 - **Solution:** Changed to static ES module imports matching pattern in EnhancedDashboard and LoginPage
   ```typescript
@@ -104,7 +104,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   
   // After (fixed)
   import churchLogo from '../../imports/church logo.png';
-  import festivalLogo from '../../imports/service logo.png';
+  import serviceLogo from '../../imports/service logo.png';
   ```
 - **Impact:** Logos now display correctly in development and production builds
 - **Testing:** Verified consistency across all components using logos

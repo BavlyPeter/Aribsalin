@@ -734,7 +734,7 @@ Stores brand assets imported as static ES modules:
 * **`ManualPointsModal.tsx`:** Search-driven point adjustment interface that does not require camera scanning.
 
 #### 📂 `src/components/shared/`
-* **`IDCard.tsx`:** The digital badge component (350x550px). Features church and festival logos, participant photo or initials, Arabic name, educational stage, Smart ID, and a Level-H `QRCodeSVG`.
+* **`IDCard.tsx`:** The digital badge component (350x550px). Features church and service Logos, participant photo or initials, Arabic name, educational stage, Smart ID, and a Level-H `QRCodeSVG`.
 * **`QRScanner.tsx`:** Hardened QR scanning engine powered by `html5-qrcode`. Implements an isolated `#file-qr-reader` canvas instance for screenshot uploads and suppresses vibration APIs to protect iOS Safari camera streams.
 * **`ParticipantsList.tsx`:** Compact roster view with search, gender filtering, stage filtering, and manual attendance logging.
 

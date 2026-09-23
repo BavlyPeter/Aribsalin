@@ -1,6 +1,6 @@
 import { QRCodeSVG } from 'qrcode.react';
 import churchLogo from '../../assets/images/church logo.png';
-import festivalLogo from '../../assets/images/service logo.png';
+import serviceLogo from '../../assets/images/service logo.png';
 import { StudentData } from '../../types';
 
 interface IDCardProps {
@@ -47,8 +47,8 @@ export function IDCard({ student }: IDCardProps) {
         {/* Church Logo - Upper Right */}
         <img src={churchLogo} alt="Church Logo" className="absolute top-3 right-2 w-21 h-14 object-contain" />
 
-        {/* Festival Logo - Center */}
-        <img src={festivalLogo} alt="Festival Logo" className="absolute top-3 left-1/2 transform -translate-x-1/2 h-14 object-contain" />
+        {/* service Logo - Center */}
+        <img src={serviceLogo} alt="service Logo" className="absolute top-3 left-1/2 transform -translate-x-1/2 h-14 object-contain" />
       </div>
 
       {/* Content Wrapper */}

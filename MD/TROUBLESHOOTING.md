@@ -11,7 +11,7 @@
 
 #### Symptoms
 - Church logo (`church logo.png`) not visible on ID card
-- Festival logo (`service logo.png`) not visible on ID card
+- service Logo (`service logo.png`) not visible on ID card
 - Broken image icon appears where logos should be
 - Console error: `Failed to load: /src/imports/...`
 
@@ -25,10 +25,10 @@ Using dynamic URL construction instead of static ES module imports.
 ```typescript
 // ✅ CORRECT - Do this
 import churchLogo from '../../imports/church logo.png';
-import festivalLogo from '../../imports/service logo.png';
+import serviceLogo from '../../imports/service logo.png';
 
 <img src={churchLogo} alt="Church Logo" className="..." />
-<img src={festivalLogo} alt="Festival Logo" className="..." />
+<img src={serviceLogo} alt="service Logo" className="..." />
 ```
 
 **Avoid these patterns:**

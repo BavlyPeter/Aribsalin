@@ -59,11 +59,11 @@ interface IDCardProps {
   - File: `church logo.png`
   - Import: `import churchLogo from '../../imports/church logo.png';`
   
-- **Festival Logo:**
+- **service Logo:**
   - Position: Absolute top-3, horizontally centered
   - Height: 56px, auto width
   - File: `service logo.png`
-  - Import: `import festivalLogo from '../../imports/service logo.png';`
+  - Import: `import serviceLogo from '../../imports/service logo.png';`
 
 ---
 
@@ -256,11 +256,11 @@ const downloadIDCard = async () => {
 ```typescript
 // At top of file
 import churchLogo from '../../imports/church logo.png';
-import festivalLogo from '../../imports/service logo.png';
+import serviceLogo from '../../imports/service logo.png';
 
 // In JSX
 <img src={churchLogo} alt="Church Logo" className="..." />
-<img src={festivalLogo} alt="Festival Logo" className="..." />
+<img src={serviceLogo} alt="service Logo" className="..." />
 ```
 
 ### ❌ INCORRECT Methods (Avoid)
@@ -344,7 +344,7 @@ import { IDCard } from './IDCard';
 ### v1.1.0 - Logo Display Fix
 
 **Problem:**
-- Church and festival logos not displaying
+- Church and service Logos not displaying
 - Error: `Failed to load: /src/imports/church logo.png`
 
 **Root Cause:**
@@ -355,7 +355,7 @@ import { IDCard } from './IDCard';
 ```typescript
 // Changed from dynamic URL to static import
 import churchLogo from '../../imports/church logo.png';
-import festivalLogo from '../../imports/service logo.png';
+import serviceLogo from '../../imports/service logo.png';
 ```
 
 **Result:**
