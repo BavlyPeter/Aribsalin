@@ -1,6 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowRight, User, Phone, MapPin, Book, Crown, Calendar, Info } from 'lucide-react';
+import { ArrowRight, User, Phone, MapPin, Book, Crown, Calendar, Info, Trash2, Download, CreditCard, CheckCircle2 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import html2canvas from 'html2canvas';
+import { IDCard } from '../components/shared/IDCard';
+import { useFestivalStore } from '../store/useFestivalStore';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 
@@ -40,9 +44,20 @@ export function ServantProfile({ servantId: propsServantId, onBack }: ServantPro
   const { id: paramId } = useParams();
   const servantId = propsServantId || paramId || '';
   const handleBack = onBack || (() => navigate(-1));
-  const [servant, setServant] = useState<any>(null);
+  const { currentServant, viewerRole: storeViewerRole } = useFestivalStore();
+  const viewerRole = currentServant?.role || storeViewerRole || 'normal';
+  const canDeleteAttendance = ['admin', 'supervisor', 'developer'].includes(viewerRole);
 
+  const [servant, setServant] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
+  const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
+  const [isDeletingLogId, setIsDeletingLogId] = useState<string | null>(null);
+
+  const qrRef = useRef<HTMLDivElement>(null);
+  const idCardRef = useRef<HTMLDivElement>(null);
+  const [isDownloadingCard, setIsDownloadingCard] = useState(false);
 
   useEffect(() => {
     const fetchServantData = async () => {
@@ -63,10 +78,137 @@ export function ServantProfile({ servantId: propsServantId, onBack }: ServantPro
       }
     };
 
+    const fetchAttendanceLogs = async () => {
+      if (!servantId) return;
+      setIsLoadingAttendance(true);
+      try {
+        const { data, error } = await supabase
+          .from('servant_attendance_logs')
+          .select('*')
+          .eq('servant_id', servantId)
+          .order('attendance_date', { ascending: false });
+
+        if (error) {
+          console.warn('Error fetching servant attendance logs:', error);
+        } else {
+          setAttendanceLogs(data || []);
+        }
+      } catch (err) {
+        console.error('Error fetching servant attendance logs:', err);
+      } finally {
+        setIsLoadingAttendance(false);
+      }
+    };
+
     if (servantId) {
       fetchServantData();
+      fetchAttendanceLogs();
     }
   }, [servantId]);
+
+  const handleDeleteAttendance = async (logId: string, date: string) => {
+    if (!confirm(`هل أنت متأكد من حذف سجل حضور يوم ${date}؟`)) return;
+    setIsDeletingLogId(logId);
+    try {
+      const { error } = await supabase
+        .from('servant_attendance_logs')
+        .delete()
+        .eq('id', logId);
+
+      if (error) throw error;
+
+      setAttendanceLogs(prev => prev.filter(item => item.id !== logId));
+      toast.success('تم حذف سجل الحضور بنجاح');
+    } catch (err) {
+      console.error('Error deleting attendance log:', err);
+      toast.error('فشل في حذف سجل الحضور');
+    } finally {
+      setIsDeletingLogId(null);
+    }
+  };
+
+  const downloadQRCode = () => {
+    const svg = qrRef.current?.querySelector('svg');
+    if (!svg) return;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const size = 600;
+    canvas.width = size;
+    canvas.height = size;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, size, size);
+
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, size, size);
+
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const link = document.createElement('a');
+        link.download = `QR_${servant.teacher_id}_${servant.full_name}.png`;
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        URL.revokeObjectURL(link.href);
+      });
+
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  };
+
+  const downloadIDCard = async () => {
+    if (!idCardRef.current) return;
+
+    setIsDownloadingCard(true);
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      const element = idCardRef.current.querySelector('#id-card') as HTMLElement;
+      if (!element) return;
+
+      const canvas = await html2canvas(idCardRef.current, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        foreignObjectRendering: false,
+        windowWidth: 350,
+        windowHeight: 550,
+        scrollX: 0,
+        scrollY: 0,
+        x: 0,
+        y: 0,
+        removeContainer: true
+      });
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          setIsDownloadingCard(false);
+          return;
+        }
+        const link = document.createElement('a');
+        link.download = `كارنيه_${servant.full_name || servant.teacher_id}.png`;
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        URL.revokeObjectURL(link.href);
+        setIsDownloadingCard(false);
+      });
+    } catch (error) {
+      console.error('Error generating ID card:', error);
+      toast.error('فشل في تحميل الكارنيه');
+      setIsDownloadingCard(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -89,7 +231,7 @@ export function ServantProfile({ servantId: propsServantId, onBack }: ServantPro
   if (!servant) return null;
 
   return (
-    <div className="min-h-screen bg-background pb-8">
+    <div className="min-h-screen bg-background pb-8" dir="rtl">
       {/* Header */}
       <div className="bg-primary text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
         <div className="flex items-center gap-3">
@@ -103,7 +245,7 @@ export function ServantProfile({ servantId: propsServantId, onBack }: ServantPro
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4 max-w-2xl mx-auto">
         {/* Profile Header Card */}
         <div className="bg-card rounded-xl p-6 shadow-sm border border-border text-center">
           <div className="w-24 h-24 rounded-full mx-auto mb-4 overflow-hidden border-4 border-white shadow-xl bg-primary/10 flex items-center justify-center">
@@ -116,7 +258,7 @@ export function ServantProfile({ servantId: propsServantId, onBack }: ServantPro
             )}
           </div>
           <h3 className="text-xl mb-1 text-primary">{servant.full_name}</h3>
-          <p className="text-sm text-muted-foreground mb-4">كود الدخول: {servant.teacher_id}</p>
+          <p className="text-sm text-muted-foreground mb-4">كود الدخول: <span className="font-bold text-red-500" dir="ltr">{servant.teacher_id}</span></p>
 
           <div className="inline-flex items-center gap-2 bg-secondary/10 px-4 py-2 rounded-lg" style={{ color: 'var(--secondary)' }}>
             <span className="text-sm font-medium">
@@ -126,9 +268,113 @@ export function ServantProfile({ servantId: propsServantId, onBack }: ServantPro
           </div>
         </div>
 
+        {/* ID Card Preview */}
+        <div className="bg-card rounded-xl p-6 shadow-sm border border-border">
+          <h3 className="mb-4 text-center text-primary font-bold">بطاقة الهوية</h3>
+          <div className="flex justify-center">
+            <div className="transform scale-75 origin-top">
+              <IDCard servant={servant} />
+            </div>
+          </div>
+        </div>
+
+        {/* Action buttons under ID card: Download ID card and Download QR */}
+        <div className="flex gap-3 justify-center">
+          <button
+            onClick={downloadIDCard}
+            disabled={isDownloadingCard}
+            className="bg-primary text-primary-foreground rounded-xl py-3 px-5 shadow-sm active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center gap-2"
+            title="تحميل الكارنيه"
+          >
+            <CreditCard className="w-5 h-5" />
+            <span>{isDownloadingCard ? 'جاري التحميل...' : 'تحميل الكارنيه'}</span>
+          </button>
+
+          <button
+            onClick={downloadQRCode}
+            className="bg-secondary text-secondary-foreground rounded-xl py-3 px-5 shadow-sm active:scale-[0.98] transition-transform flex items-center gap-2"
+            title="تحميل كود QR"
+          >
+            <Download className="w-5 h-5" />
+            <span>تحميل كود QR</span>
+          </button>
+        </div>
+
+        {/* Attendance Details Section */}
+        <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
+          <h3 className="mb-4 text-primary flex items-center justify-between">
+            <span className="flex items-center gap-2 font-bold">
+              <Calendar className="w-5 h-5" />
+              تفاصيل الحضور
+            </span>
+            <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-bold">
+              {attendanceLogs.length} حضور
+            </span>
+          </h3>
+
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="p-3 bg-muted/20 rounded-xl border border-border text-center">
+              <div className="text-xs text-muted-foreground mb-1">حضور الحصص</div>
+              <div className="text-xl font-bold text-primary">
+                {attendanceLogs.filter(l => l.meeting_type === 'class').length}
+              </div>
+            </div>
+            <div className="p-3 bg-muted/20 rounded-xl border border-border text-center">
+              <div className="text-xs text-muted-foreground mb-1">اجتماعات الخدمة</div>
+              <div className="text-xl font-bold" style={{ color: 'var(--secondary)' }}>
+                {attendanceLogs.filter(l => l.meeting_type === 'service_meeting').length}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h4 className="text-sm text-muted-foreground mb-1">سجل الحضور:</h4>
+            {attendanceLogs && attendanceLogs.length > 0 ? (
+              attendanceLogs.map((log) => {
+                const meetingTypeLabel = log.meeting_type === 'class' ? 'حصة' : 'اجتماع خدمة';
+                const dateFormatted = log.attendance_date || (log.scanned_at ? String(log.scanned_at).split('T')[0] : '');
+
+                return (
+                  <div key={log.id} className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/20">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Calendar className="w-4 h-4 text-primary" />
+                      </div>
+                      <div>
+                        <span className="font-medium text-foreground block" dir="ltr">{dateFormatted}</span>
+                        <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full inline-block mt-0.5 ${
+                          log.meeting_type === 'class' ? 'bg-primary/10 text-primary' : 'bg-secondary/20 text-amber-800'
+                        }`}>
+                          {meetingTypeLabel}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Delete Button (Only for Admin/Supervisor/Developer) */}
+                    {canDeleteAttendance && (
+                      <button
+                        onClick={() => handleDeleteAttendance(log.id, dateFormatted)}
+                        disabled={isDeletingLogId === log.id}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                        title="حذف سجل الحضور"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-6 text-muted-foreground bg-muted/10 rounded-xl border border-dashed border-border">
+                لم يتم تسجيل أي حضور حتى الآن
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Personal Information */}
         <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
-          <h3 className="mb-4 text-primary flex items-center gap-2">
+          <h3 className="mb-4 text-primary flex items-center gap-2 font-bold">
             <Info className="w-5 h-5" />
             البيانات الشخصية والكنسية
           </h3>
@@ -171,7 +417,7 @@ export function ServantProfile({ servantId: propsServantId, onBack }: ServantPro
 
         {/* Education Information */}
         <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
-          <h3 className="mb-4 text-primary flex items-center gap-2">
+          <h3 className="mb-4 text-primary flex items-center gap-2 font-bold">
             <Book className="w-5 h-5" />
             البيانات التعليمية / العملية
           </h3>
@@ -210,7 +456,7 @@ export function ServantProfile({ servantId: propsServantId, onBack }: ServantPro
 
         {/* Contact Information */}
         <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
-          <h3 className="mb-4 text-primary flex items-center gap-2">
+          <h3 className="mb-4 text-primary flex items-center gap-2 font-bold">
             <Phone className="w-5 h-5" />
             بيانات التواصل
           </h3>
@@ -252,6 +498,33 @@ export function ServantProfile({ servantId: propsServantId, onBack }: ServantPro
               </div>
             )}
           </div>
+        </div>
+
+        {/* Hidden ID Card for Download */}
+        <div
+          ref={idCardRef}
+          style={{
+            position: 'absolute',
+            left: '-9999px',
+            top: '-9999px',
+            backgroundColor: '#ffffff',
+          }}
+        >
+          <IDCard servant={servant} />
+        </div>
+
+        {/* Hidden QR for download only */}
+        <div
+          ref={qrRef}
+          style={{
+            position: 'absolute',
+            left: '-9999px',
+            top: '-9999px',
+            backgroundColor: '#ffffff',
+            padding: '20px'
+          }}
+        >
+          <QRCodeSVG value={String(servant.teacher_id)} size={600} includeMargin={true} />
         </div>
       </div>
     </div>

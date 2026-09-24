@@ -23,6 +23,14 @@ export function QRScanner({ onBack, onScanSuccess, mode: propsMode }: QRScannerP
 
   const [selectedParticipantForModal, setSelectedParticipantForModal] = useState<any | null>(null);
   const [activeModal, setActiveModal] = useState<'market' | 'addPoints' | null>(null);
+  const [meetingType, setMeetingType] = useState<'class' | 'service_meeting'>('class');
+  const meetingTypeRef = useRef(meetingType);
+  useEffect(() => {
+    meetingTypeRef.current = meetingType;
+  }, [meetingType]);
+
+  const userRole = currentServant?.role || viewerRole || 'normal';
+  const canSelectMeetingType = ['admin', 'supervisor', 'developer'].includes(userRole);
 
   const [isScannerActive, setIsScannerActive] = useState(false);
   const [isScanning, setIsScanning] = useState(false); // Used to prevent duplicate scans during processing
@@ -49,73 +57,156 @@ export function QRScanner({ onBack, onScanSuccess, mode: propsMode }: QRScannerP
   };
 
   const defaultScanHandler = async (decodedText: string): Promise<boolean> => {
-    const scanned = String(decodedText).trim().toLowerCase();
+    const rawScanned = String(decodedText).trim();
+    const scanned = rawScanned.toLowerCase();
     if (!scanned) return false;
 
+    // 1. First, search for the scanned ID in the store.participants
     const participant = participants.find(p =>
       String(p.id || '').trim().toLowerCase() === scanned ||
       String(p.participant_id || '').trim().toLowerCase() === scanned ||
       String((p as any).dbId || '').trim().toLowerCase() === scanned
     );
 
-    if (!participant) {
-      toast.error('هذا الكود غير مسجل في النظام');
-      return false;
-    }
+    if (participant) {
+      const targetParticipant = participant;
 
-    const targetParticipant = participant;
+      if (mode === 'attendance') {
+        if (!currentServant || !currentServant.id) {
+          toast.error('يجب تسجيل الدخول كخادم قبل تسجيل الحضور');
+          return false;
+        }
 
-    if (mode === 'attendance') {
-      if (!currentServant || !currentServant.id) {
-        toast.error('يجب تسجيل الدخول كخادم قبل تسجيل الحضور');
-        return false;
-      }
+        try {
+          const participantUuid = targetParticipant.id as string;
+          const { error: attendError } = await supabase.from('attendance_logs').insert([{
+            participant_id: participantUuid,
+            servant_id: currentServant.id,
+            attendance_date: new Date().toISOString().split('T')[0]
+          }]);
 
-      try {
-        const participantUuid = targetParticipant.id as string;
-        const { error: attendError } = await supabase.from('attendance_logs').insert([{
-          participant_id: participantUuid,
-          servant_id: currentServant.id,
-          attendance_date: new Date().toISOString().split('T')[0]
-        }]);
+          if (attendError) {
+            toast.info('تم تسجيل حضور هذا المشارك مسبقاً اليوم');
+            return true;
+          }
 
-        if (attendError) {
-          toast.info('تم تسجيل حضور هذا المشارك مسبقاً اليوم');
+          const currentPoints = Number(targetParticipant.points || 0);
+          const newPoints = currentPoints + 10;
+          await supabase.from('participants').update({ points_balance: newPoints }).eq('id', participantUuid);
+          await supabase.from('points_transactions').insert([{
+            participant_id: participantUuid,
+            servant_id: currentServant.id,
+            transaction_type: 'attendance_bonus',
+            points_amount: 10,
+            description: 'مكافأة حضور اليوم'
+          }]);
+
+          setParticipants((prev: any[]) => prev.map(p => (String(p.id) === String(participantUuid)) ? { ...p, points: newPoints, attended: true, attendanceDays: [...p.attendanceDays, new Date().toISOString().split('T')[0]] } : p));
+          toast.success('تم تسجيل الحضور بنجاح وإضافة 10 نقاط');
           return true;
+        } catch (err) {
+          toast.error('حدث خطأ أثناء تسجيل الحضور');
+          return false;
         }
-
-        const currentPoints = Number(targetParticipant.points || 0);
-        const newPoints = currentPoints + 10;
-        await supabase.from('participants').update({ points_balance: newPoints }).eq('id', participantUuid);
-        await supabase.from('points_transactions').insert([{
-          participant_id: participantUuid,
-          servant_id: currentServant.id,
-          transaction_type: 'attendance_bonus',
-          points_amount: 10,
-          description: 'مكافأة حضور اليوم'
-        }]);
-
-        setParticipants((prev: any[]) => prev.map(p => (String(p.id) === String(participantUuid)) ? { ...p, points: newPoints, attended: true, attendanceDays: [...p.attendanceDays, new Date().toISOString().split('T')[0]] } : p));
-        toast.success('تم تسجيل الحضور بنجاح وإضافة 10 نقاط');
+      } else {
+        setTimeout(() => {
+          if (mode === 'market') {
+            setSelectedParticipantForModal(targetParticipant);
+            setActiveModal('market');
+          } else if (mode === 'addPoints') {
+            setSelectedParticipantForModal(targetParticipant);
+            setActiveModal('addPoints');
+          } else if (mode === 'viewDetails') {
+            navigate(`/profile/${targetParticipant.id}`);
+          }
+        }, 500);
         return true;
-      } catch (err) {
-        toast.error('حدث خطأ أثناء تسجيل الحضور');
-        return false;
       }
-    } else {
-      setTimeout(() => {
-        if (mode === 'market') {
-          setSelectedParticipantForModal(targetParticipant);
-          setActiveModal('market');
-        } else if (mode === 'addPoints') {
-          setSelectedParticipantForModal(targetParticipant);
-          setActiveModal('addPoints');
-        } else if (mode === 'viewDetails') {
-          navigate(`/profile/${targetParticipant.id}`);
-        }
-      }, 500);
-      return true;
     }
+
+    // 2. If NOT found in participants, query the servants table via Supabase
+    try {
+      let servantData: any = null;
+
+      // Query by teacher_id exact or case-insensitive
+      const { data: sByTeacherId } = await supabase
+        .from('servants')
+        .select('id, full_name, teacher_id')
+        .ilike('teacher_id', rawScanned)
+        .maybeSingle();
+
+      servantData = sByTeacherId;
+
+      // Fallback: check by id if scanned text looks like a UUID
+      if (!servantData && rawScanned.includes('-')) {
+        const { data: sById } = await supabase
+          .from('servants')
+          .select('id, full_name, teacher_id')
+          .eq('id', rawScanned)
+          .maybeSingle();
+        servantData = sById;
+      }
+
+      if (servantData) {
+        if (mode === 'attendance') {
+          if (!currentServant || !currentServant.id) {
+            toast.error('يجب تسجيل الدخول كخادم قبل تسجيل الحضور');
+            return false;
+          }
+
+          const currentMeeting = meetingTypeRef.current || meetingType;
+          const today = new Date().toISOString().split('T')[0];
+
+          // Check if already attended today for this meeting type
+          const { data: existingLog } = await supabase
+            .from('servant_attendance_logs')
+            .select('id')
+            .eq('servant_id', servantData.id)
+            .eq('meeting_type', currentMeeting)
+            .eq('attendance_date', today)
+            .maybeSingle();
+
+          if (existingLog) {
+            toast.info('تم تسجيل حضور هذا الخادم مسبقاً لهذا الاجتماع اليوم');
+            return true;
+          }
+
+          // 3. Insert record into servant_attendance_logs
+          const { error: servantAttendError } = await supabase
+            .from('servant_attendance_logs')
+            .insert([{
+              servant_id: servantData.id,
+              scanned_by: currentServant.id,
+              meeting_type: currentMeeting,
+              attendance_date: today
+            }]);
+
+          // 4. Handle duplicate constraint error gracefully
+          if (servantAttendError) {
+            toast.info('تم تسجيل حضور هذا الخادم مسبقاً لهذا الاجتماع اليوم');
+            return true;
+          }
+
+          // 5. Show success toast
+          toast.success(`تم تسجيل حضور الخادم ${servantData.full_name} بنجاح`);
+          return true;
+        } else if (mode === 'viewDetails') {
+          setTimeout(() => {
+            navigate(`/servant-profile/${servantData.id}`);
+          }, 300);
+          return true;
+        } else {
+          toast.error('عمليات السوق والنقاط الإضافية مخصصة للطلاب والمشاركين فقط');
+          return false;
+        }
+      }
+    } catch (err) {
+      console.error('Error checking servant scan:', err);
+    }
+
+    // 6. If neither student nor servant is found, show the existing error
+    toast.error('هذا الكود غير مسجل في النظام');
+    return false;
   };
 
   const handleScanSuccess = async (decodedText: string) => {
@@ -378,11 +469,37 @@ export function QRScanner({ onBack, onScanSuccess, mode: propsMode }: QRScannerP
                'عرض التفاصيل'}
             </div>
             <div className="text-sm opacity-80">
-              {mode === 'attendance' ? 'قم بمسح كود QR للمشارك' :
+              {mode === 'attendance' ? 'قم بمسح كود QR للمشارك أو الخادم' :
                mode === 'market' ? 'امسح الكود لخصم النقاط' :
                mode === 'addPoints' ? 'امسح الكود لإضافة النقاط' :
                'امسح الكود لعرض الملف الشخصي'}
             </div>
+            {mode === 'attendance' && canSelectMeetingType && (
+              <div className="mt-3 flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMeetingType('class')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    meetingType === 'class' 
+                      ? 'bg-primary text-white shadow-md' 
+                      : 'bg-white/20 text-white/80 hover:bg-white/30'
+                  }`}
+                >
+                  تسجيل حصة
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMeetingType('service_meeting')}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    meetingType === 'service_meeting' 
+                      ? 'bg-secondary text-secondary-foreground shadow-md' 
+                      : 'bg-white/20 text-white/80 hover:bg-white/30'
+                  }`}
+                >
+                  تسجيل اجتماع خدمة
+                </button>
+              </div>
+            )}
           </div>
           <div className="w-10" /> {/* Spacer for centering */}
         </div>

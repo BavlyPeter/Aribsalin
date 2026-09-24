@@ -1,21 +1,33 @@
 import { QRCodeSVG } from 'qrcode.react';
 import churchLogo from '../../assets/images/church logo.png';
 import serviceLogo from '../../assets/images/service logo.png';
-import { StudentData } from '../../types';
 
 interface IDCardProps {
-  student: {
-    id: string;
-    participant_id?: string | number;
-    name: string;
-    data: {
-      educationStage: StudentData['educationStage'];
-      educationYear: StudentData['educationYear'];
-      gender: StudentData['gender'];
-      photo_url?: StudentData['photo_url'];
-    };
-  };
+  student?: any;
+  servant?: any;
+  data?: any;
 }
+
+const roleLabels: Record<string, string> = {
+  'normal': 'خادم',
+  'supervisor': 'أمين فصل',
+  'admin': 'أمين الخدمة',
+  'developer': 'مطور النظام'
+};
+
+const stageLabelsMap: Record<string, string> = {
+  'kg': 'حضانة',
+  'primary_12': 'ابتدائي (الأول والثاني)',
+  'primary_34': 'ابتدائي (الثالث والرابع)',
+  'primary_56': 'ابتدائي (الخامس والسادس)',
+  'preparatory': 'إعدادي',
+  'secondary': 'ثانوي',
+  'university_graduate': 'جامعي وخريجين',
+  'university': 'جامعي',
+  'graduate': 'خريجين',
+  'primary': 'ابتدائي',
+  'supervisors': 'الخدام والمشرفين'
+};
 
 const educationStageLabels: Record<string, string> = {
   'kg': 'حضانة',
@@ -26,8 +38,38 @@ const educationStageLabels: Record<string, string> = {
   'graduate': 'خريجين'
 };
 
-export function IDCard({ student }: IDCardProps) {
-  const participantSmartId = student.participant_id || student.id;
+export function IDCard({ student, servant, data }: IDCardProps) {
+  const target = servant || student || data;
+  if (!target) return null;
+
+  // Check if the passed object has a teacher_id. If so, treat it as a Servant. If it has a participant_id, treat it as a Student.
+  const hasTeacherId = Boolean(target.teacher_id || target.data?.teacher_id);
+  const hasParticipantId = Boolean(target.participant_id || target.data?.participant_id);
+  const isServant = hasTeacherId || (!hasParticipantId && (target.role !== undefined || target.class_stage !== undefined));
+
+  const smartId = isServant
+    ? String(target.teacher_id || target.data?.teacher_id || target.id || '')
+    : String(target.participant_id || target.data?.participant_id || target.id || '');
+
+  const displayName = target.name || target.full_name || target.data?.fullName || '';
+
+  let subtitleLine1 = '';
+  let subtitleLine2 = '';
+
+  if (isServant) {
+    const rawRole = target.role || target.data?.role || '';
+    const roleText = roleLabels[rawRole] || rawRole || 'خادم';
+
+    const rawStage = target.class_stage || target.classStage || target.data?.class_stage || target.data?.classStage || '';
+    const stageText = stageLabelsMap[rawStage] || rawStage || '';
+
+    // e.g. "أمين فصل - ابتدائي"
+    subtitleLine1 = [roleText, stageText].filter(Boolean).join(' - ');
+  } else {
+    const rawStage = target.data?.educationStage || target.educationStage || target.educational_stage || '';
+    subtitleLine1 = educationStageLabels[rawStage] || stageLabelsMap[rawStage] || rawStage || '';
+    subtitleLine2 = target.data?.educationYear || target.educationYear || target.academic_year || '';
+  }
 
   return (
     <div
@@ -55,95 +97,84 @@ export function IDCard({ student }: IDCardProps) {
       <div className="relative p-4 flex flex-col flex-1 z-10">
         
         {/* Core Information Boxes */}
-        <div className="flex flex-col space-y-4 mt-2 mb-4">
+        <div className="flex flex-col space-y-3 mt-2 mb-3">
           
-          {/* Box 1: Participant Name */}
+          {/* Box 1: Name */}
           <div
-            className="rounded-xl px-4 shadow-sm flex items-center justify-center text-center"
+            className="rounded-xl px-4 py-2.5 shadow-sm flex items-center justify-center text-center min-h-[58px]"
             style={{
               backgroundColor: 'rgba(139, 21, 56, 0.03)',
               border: '1px solid rgba(139, 21, 56, 0.25)',
-              // height: '80px'
             }}
           >
             <div 
-              className="text-2xl font-black" 
+              className="text-xl font-black" 
               style={{ color: '#8B1538', lineHeight: '1.2' }} 
               dir="rtl"
             >
-              {student.name}
-              {/* bavly peter barsoum kamel sefen */}
-              {/* بافلي بيتر برسوم كامل سيفن */}
-              
-              
-              <br/>
-              <br/>
-
+              {displayName}
             </div>
           </div>
 
-          {/* Box 2: Education Stage & Year */}
+          {/* Box 2: Stage / Role */}
           <div
-            className="rounded-xl px-4 shadow-sm flex flex-col justify-center items-center text-center"
+            className="rounded-xl px-4 py-2.5 shadow-sm flex flex-col justify-center items-center text-center min-h-[56px]"
             style={{
               backgroundColor: 'rgba(201, 169, 97, 0.08)',
               border: '2.5px solid rgba(201, 169, 97, 0.35)',
-              // height: '70px'
             }}
           >
             <div 
-              className="text-sm font-bold" 
+              className="text-base font-bold" 
               style={{ color: '#6B5744', lineHeight: '1.2' }}
+              dir="rtl"
             >
-              {educationStageLabels[student.data.educationStage] || student.data.educationStage}
+              {subtitleLine1}
             </div>
 
-            {student.data.educationYear && (
+            {subtitleLine2 && (
               <div 
-                className="text-lg font-bold mt-0.5" 
+                className="text-sm font-bold mt-0.5" 
                 style={{ color: '#8B1538', lineHeight: '1.2' }} 
                 dir="rtl"
               >
-                {student.data.educationYear}
+                {subtitleLine2}
               </div>
             )}
-
-            <br/>
           </div>
 
-          {/* Box 3: Participant ID */}
-          <div
-          //   flex-col 
-            
-            className="w-fit mx-auto rounded-full px-4 py-0 shadow-sm flex items-center justify-center text-center"
-            style={{
-              backgroundColor: 'rgba(201, 169, 97, 0.08)',
-              border: '2px solid rgba(139, 21, 56, 0.25)',
-              // height: '46px'
-            }}
-          >
+          {/* Box 3: Smart ID (Participant ID / Servant ID) */}
+          <div className="flex flex-col items-center">
+            <span className="text-[12px] font-bold mb-1" style={{ color: '#8B1538' }}>
+              {isServant ? 'كود الخادم' : 'رقم المشارك'}
+            </span>
             <div 
-              className="text-2xl font-black tracking-widest" 
-              style={{ color: '#C9A961', lineHeight: '1.1' }} 
-              dir="ltr"
+              className="w-fit mx-auto rounded-full px-5 py-0.5 shadow-sm flex items-center justify-center text-center"
+              style={{
+                backgroundColor: 'rgba(201, 169, 97, 0.08)',
+                border: '2px solid rgba(139, 21, 56, 0.25)',
+              }}
             >
-              {participantSmartId}
-
-              <br/>
-              <br/>
+              <div 
+                className="text-2xl font-black tracking-widest" 
+                style={{ color: '#C9A961', lineHeight: '1.1' }} 
+                dir="ltr"
+              >
+                {smartId}
+              </div>
             </div>
           </div>
 
         </div>
 
         {/* QR Code Container */}
-        <div className="flex flex-col items-center mt-auto pb-2">
+        <div className="flex flex-col items-center mt-auto pb-1">
           <div
             className="bg-white p-2 rounded-2xl shadow-md"
             style={{ border: '2px solid rgba(139, 21, 56, 0.2)' }}
           >
             <QRCodeSVG
-              value={String(participantSmartId)}
+              value={smartId}
               size={130}
               level="H"
               includeMargin={true}
