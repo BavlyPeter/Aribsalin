@@ -22,7 +22,7 @@ export function WelcomeScreen({ onClose }: WelcomeScreenProps) {
               <span className="text-5xl text-primary-foreground">†</span>
             </div>
             <h2 className="text-2xl mb-2" style={{ color: 'var(--primary)' }}>اريبصالين</h2>
-            <p className="text-muted-foreground">نظام إدارة مهرجان الصيف</p>
+            <p className="text-muted-foreground">نظام إدارةالخدمة</p>
           </div>
 
           {/* Instructions */}
@@ -30,7 +30,7 @@ export function WelcomeScreen({ onClose }: WelcomeScreenProps) {
             <div className="bg-muted/30 rounded-xl p-4">
               <h3 className="mb-2 text-primary">مرحباً بك!</h3>
               <p className="text-sm text-foreground leading-relaxed">
-                هذا النظام مصمم لإدارة حضور ونقاط المشاركين في مهرجان الصيف للكنيسة القبطية الأرثوذكسية.
+                هذا النظام مصمم لإدارة حضور ونقاط المشاركين فيالخدمة للكنيسة القبطية الأرثوذكسية.
               </p>
             </div>
 
