@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { AlignCenter, X } from 'lucide-react';
 
 interface WelcomeScreenProps {
   onClose: () => void;
@@ -53,9 +53,9 @@ export function WelcomeScreen({ onClose }: WelcomeScreenProps) {
                   <span style={{ color: 'var(--secondary-foreground)' }}>2</span>
                 </div>
                 <div>
-                  <h4 className="mb-1">مسح السوق</h4>
+                  <h4 className="mb-1">اضافه وخصم النقاط</h4>
                   <p className="text-sm text-muted-foreground">
-                    امسح الكود لخصم النقاط من رصيد المشارك عند الشراء من السوق
+                    امسح الكود لاضافة او لخصم النقاط من رصيد المشارك
                   </p>
                 </div>
               </div>
@@ -73,11 +73,8 @@ export function WelcomeScreen({ onClose }: WelcomeScreenProps) {
               </div>
             </div>
 
-            <div className="bg-secondary/10 rounded-xl p-4 border-2 border-secondary/30">
-              <h4 className="mb-2" style={{ color: 'var(--secondary)' }}>للتجربة:</h4>
-              <p className="text-sm text-foreground">
-                ستجد أكواد QR تجريبية أسفل الشاشة الرئيسية. اضغط على اسم المشارك لعرض الكود، ثم استخدم خاصية "تسجيل الحضور" أو "مسح السوق" لمسحه.
-              </p>
+            <div className="bg-secondary/10 rounded-xl p-4 border-2 border-secondary/30 text-center">
+              <h4 className="mb-2 text-primary text-xl font-bold">صلو لأجل الخدمة</h4>
             </div>
           </div>
 

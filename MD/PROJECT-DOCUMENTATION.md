@@ -1,4 +1,4 @@
-# اريبصالين (Aribsalin) - Church Festival & Sunday School Management System
+# Church Management System
 ## Unified Master Technical Architecture & Developer Reference Manual
 
 **System Version:** `2.3.0` (Servant Attendance Module, Smart QR Router, Developer God-Mode, Actionable Contacts, Dual-Login, Global Zustand Store)  
@@ -11,35 +11,60 @@
 ---
 
 ## Table of Contents
-1. [Project Idea & Concept](#1-project-idea--concept)
-   - [Executive Summary](#executive-summary)
-   - [Core Business Problems Solved](#core-business-problems-solved)
-2. [Tech Stack & Tooling](#2-tech-stack--tooling)
-   - [Core Dependencies & Architectural Rationale](#core-dependencies--architectural-rationale)
-   - [Build Pipeline & Configuration](#build-pipeline--configuration)
-3. [User Roles & Workflows](#3-user-roles--workflows)
-   - [Role-Based Access Control (RBAC) Matrix](#role-based-access-control-rbac-matrix)
-   - [Critical System Workflows](#critical-system-workflows)
-4. [Architecture & State Management](#4-architecture--state-management)
-   - [End-to-End Data Flow](#end-to-end-data-flow)
-   - [Zustand Reactive Store Architecture](#zustand-reactive-store-architecture)
-   - [Database Schema Specification (Supabase PostgreSQL)](#database-schema-specification-supabase-postgresql)
-   - [Database Functions & Stored Procedures](#database-functions--stored-procedures)
-5. [Folder Structure & Deep Dive](#5-folder-structure--deep-dive)
-   - [src/ Directory ASCII Tree](#src-directory-ascii-tree)
-   - [Module & Directory Explanations](#module--directory-explanations)
-6. [Developer Guide & Architectural Invariants](#6-developer-guide--architectural-invariants)
-   - [The Coptic Heritage Palette Design System](#the-coptic-heritage-palette-design-system)
-   - [Non-Negotiable Architectural Invariants](#non-negotiable-architectural-invariants)
-7. [Troubleshooting Guide](#7-troubleshooting-guide)
-8. [System Changelog](#8-system-changelog)
+- [Church Management System](#church-management-system)
+  - [Unified Master Technical Architecture \& Developer Reference Manual](#unified-master-technical-architecture--developer-reference-manual)
+  - [Table of Contents](#table-of-contents)
+  - [1. Project Idea \& Concept](#1-project-idea--concept)
+    - [Executive Summary](#executive-summary)
+    - [Core Business Problems Solved](#core-business-problems-solved)
+  - [2. Tech Stack \& Tooling](#2-tech-stack--tooling)
+    - [Core Dependencies \& Architectural Rationale](#core-dependencies--architectural-rationale)
+    - [Build Pipeline \& Configuration](#build-pipeline--configuration)
+  - [3. User Roles \& Workflows](#3-user-roles--workflows)
+    - [Role-Based Access Control (RBAC) Matrix](#role-based-access-control-rbac-matrix)
+    - [Critical System Workflows](#critical-system-workflows)
+      - [Workflow A: Smart QR Routing (Student vs. Servant Check-in)](#workflow-a-smart-qr-routing-student-vs-servant-check-in)
+      - [Workflow B: Manual Servant Attendance Logging](#workflow-b-manual-servant-attendance-logging)
+      - [Workflow C: Dual-Login Credential Resolution](#workflow-c-dual-login-credential-resolution)
+      - [Workflow D: Compensating Point Rollbacks \& Overdraft Guards](#workflow-d-compensating-point-rollbacks--overdraft-guards)
+  - [4. Architecture \& State Management](#4-architecture--state-management)
+    - [End-to-End Data Flow](#end-to-end-data-flow)
+    - [Zustand Reactive Store Architecture](#zustand-reactive-store-architecture)
+    - [Database Schema Specification (Supabase PostgreSQL)](#database-schema-specification-supabase-postgresql)
+    - [Database Functions \& Stored Procedures](#database-functions--stored-procedures)
+      - [`delete_servant_completely(target_user_id UUID)`](#delete_servant_completelytarget_user_id-uuid)
+  - [5. Folder Structure \& Deep Dive](#5-folder-structure--deep-dive)
+    - [`src/` Directory ASCII Tree](#src-directory-ascii-tree)
+    - [Module \& Directory Explanations](#module--directory-explanations)
+  - [6. Developer Guide \& Architectural Invariants](#6-developer-guide--architectural-invariants)
+    - [The Coptic Heritage Palette Design System](#the-coptic-heritage-palette-design-system)
+    - [Non-Negotiable Architectural Invariants](#non-negotiable-architectural-invariants)
+      - [1. Smart ID Gap-Filling Scheme](#1-smart-id-gap-filling-scheme)
+      - [2. iOS Safari Camera Freeze Prevention](#2-ios-safari-camera-freeze-prevention)
+      - [3. Actionable Contact Protocol](#3-actionable-contact-protocol)
+      - [4. Developer Stealth Mode \& God-Mode Bypass](#4-developer-stealth-mode--god-mode-bypass)
+      - [5. Static Asset Import Requirement](#5-static-asset-import-requirement)
+      - [6. PostgREST Query Chunking](#6-postgrest-query-chunking)
+  - [7. Troubleshooting Guide](#7-troubleshooting-guide)
+    - [1. Logos Not Displaying on ID Cards](#1-logos-not-displaying-on-id-cards)
+    - [2. ID Card Download Failing or Blank](#2-id-card-download-failing-or-blank)
+    - [3. Arabic Text Rendering Backwards or Disconnected](#3-arabic-text-rendering-backwards-or-disconnected)
+    - [4. iOS Safari Camera Freezing on Scan](#4-ios-safari-camera-freezing-on-scan)
+    - [5. Camera Permission Denied](#5-camera-permission-denied)
+    - [6. Duplicate Key Constraint Error on Attendance](#6-duplicate-key-constraint-error-on-attendance)
+  - [8. System Changelog](#8-system-changelog)
+    - [\[2.3.0\] - September 2026 (Current Version)](#230---september-2026-current-version)
+    - [\[1.6.1\] - 2026-06-17](#161---2026-06-17)
+    - [\[1.5.0\] - 2026-06-05](#150---2026-06-05)
+    - [\[1.1.0\] - 2026-05-24](#110---2026-05-24)
+    - [\[1.0.0\] - 2026-05-00](#100---2026-05-00)
 
 ---
 
 ## 1. Project Idea & Concept
 
 ### Executive Summary
-**اريبصالين (Aribsalin)** — derived from the Coptic hymn call *ⲁⲣⲓⲯⲁⲗⲓⲛ* ("Chant / Sing Psalms") — is an enterprise-grade, mobile-first festival, Sunday school, and ministry management platform engineered exclusively for the **Church of the Great Martyr St. Mina the Wonderworker & Pope Kyrillos VI in Aswan, Egypt**. Built as a reactive single-page application (SPA), the system digitizes, coordinates, and unifies the operational lifecycle of summer deacon schools, spiritual competitions, weekly services, and parishioner databases across all educational cohorts from Kindergarten through University Graduates.
+**Project_Overview**  is an enterprise-grade, mobile-first church management platform . Built as a reactive single-page application (SPA), the system digitizes, coordinates, and unifies the operational lifecycle of summer deacon schools, spiritual competitions, weekly services, and parishioner databases across all educational cohorts from Kindergarten through University Graduates.
 
 The platform provides a unified operational dashboard for church clergy, general service leaders (أمناء الخدمة), stage supervisors (أمناء المراحل والفصول), servants (خدام وخادمات), and students (مخدومين), streamlining attendance tracking, behavioral points economics, badge printing, stage-level analytics, and ministry treasury ledgers.
 

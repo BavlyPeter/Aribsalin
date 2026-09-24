@@ -33,7 +33,7 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
 
   useEffect(() => {
     if (isAuthenticated) {
-      const hasVisited = localStorage.getItem('arribsalin-visited');
+      const hasVisited = localStorage.getItem('visited');
       if (!hasVisited) {
         setShowWelcome(true);
       }
@@ -41,7 +41,7 @@ export function AuthInitializer({ children }: AuthInitializerProps) {
   }, [isAuthenticated]);
 
   const handleCloseWelcome = () => {
-    localStorage.setItem('arribsalin-visited', 'true');
+    localStorage.setItem('visited', 'true');
     setShowWelcome(false);
   };
 
