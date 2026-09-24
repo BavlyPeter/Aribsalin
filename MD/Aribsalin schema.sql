@@ -95,3 +95,25 @@ CREATE TABLE public.servant_attendance_logs (
   CONSTRAINT servant_attendance_logs_servant_id_fkey FOREIGN KEY (servant_id) REFERENCES public.servants(id),
   CONSTRAINT servant_attendance_logs_scanned_by_fkey FOREIGN KEY (scanned_by) REFERENCES public.servants(id)
 );
+
+CREATE OR REPLACE FUNCTION public.delete_servant_completely(target_user_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- 1. Remove servant attendance logs
+  DELETE FROM public.servant_attendance_logs WHERE servant_id = target_user_id OR scanned_by = target_user_id;
+  
+  -- 2. Nullify references in attendance and points ledgers
+  UPDATE public.attendance_logs SET servant_id = NULL WHERE servant_id = target_user_id;
+  UPDATE public.points_transactions SET servant_id = NULL WHERE servant_id = target_user_id;
+  UPDATE public.financial_transactions SET servant_id = NULL WHERE servant_id = target_user_id;
+  
+  -- 3. Remove servant profile record
+  DELETE FROM public.servants WHERE id = target_user_id;
+  
+  -- 4. Delete Supabase Auth user
+  DELETE FROM auth.users WHERE id = target_user_id;
+END;
+$$;
