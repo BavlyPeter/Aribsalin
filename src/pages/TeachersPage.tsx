@@ -1,8 +1,9 @@
-import { ArrowRight, Users, Crown, Trash2, Edit, User } from 'lucide-react';
+import { ArrowRight, Users, Crown, Trash2, Edit, User, CalendarCheck } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
+import { useFestivalStore } from '../store/useFestivalStore';
 
 interface Teacher {
   id: string;
@@ -43,6 +44,13 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
   const handleBack = onBack || (() => navigate('/dashboard'));
   const handleViewProfile = onViewProfile || ((id: string) => navigate(`/servant-profile/${id}`));
   const handleEdit = onEdit || ((teacher: Teacher) => navigate(`/signup?edit=${teacher.id}`));
+
+  const { currentServant } = useFestivalStore();
+  const [attendanceModalOpen, setAttendanceModalOpen] = useState(false);
+  const [attendanceTeacher, setAttendanceTeacher] = useState<Teacher | null>(null);
+  const [attendanceDate, setAttendanceDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [attendanceType, setAttendanceType] = useState<'class' | 'service_meeting'>('class');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [classesData, setClassesData] = useState<ClassData[]>([]);
 
@@ -267,6 +275,20 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
 
                           <div className="flex items-center gap-2 mr-2 shrink-0">
                             <button
+                              title="تسجيل حضور يدوي"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setAttendanceTeacher(teacher);
+                                setAttendanceDate(new Date().toISOString().split('T')[0]);
+                                setAttendanceType('class');
+                                setAttendanceModalOpen(true);
+                              }}
+                              className="p-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                            >
+                              <CalendarCheck className="w-4 h-4" />
+                            </button>
+
+                            <button
                               title="تعديل"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -319,6 +341,114 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
           ))}
         </div>
       </div>
+
+      {/* Manual Attendance Modal */}
+      {attendanceModalOpen && attendanceTeacher && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => !isSubmitting && setAttendanceModalOpen(false)}
+        >
+          <div
+            className="bg-background rounded-2xl w-full max-w-sm shadow-xl overflow-hidden border border-border"
+            onClick={e => e.stopPropagation()}
+            dir="rtl"
+          >
+            <div className="p-4 bg-blue-50 border-b border-blue-100 flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                <CalendarCheck className="w-5 h-5 text-blue-700"/>
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-bold text-blue-900">تسجيل حضور خادم</h3>
+                <p className="text-sm text-blue-700 truncate max-w-[220px]">{attendanceTeacher.name}</p>
+              </div>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">تاريخ الحضور</label>
+                <input
+                  type="date"
+                  value={attendanceDate}
+                  onChange={(e) => setAttendanceDate(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-input-background focus:ring-2 focus:ring-primary outline-none text-foreground text-sm"
+                  max={new Date().toISOString().split('T')[0]}
+                  disabled={isSubmitting}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">نوع الاجتماع</label>
+                <select
+                  value={attendanceType}
+                  onChange={(e) => setAttendanceType(e.target.value as 'class' | 'service_meeting')}
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-input-background focus:ring-2 focus:ring-primary outline-none text-foreground text-sm"
+                  disabled={isSubmitting}
+                >
+                  <option value="class">حصة</option>
+                  <option value="service_meeting">اجتماع خدمة</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border flex gap-3">
+              <button
+                disabled={isSubmitting}
+                onClick={async () => {
+                  setIsSubmitting(true);
+                  try {
+                    // Check for duplicate
+                    const { data: existingLog, error: checkError } = await supabase
+                      .from('servant_attendance_logs')
+                      .select('id')
+                      .eq('servant_id', attendanceTeacher.id)
+                      .eq('attendance_date', attendanceDate)
+                      .eq('meeting_type', attendanceType)
+                      .maybeSingle();
+
+                    if (checkError) throw checkError;
+
+                    if (existingLog) {
+                      toast.info('تم تسجيل حضور هذا الخادم مسبقاً لهذا الاجتماع في هذا اليوم');
+                      setIsSubmitting(false);
+                      setAttendanceModalOpen(false);
+                      return;
+                    }
+
+                    // Insert new log
+                    const { error: insertError } = await supabase
+                      .from('servant_attendance_logs')
+                      .insert({
+                        servant_id: attendanceTeacher.id,
+                        scanned_by: currentServant?.id || null,
+                        meeting_type: attendanceType,
+                        attendance_date: attendanceDate
+                      });
+
+                    if (insertError) throw insertError;
+
+                    toast.success('تم تسجيل حضور الخادم بنجاح');
+                    setAttendanceModalOpen(false);
+                  } catch (err: any) {
+                    console.error('Manual servant attendance error:', err);
+                    toast.error('حدث خطأ أثناء تسجيل الحضور');
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                }}
+                className="flex-1 bg-primary text-primary-foreground py-3 rounded-xl font-medium hover:opacity-90 active:scale-95 transition-all disabled:opacity-70"
+              >
+                {isSubmitting ? 'جاري التسجيل...' : 'تأكيد الحضور'}
+              </button>
+              <button
+                disabled={isSubmitting}
+                onClick={() => setAttendanceModalOpen(false)}
+                className="flex-1 bg-muted text-foreground py-3 rounded-xl font-medium hover:bg-muted/80 active:scale-95 transition-all disabled:opacity-70"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
