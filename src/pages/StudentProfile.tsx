@@ -373,7 +373,7 @@ export function StudentProfile({
               <span className="font-medium">{student?.attendanceDays?.length || 0} يوم</span>
             </div>
             <div className="flex items-center justify-between py-2 border-b border-border">
-              <span className="text-sm text-muted-foreground">إجمالي أيام المهرجان</span>
+              <span className="text-sm text-muted-foreground">إجمالي أيام الخدمة</span>
               <span className="font-medium">{totalDays} يوم</span>
             </div>
             <div className="flex items-center justify-between py-2">

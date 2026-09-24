@@ -307,7 +307,7 @@ export function StatisticsPage({
           >
             <ArrowRight className="w-6 h-6" />
           </button>
-          <h2 className="text-xl">إحصائيات المهرجان</h2>
+          <h2 className="text-xl">إحصائيات الخدمة</h2>
         </div>
       </div>
 

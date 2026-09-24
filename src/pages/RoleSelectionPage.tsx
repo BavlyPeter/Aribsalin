@@ -31,7 +31,7 @@ export function RoleSelectionPage({ onSelectRole }: RoleSelectionPageProps = {})
       <div className="flex flex-col items-center mb-12 space-y-6">
         <img src={churchLogo} alt="Church Logo" className="w-24 h-24 object-contain shadow-lg rounded-full" />
         <img src={serviceLogo} alt="service Logo" className="h-16 object-contain" />
-        <p className="text-muted-foreground text-center">مرحباً بك في نظام إدارة المهرجان</p>
+        <p className="text-muted-foreground text-center">مرحباً بك في نظام إدارة الخدمة</p>
       </div>
       <h2 className="text-2xl font-bold mb-8 text-foreground">من أنت؟</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-md">
