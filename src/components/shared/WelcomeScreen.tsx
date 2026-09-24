@@ -30,7 +30,7 @@ export function WelcomeScreen({ onClose }: WelcomeScreenProps) {
             <div className="bg-muted/30 rounded-xl p-4">
               <h3 className="mb-2 text-primary">مرحباً بك!</h3>
               <p className="text-sm text-foreground leading-relaxed">
-                هذا النظام مصمم لإدارة حضور ونقاط المشاركين فيالخدمة للكنيسة القبطية الأرثوذكسية.
+                هذا النظام مصمم لإدارة حضور ونقاط المشاركين في الخدمة.
               </p>
             </div>
 
