@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, FileText, Wallet, BarChart3, LogOut, User, UserCheck, BookOpen, Download } from 'lucide-react';
+import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, FileText, Wallet, BarChart3, LogOut, User, UserCheck, BookOpen, Download, MapPin } from 'lucide-react';
 import churchLogo from '../assets/images/church logo.png';
 import serviceLogo from '../assets/images/service logo.png';
 import { BulkIDDownloadModal } from '../components/modals/BulkIDDownloadModal';
@@ -278,6 +278,16 @@ export function Dashboard({
                 <div className="flex items-center justify-center gap-3">
                   <Users className="w-5 h-5 text-primary" />
                   <span>إدارة الخدام</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => navigate('/areas-management')}
+                className="w-full bg-card text-card-foreground rounded-xl p-4 shadow-sm border border-border active:scale-[0.98] transition-transform"
+              >
+                <div className="flex items-center justify-center gap-3">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  <span>إدارة المناطق</span>
                 </div>
               </button>
             </>

@@ -67,3 +67,12 @@ export interface TeacherData {
   address: string;
   dateOfBirth: string;
 }
+
+export interface Area {
+  id: string;
+  name: string;
+  created_at?: string;
+  has_neighborhoods: boolean;
+  neighborhoods: string[];
+  ask_building_details: boolean;
+}

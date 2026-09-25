@@ -16,6 +16,7 @@ const FinancePage = lazy(()              => import('../pages/FinancePage').then(
 const SessionsManagementPage = lazy(()   => import('../pages/SessionsManagementPage').then(module => ({ default: module.SessionsManagementPage })));
 const RegistrationRequestsPage = lazy(() => import('../pages/RegistrationRequestsPage').then(module => ({ default: module.RegistrationRequestsPage })));
 const TeachersPage = lazy(()             => import('../pages/TeachersPage').then(module => ({ default: module.TeachersPage })));
+const AreasManagementPage = lazy(()      => import('../pages/AreasManagementPage').then(module => ({ default: module.AreasManagementPage })));
 const StudentProfile = lazy(()           => import('../pages/StudentProfile').then(module => ({ default: module.StudentProfile })));
 const ServantProfile = lazy(()           => import('../pages/ServantProfile').then(module => ({ default: module.ServantProfile })));
 const RegistrationPage = lazy(()         => import('../pages/RegistrationPage').then(module => ({ default: module.RegistrationPage })));
@@ -113,6 +114,14 @@ export default function App() {
               element={
                 <RoleGuard allowedRoles={['admin']}>
                   <TeachersPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="/areas-management"
+              element={
+                <RoleGuard allowedRoles={['admin', 'developer']}>
+                  <AreasManagementPage />
                 </RoleGuard>
               }
             />

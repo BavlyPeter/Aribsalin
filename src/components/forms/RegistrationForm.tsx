@@ -4,6 +4,7 @@ import { StudentData } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { uploadProfileImage } from '../../lib/uploadHelper';
 import { toast } from 'sonner';
+import { SmartAddressInput } from '../shared/SmartAddressInput';
 
 interface RegistrationFormProps {
   onBack: () => void;
@@ -54,7 +55,6 @@ const educationYears = {
 
 export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: RegistrationFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [areas, setAreas] = useState<string[]>([]);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(editData?.photo_url || null);
   const [formData, setFormData] = useState<StudentData>({
@@ -133,20 +133,6 @@ export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: Regi
       }
     };
   }, [photoPreview]);
-
-  useEffect(() => {
-    const fetchAreas = async () => {
-      try {
-        const { data, error } = await supabase.from('areas').select('name').order('name');
-        if (!error && data) {
-          setAreas(data.map(a => a.name));
-        }
-      } catch (err) {
-        console.error('Error fetching areas:', err);
-      }
-    };
-    fetchAreas();
-  }, []);
 
   const generateParticipantSmartId = async (stage: string, year: string) => {
     let stageChar = 'X';
@@ -511,31 +497,13 @@ export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: Regi
               />
             </div>
 
-            <div>
-              <label className="block mb-2 text-sm text-foreground">المنطقة السكنية *</label>
-              <select
-                required
-                value={formData.area}
-                onChange={(e) => updateField('area', e.target.value)}
-                className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">اختر المنطقة</option>
-                {areas.map((area) => (
-                  <option key={area} value={area}>{area}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block mb-2 text-sm text-foreground">العنوان بالتفصيل</label>
-              <textarea
-                value={formData.address}
-                onChange={(e) => updateField('address', e.target.value)}
-                className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-                rows={3}
-                placeholder="المدينة، الحي، الشارع، رقم المنزل"
-              />
-            </div>
+            <SmartAddressInput
+              required
+              areaValue={formData.area}
+              detailsValue={formData.address}
+              onAreaChange={(val) => updateField('area', val)}
+              onDetailsChange={(val) => updateField('address', val)}
+            />
           </div>
         </div>
       </form>

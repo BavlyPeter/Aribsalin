@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useFestivalStore } from '../store/useFestivalStore';
 import churchLogo from '../assets/images/church logo.png';
 import serviceLogo from '../assets/images/service logo.png';
+import { SmartAddressInput } from '../components/shared/SmartAddressInput';
 
 interface SignupPageProps {
   onSignup?: (data: TeacherData) => void;
@@ -78,7 +79,6 @@ export function SignupPage({ onSignup, onBack, editData: propsEditData, clearEdi
 
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [areas, setAreas] = useState<string[]>([]);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(editData?.photo_url || null);
   const [formData, setFormData] = useState<TeacherData>({
@@ -100,20 +100,6 @@ export function SignupPage({ onSignup, onBack, editData: propsEditData, clearEdi
     address: '',
     dateOfBirth: ''
   });
-
-  useEffect(() => {
-    const fetchAreas = async () => {
-      try {
-        const { data, error } = await supabase.from('areas').select('name').order('name');
-        if (!error && data) {
-          setAreas(data.map(a => a.name));
-        }
-      } catch (err) {
-        console.error('Error fetching areas:', err);
-      }
-    };
-    fetchAreas();
-  }, []);
 
   // Fetch full data for editing from Supabase to ensure all fields populate
   useEffect(() => {
@@ -644,37 +630,13 @@ export function SignupPage({ onSignup, onBack, editData: propsEditData, clearEdi
         <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
           <h3 className="mb-4 text-primary">العنوان</h3>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block mb-2 text-sm text-foreground">المنطقة *</label>
-              <select
-                required
-                value={formData.area}
-                onChange={(e) => updateField('area', e.target.value)}
-                className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">اختر المنطقة</option>
-                  {areas.length > 0 ? (
-                    areas.map((area) => (
-                      <option key={area} value={area}>{area}</option>
-                    ))
-                  ) : (
-                    <option value="" disabled>جاري تحميل المناطق...</option>
-                  )}
-              </select>
-            </div>
-
-            <div>
-              <label className="block mb-2 text-sm text-foreground">العنوان بالتفصيل</label>
-              <textarea
-                value={formData.address}
-                onChange={(e) => updateField('address', e.target.value)}
-                className="w-full px-4 py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-ring"
-                rows={3}
-                placeholder="المدينة، الحي، الشارع، رقم المنزل"
-              />
-            </div>
-          </div>
+          <SmartAddressInput
+            required
+            areaValue={formData.area}
+            detailsValue={formData.address}
+            onAreaChange={(val) => updateField('area', val)}
+            onDetailsChange={(val) => updateField('address', val)}
+          />
         </div>
 
         {/* Auth & Role Card */}
