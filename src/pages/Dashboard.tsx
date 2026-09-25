@@ -162,8 +162,8 @@ export function Dashboard({
               <div className="flex items-center justify-center mb-3">
                 <ShoppingBag className="w-6 h-6" />
               </div>
-              <div className="text-base">مسح السوق</div>
-              <div className="text-xs opacity-90 mt-1">خصم النقاط</div>
+              <div className="text-base">خصم النقاط</div>
+              <div className="text-xs opacity-90 mt-1">مسح للخصم</div>
             </button>
 
             <button
