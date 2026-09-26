@@ -1,7 +1,7 @@
-import { ArrowRight, Calendar, Phone, MapPin, Book, Award, CheckCircle2, User, School, Download, CreditCard, Trash2 } from 'lucide-react';
+import { ArrowRight, Calendar, Phone, MapPin, Book, Award, CheckCircle2, User, School, Download, CreditCard, Trash2, BookOpen, Church, Heart, Scroll, X } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Participant } from '../types';
-import { useRef, useState, useMemo, startTransition } from 'react';
+import { useRef, useState, useMemo, useEffect, startTransition } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { IDCard } from '../components/shared/IDCard';
@@ -217,33 +217,71 @@ export function StudentProfile({
     }
   };
 
-  const handleDeleteDate = async (date: string) => {
-    if (!confirm(`هل أنت متأكد من حذف حضور يوم ${date} لهذا المخدوم؟`)) return;
-    
-    setIsDeletingDate(date);
+  const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
+  const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
+  const [selectedSpiritualModal, setSelectedSpiritualModal] = useState<{
+    type: 'class' | 'liturgy' | 'communion' | 'confession';
+    title: string;
+  } | null>(null);
+
+  const canDeleteAttendance = ['admin', 'supervisor', 'developer'].includes(viewerRole);
+
+  const fetchStudentAttendanceLogs = async () => {
+    const targetId = student?.dbId || student?.id;
+    if (!targetId) return;
+    setIsLoadingAttendance(true);
+    try {
+      const { data, error } = await supabase
+        .from('attendance_logs')
+        .select('*')
+        .eq('participant_id', targetId)
+        .order('attendance_date', { ascending: false });
+
+      if (error) throw error;
+      setAttendanceLogs(data || []);
+    } catch (err) {
+      console.error('Error fetching student attendance logs:', err);
+    } finally {
+      setIsLoadingAttendance(false);
+    }
+  };
+
+  useEffect(() => {
+    if (student) {
+      fetchStudentAttendanceLogs();
+    }
+  }, [student?.id, student?.dbId]);
+
+  const classLogs = attendanceLogs.filter(l => (l.meeting_type || 'class') === 'class');
+  const liturgyLogs = attendanceLogs.filter(l => l.meeting_type === 'liturgy');
+  const communionLogs = attendanceLogs.filter(l => l.meeting_type === 'communion');
+  const confessionLogs = attendanceLogs.filter(l => l.meeting_type === 'confession');
+
+  const handleDeleteLog = async (logId: string, date: string, meetingType: string) => {
+    const typeLabel = meetingType === 'class' ? 'حصة' : meetingType === 'liturgy' ? 'قداس' : meetingType === 'communion' ? 'تناول' : 'اعتراف';
+    if (!confirm(`هل أنت متأكد من حذف حضور ${typeLabel} يوم ${date}؟`)) return;
+
+    setIsDeletingDate(logId);
     try {
       const targetId = student.dbId || student.id;
-      if (onDeleteAttendance) {
-        await onDeleteAttendance(targetId, date);
-      } else {
-        const { error: deleteError } = await supabase
-          .from('attendance_logs')
-          .delete()
-          .match({ 
-            participant_id: targetId, 
-            attendance_date: date 
-          });
 
-        if (deleteError) throw deleteError;
+      const { error: deleteError } = await supabase
+        .from('attendance_logs')
+        .delete()
+        .eq('id', logId);
 
+      if (deleteError) throw deleteError;
+
+      // Only deduct 10 points if the meeting_type is 'class'
+      if (meetingType === 'class') {
         const { data: pData } = await supabase
           .from('participants')
           .select('points_balance')
           .eq('id', targetId)
           .single();
-          
+
         const currentBalance = pData?.points_balance || 0;
-        const newBalance = Math.max(0, currentBalance - 10); 
+        const newBalance = Math.max(0, currentBalance - 10);
 
         await supabase
           .from('participants')
@@ -254,18 +292,22 @@ export function StudentProfile({
           .from('points_transactions')
           .insert({
             participant_id: targetId,
-            servant_id: currentServant?.id,
+            servant_id: currentServant?.id || null,
             transaction_type: 'deduction',
             points_amount: 10,
-            description: `إلغاء مكافأة حضور يوم ${date}`
+            description: `إلغاء مكافأة حضور حصة يوم ${date}`
           });
 
-        toast.success(`تم حذف حضور يوم ${date} وخصم 10 نقاط بنجاح`);
-        await fetchData();
+        toast.success(`تم حذف حضور الحصة ليوم ${date} وخصم 10 نقاط بنجاح`);
+      } else {
+        toast.success(`تم حذف حضور ${typeLabel} ليوم ${date} بنجاح`);
       }
+
+      setAttendanceLogs(prev => prev.filter(l => l.id !== logId));
+      await fetchData();
     } catch (error) {
       console.error('Error deleting specific attendance:', error);
-      toast.error('حدث خطأ أثناء حذف الحصة');
+      toast.error('حدث خطأ أثناء حذف السجل');
     } finally {
       setIsDeletingDate(null);
     }
@@ -364,54 +406,87 @@ export function StudentProfile({
           </div>
         </div>
 
-        {/* Attendance Details */}
+        {/* Spiritual Tracking Section */}
         <div className="bg-card rounded-xl p-5 shadow-sm border border-border">
-          <h3 className="mb-4 text-primary">تفاصيل الحضور</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between py-2 border-b border-border">
-              <span className="text-sm text-muted-foreground">عدد أيام الحضور</span>
-              <span className="font-medium">{student?.attendanceDays?.length || 0} يوم</span>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b border-border">
-              <span className="text-sm text-muted-foreground">إجمالي أيام الخدمة</span>
-              <span className="font-medium">{totalDays} يوم</span>
-            </div>
-            <div className="flex items-center justify-between py-2">
-              <span className="text-sm text-muted-foreground">نسبة الحضور</span>
-              <span className="font-medium" style={{ color: 'var(--primary)' }}>{attendancePercentage}%</span>
-            </div>
-          </div>
+          <h3 className="mb-4 text-primary font-bold text-lg flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Church className="w-5 h-5 text-primary" />
+              المتابعة الروحية
+            </span>
+            <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-bold">
+              {attendanceLogs.length} نشاط مسجل
+            </span>
+          </h3>
 
-          <div className="space-y-3 mt-4">
-            <h4 className="text-sm text-muted-foreground mb-1">أيام الحضور:</h4>
-            {student?.attendanceDays && student.attendanceDays.length > 0 ? (
-              student.attendanceDays.map((date, index) => (
-                <div key={index} className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/20">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Calendar className="w-4 h-4 text-primary" />
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            {[
+              {
+                type: 'class' as const,
+                title: 'الحصص',
+                count: classLogs.length,
+                icon: BookOpen,
+                bgClass: 'bg-blue-50/60 dark:bg-blue-950/20',
+                borderClass: 'border-blue-200 dark:border-blue-800/40',
+                iconBgClass: 'bg-blue-100 dark:bg-blue-900/50',
+                iconColorClass: 'text-blue-600 dark:text-blue-400'
+              },
+              {
+                type: 'liturgy' as const,
+                title: 'القداسات',
+                count: liturgyLogs.length,
+                icon: Church,
+                bgClass: 'bg-purple-50/60 dark:bg-purple-950/20',
+                borderClass: 'border-purple-200 dark:border-purple-800/40',
+                iconBgClass: 'bg-purple-100 dark:bg-purple-900/50',
+                iconColorClass: 'text-purple-600 dark:text-purple-400'
+              },
+              {
+                type: 'communion' as const,
+                title: 'التناول',
+                count: communionLogs.length,
+                icon: Heart,
+                bgClass: 'bg-rose-50/60 dark:bg-rose-950/20',
+                borderClass: 'border-rose-200 dark:border-rose-800/40',
+                iconBgClass: 'bg-rose-100 dark:bg-rose-900/50',
+                iconColorClass: 'text-rose-600 dark:text-rose-400'
+              },
+              {
+                type: 'confession' as const,
+                title: 'الاعتراف',
+                count: confessionLogs.length,
+                icon: Scroll,
+                bgClass: 'bg-amber-50/60 dark:bg-amber-950/20',
+                borderClass: 'border-amber-200 dark:border-amber-800/40',
+                iconBgClass: 'bg-amber-100 dark:bg-amber-900/50',
+                iconColorClass: 'text-amber-600 dark:text-amber-400'
+              }
+            ].map((card) => {
+              const Icon = card.icon;
+              return (
+                <button
+                  key={card.type}
+                  type="button"
+                  onClick={() => setSelectedSpiritualModal({ type: card.type, title: card.title })}
+                  className={`p-4 rounded-xl border text-right transition-all transform active:scale-98 hover:shadow-md flex flex-col justify-between ${card.bgClass} ${card.borderClass}`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${card.iconBgClass} ${card.iconColorClass}`}>
+                      <Icon className="w-5 h-5" />
                     </div>
-                    <span className="font-medium text-foreground" dir="ltr">{date}</span>
+                    <span className="text-2xl font-black text-foreground">
+                      {card.count}
+                    </span>
                   </div>
-                  
-                  {/* Delete Button (Only for Admin/Supervisor/Developer) */}
-                  {(viewerRole === 'admin' || viewerRole === 'supervisor' || viewerRole === 'developer') && (
-                    <button
-                      onClick={() => handleDeleteDate(date)}
-                      disabled={isDeletingDate === date}
-                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                      title="حذف الحصة"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-6 text-muted-foreground bg-muted/10 rounded-xl border border-dashed border-border">
-                لم يتم تسجيل أي حضور حتى الآن
-              </div>
-            )}
+                  <div>
+                    <div className="font-bold text-foreground text-sm">{card.title}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                      <span>عرض السجل</span>
+                      <span className="text-xs">←</span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -627,6 +702,101 @@ export function StudentProfile({
           <QRCodeSVG value={String(student.participant_id || student.id)} size={600} includeMargin={true} />
         </div>
       </div>
+
+      {/* Spiritual Activity Logs Modal */}
+      {selectedSpiritualModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" dir="rtl">
+          <div className="bg-card border border-border rounded-2xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-4 bg-muted/40 border-b border-border flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  {selectedSpiritualModal.type === 'class' && <BookOpen className="w-5 h-5" />}
+                  {selectedSpiritualModal.type === 'liturgy' && <Church className="w-5 h-5" />}
+                  {selectedSpiritualModal.type === 'communion' && <Heart className="w-5 h-5" />}
+                  {selectedSpiritualModal.type === 'confession' && <Scroll className="w-5 h-5" />}
+                </div>
+                <div>
+                  <h3 className="font-bold text-foreground">سجل: {selectedSpiritualModal.title}</h3>
+                  <p className="text-xs text-muted-foreground">
+                    إجمالي السجلات: {
+                      (selectedSpiritualModal.type === 'class' ? classLogs :
+                       selectedSpiritualModal.type === 'liturgy' ? liturgyLogs :
+                       selectedSpiritualModal.type === 'communion' ? communionLogs : confessionLogs).length
+                    }
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedSpiritualModal(null)}
+                className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body: List of Dates */}
+            <div className="p-4 overflow-y-auto space-y-2 flex-1">
+              {isLoadingAttendance ? (
+                <div className="text-center py-8 text-muted-foreground">جاري تحميل السجلات...</div>
+              ) : (selectedSpiritualModal.type === 'class' ? classLogs :
+                   selectedSpiritualModal.type === 'liturgy' ? liturgyLogs :
+                   selectedSpiritualModal.type === 'communion' ? communionLogs : confessionLogs).length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground bg-muted/10 rounded-xl border border-dashed border-border">
+                  لا توجد سجلات حضور مسجلة لهذا النشاط حتى الآن
+                </div>
+              ) : (
+                (selectedSpiritualModal.type === 'class' ? classLogs :
+                 selectedSpiritualModal.type === 'liturgy' ? liturgyLogs :
+                 selectedSpiritualModal.type === 'communion' ? communionLogs : confessionLogs).map((log: any) => {
+                  const dateStr = log.attendance_date || (log.scanned_at ? String(log.scanned_at).split('T')[0] : '');
+                  return (
+                    <div
+                      key={log.id}
+                      className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/20 hover:bg-muted/40 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <Calendar className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                          <span className="font-medium text-foreground block" dir="ltr">{dateStr}</span>
+                          {log.scanned_at && (
+                            <span className="text-[11px] text-muted-foreground">
+                              {new Date(log.scanned_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {canDeleteAttendance && (
+                        <button
+                          onClick={() => handleDeleteLog(log.id, dateStr, log.meeting_type || 'class')}
+                          disabled={isDeletingDate === log.id}
+                          className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
+                          title="حذف السجل"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 border-t border-border bg-muted/20 text-center">
+              <button
+                onClick={() => setSelectedSpiritualModal(null)}
+                className="w-full py-2.5 bg-muted text-foreground rounded-xl font-medium hover:bg-muted/80 transition-colors text-sm"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -27,6 +27,7 @@ CREATE TABLE public.attendance_logs (
   scanned_at timestamp with time zone DEFAULT now(),
   servant_id uuid,
   attendance_date date DEFAULT CURRENT_DATE,
+  meeting_type text DEFAULT 'class'::text CHECK (meeting_type = ANY (ARRAY['class'::text, 'liturgy'::text, 'communion'::text, 'confession'::text])),
   CONSTRAINT attendance_logs_pkey PRIMARY KEY (id),
   CONSTRAINT attendance_logs_participant_id_fkey FOREIGN KEY (participant_id) REFERENCES public.participants(id),
   CONSTRAINT attendance_logs_servant_id_fkey FOREIGN KEY (servant_id) REFERENCES public.servants(id)
@@ -91,7 +92,7 @@ CREATE TABLE public.servant_attendance_logs (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   servant_id uuid NOT NULL,
   scanned_by uuid,
-  meeting_type text NOT NULL CHECK (meeting_type = ANY (ARRAY['class'::text, 'service_meeting'::text])),
+  meeting_type text NOT NULL CHECK (meeting_type = ANY (ARRAY['class'::text, 'service_meeting'::text, 'liturgy'::text, 'communion'::text, 'confession'::text])),
   attendance_date date DEFAULT CURRENT_DATE,
   scanned_at timestamp with time zone DEFAULT now(),
   CONSTRAINT servant_attendance_logs_pkey PRIMARY KEY (id),

@@ -257,7 +257,7 @@ export function Dashboard({
               >
                 <div className="flex items-center justify-center gap-3">
                   <BookOpen className="w-5 h-5 text-primary" />
-                  <span>إدارة الحصص</span>
+                  <span>إدارة الأحداث</span>
                 </div>
               </button>
 

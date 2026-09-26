@@ -83,7 +83,7 @@ export const useFestivalStore = create<FestivalState>((set, get) => ({
         // Step 2: Fetch attendance logs for these participants independently
         const { data: logsData, error: logsError } = await supabase
           .from('attendance_logs')
-          .select('participant_id, scanned_at, attendance_date')
+          .select('participant_id, scanned_at, attendance_date, meeting_type')
           .limit(50000);
 
         if (logsError) {
@@ -94,8 +94,11 @@ export const useFestivalStore = create<FestivalState>((set, get) => ({
 
         // Step 3: Merge them in memory
         const mapped = pData.map((p: any) => {
-          // Find all logs for this specific participant
-          const pLogs = (logsData || []).filter((log: any) => log.participant_id === p.id);
+          // Find all logs for this specific participant (ONLY consider class or null for legacy data)
+          const pLogs = (logsData || []).filter((log: any) => 
+            log.participant_id === p.id && 
+            (log.meeting_type === 'class' || log.meeting_type === null || log.meeting_type === undefined)
+          );
 
           // Extract dates
           const dates = pLogs.map((log: any) => {

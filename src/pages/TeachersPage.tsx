@@ -49,8 +49,22 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
   const [attendanceModalOpen, setAttendanceModalOpen] = useState(false);
   const [attendanceTeacher, setAttendanceTeacher] = useState<Teacher | null>(null);
   const [attendanceDate, setAttendanceDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [attendanceType, setAttendanceType] = useState<'class' | 'service_meeting'>('class');
+  const [attendanceTypes, setAttendanceTypes] = useState<string[]>(['class']);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const toggleAttendanceType = (type: string) => {
+    setAttendanceTypes(prev => {
+      if (prev.includes(type)) {
+        if (prev.length === 1) {
+          toast.info('يجب اختيار نوع حدث واحد على الأقل');
+          return prev;
+        }
+        return prev.filter(t => t !== type);
+      } else {
+        return [...prev, type];
+      }
+    });
+  };
 
   const [classesData, setClassesData] = useState<ClassData[]>([]);
 
@@ -280,7 +294,7 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
                                 e.stopPropagation();
                                 setAttendanceTeacher(teacher);
                                 setAttendanceDate(new Date().toISOString().split('T')[0]);
-                                setAttendanceType('class');
+                                setAttendanceTypes(['class']);
                                 setAttendanceModalOpen(true);
                               }}
                               className="p-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
@@ -376,16 +390,38 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">نوع الاجتماع</label>
-                <select
-                  value={attendanceType}
-                  onChange={(e) => setAttendanceType(e.target.value as 'class' | 'service_meeting')}
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-input-background focus:ring-2 focus:ring-primary outline-none text-foreground text-sm"
-                  disabled={isSubmitting}
-                >
-                  <option value="class">حصة</option>
-                  <option value="service_meeting">اجتماع خدمة</option>
-                </select>
+                <label className="block text-sm font-medium text-foreground mb-2">نوع الحدث</label>
+                <div className="flex flex-wrap items-center gap-2">
+                  {[
+                    { id: 'class', label: 'حصة' },
+                    { id: 'service_meeting', label: 'اجتماع خدمة' },
+                    { id: 'liturgy', label: 'قداس' },
+                    { id: 'communion', label: 'تناول' },
+                    { id: 'confession', label: 'اعتراف' },
+                  ].map(opt => {
+                    const isChecked = attendanceTypes.includes(opt.id);
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        disabled={isSubmitting}
+                        onClick={() => toggleAttendanceType(opt.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                          isChecked
+                            ? 'bg-primary text-white shadow-md ring-2 ring-primary/40'
+                            : 'bg-muted/60 text-foreground hover:bg-muted border border-border'
+                        }`}
+                      >
+                        <span className={`w-3.5 h-3.5 rounded flex items-center justify-center text-[10px] font-bold border transition-colors ${
+                          isChecked ? 'bg-white text-primary border-white' : 'border-foreground/30'
+                        }`}>
+                          {isChecked ? '✓' : ''}
+                        </span>
+                        <span>{opt.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -395,37 +431,63 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
                 onClick={async () => {
                   setIsSubmitting(true);
                   try {
-                    // Check for duplicate
-                    const { data: existingLog, error: checkError } = await supabase
+                    // Check for existing logs on this date for this servant
+                    const { data: existingLogs, error: checkError } = await supabase
                       .from('servant_attendance_logs')
-                      .select('id')
+                      .select('meeting_type')
                       .eq('servant_id', attendanceTeacher.id)
-                      .eq('attendance_date', attendanceDate)
-                      .eq('meeting_type', attendanceType)
-                      .maybeSingle();
+                      .eq('attendance_date', attendanceDate);
 
                     if (checkError) throw checkError;
 
-                    if (existingLog) {
-                      toast.info('تم تسجيل حضور هذا الخادم مسبقاً لهذا الاجتماع في هذا اليوم');
-                      setIsSubmitting(false);
-                      setAttendanceModalOpen(false);
-                      return;
+                    const existingSet = new Set((existingLogs || []).map((l: any) => l.meeting_type));
+
+                    const TYPE_NAMES: Record<string, string> = {
+                      class: 'حصة',
+                      service_meeting: 'اجتماع خدمة',
+                      liturgy: 'قداس',
+                      communion: 'تناول',
+                      confession: 'اعتراف'
+                    };
+
+                    const newlyRecorded: string[] = [];
+                    const alreadyRecorded: string[] = [];
+
+                    for (const type of attendanceTypes) {
+                      if (existingSet.has(type)) {
+                        alreadyRecorded.push(type);
+                        continue;
+                      }
+
+                      const { error: insertError } = await supabase
+                        .from('servant_attendance_logs')
+                        .insert({
+                          servant_id: attendanceTeacher.id,
+                          scanned_by: currentServant?.id || null,
+                          meeting_type: type,
+                          attendance_date: attendanceDate
+                        });
+
+                      if (insertError) {
+                        alreadyRecorded.push(type);
+                      } else {
+                        newlyRecorded.push(type);
+                      }
                     }
 
-                    // Insert new log
-                    const { error: insertError } = await supabase
-                      .from('servant_attendance_logs')
-                      .insert({
-                        servant_id: attendanceTeacher.id,
-                        scanned_by: currentServant?.id || null,
-                        meeting_type: attendanceType,
-                        attendance_date: attendanceDate
-                      });
+                    if (newlyRecorded.length > 0) {
+                      const recordedLabels = newlyRecorded.map(t => TYPE_NAMES[t] || t).join('، ');
+                      let toastMsg = `تم تسجيل حضور الخادم ${attendanceTeacher.name}: ${recordedLabels}`;
+                      if (alreadyRecorded.length > 0) {
+                        const skippedLabels = alreadyRecorded.map(t => TYPE_NAMES[t] || t).join('، ');
+                        toastMsg += ` (مسجل مسبقاً: ${skippedLabels})`;
+                      }
+                      toast.success(toastMsg);
+                    } else if (alreadyRecorded.length > 0) {
+                      const skippedLabels = alreadyRecorded.map(t => TYPE_NAMES[t] || t).join('، ');
+                      toast.info(`تم تسجيل (${skippedLabels}) لهذا الخادم مسبقاً لهذا اليوم`);
+                    }
 
-                    if (insertError) throw insertError;
-
-                    toast.success('تم تسجيل حضور الخادم بنجاح');
                     setAttendanceModalOpen(false);
                   } catch (err: any) {
                     console.error('Manual servant attendance error:', err);

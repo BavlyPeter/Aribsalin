@@ -43,7 +43,7 @@ export function MarketModal({ participantName, currentPoints, onConfirm, onCance
             <div className="w-16 h-16 bg-secondary/20 rounded-full mx-auto mb-3 flex items-center justify-center">
               <Coins className="w-8 h-8" style={{ color: 'var(--secondary)' }} />
             </div>
-            <h3 className="text-xl text-primary mb-1">خصم نقاط من السوق</h3>
+            <h3 className="text-xl text-primary mb-1">خصم نقاط</h3>
             <p className="text-sm text-muted-foreground">المشارك: {participantName}</p>
           </div>
         </div>

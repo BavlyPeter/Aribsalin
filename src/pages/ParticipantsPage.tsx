@@ -105,6 +105,22 @@ export function ParticipantsPage({
   const [attendanceModalOpen, setAttendanceModalOpen] = useState(false);
   const [attendanceParticipant, setAttendanceParticipant] = useState<ParticipantItem | null>(null);
   const [attendanceDate, setAttendanceDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [attendanceTypes, setAttendanceTypes] = useState<string[]>(['class']);
+  const [isSubmittingAttendance, setIsSubmittingAttendance] = useState(false);
+
+  const toggleAttendanceType = (type: string) => {
+    setAttendanceTypes(prev => {
+      if (prev.includes(type)) {
+        if (prev.length === 1) {
+          toast.info('يجب اختيار نوع حدث واحد على الأقل');
+          return prev;
+        }
+        return prev.filter(t => t !== type);
+      } else {
+        return [...prev, type];
+      }
+    });
+  };
 
   // Keep local state in sync if parent participants change
   useEffect(() => {
@@ -359,6 +375,7 @@ export function ParticipantsPage({
                       e.stopPropagation();
                       setAttendanceParticipant(participant);
                       setAttendanceDate(new Date().toISOString().split('T')[0]);
+                      setAttendanceTypes(['class']);
                       setAttendanceModalOpen(true);
                     }}
                     className="p-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
@@ -449,10 +466,43 @@ export function ParticipantsPage({
                   max={new Date().toISOString().split('T')[0]}
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">نوع الحدث</label>
+                <div className="flex flex-wrap items-center gap-2">
+                  {[
+                    { id: 'class', label: 'حصة (+10 نقاط)' },
+                    { id: 'liturgy', label: 'قداس' },
+                    { id: 'communion', label: 'تناول' },
+                    { id: 'confession', label: 'اعتراف' },
+                  ].map(opt => {
+                    const isChecked = attendanceTypes.includes(opt.id);
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => toggleAttendanceType(opt.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                          isChecked
+                            ? 'bg-primary text-white shadow-md ring-2 ring-primary/40'
+                            : 'bg-muted/60 text-foreground hover:bg-muted border border-border'
+                        }`}
+                      >
+                        <span className={`w-3.5 h-3.5 rounded flex items-center justify-center text-[10px] font-bold border transition-colors ${
+                          isChecked ? 'bg-white text-primary border-white' : 'border-foreground/30'
+                        }`}>
+                          {isChecked ? '✓' : ''}
+                        </span>
+                        <span>{opt.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             <div className="p-4 border-t border-border flex gap-3">
               <button
+                disabled={isSubmittingAttendance}
                 onClick={async () => {
                   const matched = storeParticipants.find((p: any) =>
                     p.id === attendanceParticipant.dbId ||
@@ -473,124 +523,169 @@ export function ParticipantsPage({
                   if (onManualAttendance) {
                     onManualAttendance(targetId, attendanceDate);
                   } else {
+                    setIsSubmittingAttendance(true);
                     try {
-                      const { data: existingAttendance, error: checkError } = await supabase
-                        .from('attendance_logs')
-                        .select('id')
-                        .eq('participant_id', targetId)
-                        .eq('attendance_date', attendanceDate)
-                        .maybeSingle();
-
-                      if (checkError) {
-                        console.error('Error checking existing attendance log:', checkError);
-                      }
-
-                      if (existingAttendance) {
-                        toast.info('تم تسجيل حضور هذا المخدوم في هذا اليوم مسبقاً');
-                        setAttendanceModalOpen(false);
-                        return;
-                      }
-
-                      const { error: attendanceError } = await supabase
-                        .from('attendance_logs')
-                        .insert({
-                          participant_id: targetId,
-                          servant_id: currentServant?.id || null,
-                          attendance_date: attendanceDate,
-                        });
-
-                      if (attendanceError) {
-                        console.error('Error inserting attendance log into Supabase:', attendanceError);
-                        throw attendanceError;
-                      }
-
-                      const { data: pData, error: balanceError } = await supabase
-                        .from('participants')
-                        .select('points_balance')
-                        .eq('id', targetId)
-                        .single();
-
-                      if (balanceError) {
-                        console.error('Error fetching participant balance from Supabase:', balanceError);
-                      }
-                        
-                      const currentBalance = pData?.points_balance || 0;
-                      const newBalance = currentBalance + 10;
-
-                      const { error: updateError } = await supabase
-                        .from('participants')
-                        .update({ points_balance: newBalance })
-                        .eq('id', targetId);
-
-                      if (updateError) {
-                        console.error('Error updating participant points balance:', updateError);
-                        throw updateError;
-                      }
-
-                      const { error: txError } = await supabase
-                        .from('points_transactions')
-                        .insert({
-                          participant_id: targetId,
-                          servant_id: currentServant?.id || null,
-                          transaction_type: 'addition',
-                          points_amount: 10,
-                          description: `مكافأة حضور يوم ${attendanceDate}`
-                        });
-
-                      if (txError) {
-                        console.error('Error recording points transaction:', txError);
-                      }
-
                       const today = new Date().toISOString().split('T')[0];
 
-                      // Zustand state mutation using callback signature ensuring no undefined is returned
-                      setParticipants((prev: any[]) =>
-                        (prev || []).map((p: any) => {
-                          if (p?.id === targetId || p?.participant_id === targetId) {
-                            const existingDays = Array.isArray(p.attendanceDays) ? p.attendanceDays : [];
-                            const updatedDays = existingDays.includes(attendanceDate)
-                              ? existingDays
-                              : [...existingDays, attendanceDate];
-                            return {
-                              ...p,
-                              points: newBalance,
-                              attendanceDays: updatedDays,
-                              attended: updatedDays.includes(today),
-                            };
-                          }
-                          return p;
-                        })
-                      );
+                      // 1. Fetch existing attendance logs for this participant on attendanceDate
+                      const { data: existingLogs, error: checkError } = await supabase
+                        .from('attendance_logs')
+                        .select('meeting_type')
+                        .eq('participant_id', targetId)
+                        .eq('attendance_date', attendanceDate);
 
-                      setItems((prev: ParticipantItem[]) =>
-                        (prev || []).map((p: ParticipantItem) => {
-                          if (p?.dbId === targetId || p?.id === targetId) {
-                            return {
-                              ...p,
-                              points: newBalance,
-                              attended: attendanceDate === today ? true : p.attended,
-                            };
-                          }
-                          return p;
-                        })
-                      );
+                      if (checkError) {
+                        console.error('Error checking existing attendance logs:', checkError);
+                      }
 
-                      toast.success('تم تسجيل الحضور وإضافة 10 نقاط بنجاح');
+                      const existingSet = new Set((existingLogs || []).map((l: any) => l.meeting_type || 'class'));
+
+                      const TYPE_NAMES: Record<string, string> = {
+                        class: 'حصة',
+                        liturgy: 'قداس',
+                        communion: 'تناول',
+                        confession: 'اعتراف'
+                      };
+
+                      const newlyRecorded: string[] = [];
+                      const alreadyRecorded: string[] = [];
+                      let classJustRegistered = false;
+
+                      for (const type of attendanceTypes) {
+                        if (existingSet.has(type)) {
+                          alreadyRecorded.push(type);
+                          continue;
+                        }
+
+                        const { error: insertError } = await supabase
+                          .from('attendance_logs')
+                          .insert({
+                            participant_id: targetId,
+                            servant_id: currentServant?.id || null,
+                            attendance_date: attendanceDate,
+                            meeting_type: type,
+                          });
+
+                        if (insertError) {
+                          console.error(`Error inserting attendance log for ${type}:`, insertError);
+                          alreadyRecorded.push(type);
+                        } else {
+                          newlyRecorded.push(type);
+                          if (type === 'class') {
+                            classJustRegistered = true;
+                          }
+                        }
+                      }
+
+                      let newBalance: number | undefined;
+
+                      // CRITICAL: Only add +10 points to points_balance, create points_transactions record,
+                      // and optimistically update attended status to true IF attendanceTypes.includes('class') and the class wasn't already registered
+                      if (classJustRegistered) {
+                        const { data: pData, error: balanceError } = await supabase
+                          .from('participants')
+                          .select('points_balance')
+                          .eq('id', targetId)
+                          .single();
+
+                        if (balanceError) {
+                          console.error('Error fetching participant balance from Supabase:', balanceError);
+                        }
+
+                        const currentBalance = pData?.points_balance || 0;
+                        newBalance = currentBalance + 10;
+
+                        const { error: updateError } = await supabase
+                          .from('participants')
+                          .update({ points_balance: newBalance })
+                          .eq('id', targetId);
+
+                        if (updateError) {
+                          console.error('Error updating participant points balance:', updateError);
+                        }
+
+                        const { error: txError } = await supabase
+                          .from('points_transactions')
+                          .insert({
+                            participant_id: targetId,
+                            servant_id: currentServant?.id || null,
+                            transaction_type: 'addition',
+                            points_amount: 10,
+                            description: `مكافأة حضور حصة يوم ${attendanceDate}`
+                          });
+
+                        if (txError) {
+                          console.error('Error recording points transaction:', txError);
+                        }
+
+                        // Optimistically update store & local state ONLY when class was registered
+                        setParticipants((prev: any[]) =>
+                          (prev || []).map((p: any) => {
+                            if (p?.id === targetId || p?.participant_id === targetId) {
+                              const existingDays = Array.isArray(p.attendanceDays) ? p.attendanceDays : [];
+                              const updatedDays = existingDays.includes(attendanceDate)
+                                ? existingDays
+                                : [...existingDays, attendanceDate];
+                              return {
+                                ...p,
+                                points: newBalance !== undefined ? newBalance : p.points,
+                                attendanceDays: updatedDays,
+                                attended: attendanceDate === today ? true : p.attended,
+                              };
+                            }
+                            return p;
+                          })
+                        );
+
+                        setItems((prev: ParticipantItem[]) =>
+                          (prev || []).map((p: ParticipantItem) => {
+                            if (p?.dbId === targetId || p?.id === targetId) {
+                              return {
+                                ...p,
+                                points: newBalance !== undefined ? newBalance : p.points,
+                                attended: attendanceDate === today ? true : p.attended,
+                              };
+                            }
+                            return p;
+                          })
+                        );
+                      }
+
+                      // Summarized toast message
+                      if (newlyRecorded.length > 0) {
+                        const recordedLabels = newlyRecorded.map(t => TYPE_NAMES[t] || t).join('، ');
+                        let toastMsg = `تم تسجيل حضور: ${recordedLabels}`;
+                        if (classJustRegistered) {
+                          toastMsg += ' (+10 نقاط)';
+                        }
+                        if (alreadyRecorded.length > 0) {
+                          const skippedLabels = alreadyRecorded.map(t => TYPE_NAMES[t] || t).join('، ');
+                          toastMsg += ` (مسجل مسبقاً: ${skippedLabels})`;
+                        }
+                        toast.success(toastMsg);
+                      } else if (alreadyRecorded.length > 0) {
+                        const skippedLabels = alreadyRecorded.map(t => TYPE_NAMES[t] || t).join('، ');
+                        toast.info(`تم تسجيل (${skippedLabels}) لهذا المشارك مسبقاً لهذا اليوم`);
+                      }
+
                       await fetchData();
                     } catch (err: any) {
                       console.error('Manual attendance error in ParticipantsPage:', err);
                       toast.error(`حدث خطأ أثناء تسجيل الحضور: ${err?.message || 'خطأ غير متوقع'}`);
+                    } finally {
+                      setIsSubmittingAttendance(false);
                     }
                   }
                   setAttendanceModalOpen(false);
                 }}
-                className="flex-1 bg-primary text-primary-foreground py-3 rounded-xl font-medium hover:opacity-90 active:scale-95 transition-all"
+                className="flex-1 bg-primary text-primary-foreground py-3 rounded-xl font-medium hover:opacity-90 active:scale-95 transition-all disabled:opacity-70"
               >
-                تأكيد الحضور
+                {isSubmittingAttendance ? 'جاري التسجيل...' : 'تأكيد الحضور'}
               </button>
               <button
+                disabled={isSubmittingAttendance}
                 onClick={() => setAttendanceModalOpen(false)}
-                className="flex-1 bg-muted text-foreground py-3 rounded-xl font-medium hover:bg-muted/80 active:scale-95 transition-all"
+                className="flex-1 bg-muted text-foreground py-3 rounded-xl font-medium hover:bg-muted/80 active:scale-95 transition-all disabled:opacity-70"
               >
                 إلغاء
               </button>

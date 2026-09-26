@@ -23,14 +23,28 @@ export function QRScanner({ onBack, onScanSuccess, mode: propsMode }: QRScannerP
 
   const [selectedParticipantForModal, setSelectedParticipantForModal] = useState<any | null>(null);
   const [activeModal, setActiveModal] = useState<'market' | 'addPoints' | null>(null);
-  const [meetingType, setMeetingType] = useState<'class' | 'service_meeting'>('class');
-  const meetingTypeRef = useRef(meetingType);
+  const [selectedMeetingTypes, setSelectedMeetingTypes] = useState<('class' | 'liturgy' | 'communion' | 'confession' | 'service_meeting')[]>(['class']);
+  const selectedMeetingTypesRef = useRef(selectedMeetingTypes);
   useEffect(() => {
-    meetingTypeRef.current = meetingType;
-  }, [meetingType]);
+    selectedMeetingTypesRef.current = selectedMeetingTypes;
+  }, [selectedMeetingTypes]);
 
   const userRole = currentServant?.role || viewerRole || 'normal';
   const canSelectMeetingType = ['admin', 'supervisor', 'developer'].includes(userRole);
+
+  const toggleMeetingType = (type: 'class' | 'liturgy' | 'communion' | 'confession' | 'service_meeting') => {
+    setSelectedMeetingTypes(prev => {
+      if (prev.includes(type)) {
+        if (prev.length === 1) {
+          toast.info('يجب اختيار نوع حدث واحد على الأقل');
+          return prev;
+        }
+        return prev.filter(t => t !== type);
+      } else {
+        return [...prev, type];
+      }
+    });
+  };
 
   const [isScannerActive, setIsScannerActive] = useState(false);
   const [isScanning, setIsScanning] = useState(false); // Used to prevent duplicate scans during processing
@@ -77,34 +91,102 @@ export function QRScanner({ onBack, onScanSuccess, mode: propsMode }: QRScannerP
           return false;
         }
 
+        const activeTypes = selectedMeetingTypesRef.current;
+        // Ignore service_meeting for students
+        const validStudentTypes = activeTypes.filter(t => t !== 'service_meeting');
+
+        if (validStudentTypes.length === 0) {
+          toast.info('نوع الحدث المختار (اجتماع خدمة) مخصص للخدام فقط');
+          return false;
+        }
+
         try {
           const participantUuid = targetParticipant.id as string;
-          const { error: attendError } = await supabase.from('attendance_logs').insert([{
-            participant_id: participantUuid,
-            servant_id: currentServant.id,
-            attendance_date: new Date().toISOString().split('T')[0]
-          }]);
+          const today = new Date().toISOString().split('T')[0];
 
-          if (attendError) {
-            toast.info('تم تسجيل حضور هذا المشارك مسبقاً اليوم');
-            return true;
+          // Fetch existing attendance logs for today for this participant
+          const { data: existingLogs } = await supabase
+            .from('attendance_logs')
+            .select('meeting_type')
+            .eq('participant_id', participantUuid)
+            .eq('attendance_date', today);
+
+          const existingSet = new Set((existingLogs || []).map((l: any) => l.meeting_type || 'class'));
+
+          const TYPE_NAMES: Record<string, string> = {
+            class: 'حصة',
+            liturgy: 'قداس',
+            communion: 'تناول',
+            confession: 'اعتراف',
+            service_meeting: 'اجتماع خدمة'
+          };
+
+          const newlyRecorded: string[] = [];
+          const alreadyRecorded: string[] = [];
+          let awardedPoints = false;
+
+          for (const type of validStudentTypes) {
+            if (existingSet.has(type)) {
+              alreadyRecorded.push(type);
+              continue;
+            }
+
+            const { error: attendError } = await supabase.from('attendance_logs').insert([{
+              participant_id: participantUuid,
+              servant_id: currentServant.id,
+              attendance_date: today,
+              meeting_type: type
+            }]);
+
+            if (attendError) {
+              alreadyRecorded.push(type);
+            } else {
+              newlyRecorded.push(type);
+
+              // CRITICAL: Only award the +10 bonus points and log to points_transactions if the type is exactly 'class'
+              if (type === 'class') {
+                const currentPoints = Number(targetParticipant.points || 0);
+                const newPoints = currentPoints + 10;
+                await supabase.from('participants').update({ points_balance: newPoints }).eq('id', participantUuid);
+                await supabase.from('points_transactions').insert([{
+                  participant_id: participantUuid,
+                  servant_id: currentServant.id,
+                  transaction_type: 'attendance_bonus',
+                  points_amount: 10,
+                  description: 'مكافأة حضور اليوم'
+                }]);
+                awardedPoints = true;
+
+                setParticipants((prev: any[]) => prev.map(p => (String(p.id) === String(participantUuid)) ? {
+                  ...p,
+                  points: newPoints,
+                  attended: true,
+                  attendanceDays: Array.from(new Set([...(p.attendanceDays || []), today]))
+                } : p));
+              }
+            }
           }
 
-          const currentPoints = Number(targetParticipant.points || 0);
-          const newPoints = currentPoints + 10;
-          await supabase.from('participants').update({ points_balance: newPoints }).eq('id', participantUuid);
-          await supabase.from('points_transactions').insert([{
-            participant_id: participantUuid,
-            servant_id: currentServant.id,
-            transaction_type: 'attendance_bonus',
-            points_amount: 10,
-            description: 'مكافأة حضور اليوم'
-          }]);
-
-          setParticipants((prev: any[]) => prev.map(p => (String(p.id) === String(participantUuid)) ? { ...p, points: newPoints, attended: true, attendanceDays: [...p.attendanceDays, new Date().toISOString().split('T')[0]] } : p));
-          toast.success('تم تسجيل الحضور بنجاح وإضافة 10 نقاط');
+          if (newlyRecorded.length > 0) {
+            const recordedLabels = newlyRecorded.map(t => TYPE_NAMES[t] || t).join('، ');
+            let toastMsg = `تم تسجيل حضور: ${recordedLabels}`;
+            if (awardedPoints) {
+              toastMsg += ' (+10 نقاط)';
+            }
+            if (alreadyRecorded.length > 0) {
+              const skippedLabels = alreadyRecorded.map(t => TYPE_NAMES[t] || t).join('، ');
+              toastMsg += ` (مسجل مسبقاً: ${skippedLabels})`;
+            }
+            toast.success(toastMsg);
+            return true;
+          } else if (alreadyRecorded.length > 0) {
+            const skippedLabels = alreadyRecorded.map(t => TYPE_NAMES[t] || t).join('، ');
+            toast.info(`تم تسجيل (${skippedLabels}) لهذا المشارك مسبقاً اليوم`);
+            return true;
+          }
           return true;
         } catch (err) {
+          console.error('Error recording student attendance:', err);
           toast.error('حدث خطأ أثناء تسجيل الحضور');
           return false;
         }
@@ -154,41 +236,65 @@ export function QRScanner({ onBack, onScanSuccess, mode: propsMode }: QRScannerP
             return false;
           }
 
-          const currentMeeting = meetingTypeRef.current || meetingType;
+          const activeTypes = selectedMeetingTypesRef.current;
           const today = new Date().toISOString().split('T')[0];
 
-          // Check if already attended today for this meeting type
-          const { data: existingLog } = await supabase
+          // Check if already attended today for these meeting types
+          const { data: existingLogs } = await supabase
             .from('servant_attendance_logs')
-            .select('id')
+            .select('meeting_type')
             .eq('servant_id', servantData.id)
-            .eq('meeting_type', currentMeeting)
-            .eq('attendance_date', today)
-            .maybeSingle();
+            .eq('attendance_date', today);
 
-          if (existingLog) {
-            toast.info('تم تسجيل حضور هذا الخادم مسبقاً لهذا الاجتماع اليوم');
-            return true;
+          const existingSet = new Set((existingLogs || []).map((l: any) => l.meeting_type));
+
+          const TYPE_NAMES: Record<string, string> = {
+            class: 'حصة',
+            service_meeting: 'اجتماع خدمة',
+            liturgy: 'قداس',
+            communion: 'تناول',
+            confession: 'اعتراف'
+          };
+
+          const newlyRecorded: string[] = [];
+          const alreadyRecorded: string[] = [];
+
+          for (const type of activeTypes) {
+            if (existingSet.has(type)) {
+              alreadyRecorded.push(type);
+              continue;
+            }
+
+            const { error: servantAttendError } = await supabase
+              .from('servant_attendance_logs')
+              .insert([{
+                servant_id: servantData.id,
+                scanned_by: currentServant.id,
+                meeting_type: type,
+                attendance_date: today
+              }]);
+
+            if (servantAttendError) {
+              alreadyRecorded.push(type);
+            } else {
+              newlyRecorded.push(type);
+            }
           }
 
-          // 3. Insert record into servant_attendance_logs
-          const { error: servantAttendError } = await supabase
-            .from('servant_attendance_logs')
-            .insert([{
-              servant_id: servantData.id,
-              scanned_by: currentServant.id,
-              meeting_type: currentMeeting,
-              attendance_date: today
-            }]);
-
-          // 4. Handle duplicate constraint error gracefully
-          if (servantAttendError) {
-            toast.info('تم تسجيل حضور هذا الخادم مسبقاً لهذا الاجتماع اليوم');
+          if (newlyRecorded.length > 0) {
+            const recordedLabels = newlyRecorded.map(t => TYPE_NAMES[t] || t).join('، ');
+            let toastMsg = `تم تسجيل حضور الخادم ${servantData.full_name}: ${recordedLabels}`;
+            if (alreadyRecorded.length > 0) {
+              const skippedLabels = alreadyRecorded.map(t => TYPE_NAMES[t] || t).join('، ');
+              toastMsg += ` (مسجل مسبقاً: ${skippedLabels})`;
+            }
+            toast.success(toastMsg);
+            return true;
+          } else if (alreadyRecorded.length > 0) {
+            const skippedLabels = alreadyRecorded.map(t => TYPE_NAMES[t] || t).join('، ');
+            toast.info(`تم تسجيل (${skippedLabels}) لهذا الخادم مسبقاً اليوم`);
             return true;
           }
-
-          // 5. Show success toast
-          toast.success(`تم تسجيل حضور الخادم ${servantData.full_name} بنجاح`);
           return true;
         } else if (mode === 'viewDetails') {
           setTimeout(() => {
@@ -196,7 +302,7 @@ export function QRScanner({ onBack, onScanSuccess, mode: propsMode }: QRScannerP
           }, 300);
           return true;
         } else {
-          toast.error('عمليات السوق والنقاط الإضافية مخصصة للطلاب والمشاركين فقط');
+          toast.error('عمليات النقاط مخصصة للمشاركين فقط');
           return false;
         }
       }
@@ -464,7 +570,7 @@ export function QRScanner({ onBack, onScanSuccess, mode: propsMode }: QRScannerP
           <div className="text-white text-center flex-1 mr-3">
             <div className="text-lg">
               {mode === 'attendance' ? 'تسجيل الحضور' :
-               mode === 'market' ? 'مسح السوق' :
+               mode === 'market' ? 'خصم نقاط' :
                mode === 'addPoints' ? 'إضافة نقاط' :
                'عرض التفاصيل'}
             </div>
@@ -474,30 +580,36 @@ export function QRScanner({ onBack, onScanSuccess, mode: propsMode }: QRScannerP
                mode === 'addPoints' ? 'امسح الكود لإضافة النقاط' :
                'امسح الكود لعرض الملف الشخصي'}
             </div>
-            {mode === 'attendance' && canSelectMeetingType && (
-              <div className="mt-3 flex items-center justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setMeetingType('class')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    meetingType === 'class' 
-                      ? 'bg-primary text-white shadow-md' 
-                      : 'bg-white/20 text-white/80 hover:bg-white/30'
-                  }`}
-                >
-                  تسجيل حصة
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMeetingType('service_meeting')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    meetingType === 'service_meeting' 
-                      ? 'bg-secondary text-secondary-foreground shadow-md' 
-                      : 'bg-white/20 text-white/80 hover:bg-white/30'
-                  }`}
-                >
-                  تسجيل اجتماع خدمة
-                </button>
+            {mode === 'attendance' && (
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 max-w-md mx-auto" dir="rtl">
+                {[
+                  { id: 'class' as const, label: 'حصة' },
+                  { id: 'liturgy' as const, label: 'قداس' },
+                  { id: 'communion' as const, label: 'تناول' },
+                  { id: 'confession' as const, label: 'اعتراف' },
+                  ...(canSelectMeetingType ? [{ id: 'service_meeting' as const, label: 'اجتماع خدمة' }] : []),
+                ].map(opt => {
+                  const isChecked = selectedMeetingTypes.includes(opt.id);
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => toggleMeetingType(opt.id)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                        isChecked
+                          ? 'bg-primary text-white shadow-md ring-2 ring-primary/40'
+                          : 'bg-white/20 text-white/80 hover:bg-white/30'
+                      }`}
+                    >
+                      <span className={`w-3.5 h-3.5 rounded flex items-center justify-center text-[10px] font-bold border transition-colors ${
+                        isChecked ? 'bg-white text-primary border-white' : 'border-white/50'
+                      }`}>
+                        {isChecked ? '✓' : ''}
+                      </span>
+                      <span>{opt.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -669,7 +781,7 @@ export function QRScanner({ onBack, onScanSuccess, mode: propsMode }: QRScannerP
                 servant_id: currentServant.id,
                 transaction_type: 'market_deduct',
                 points_amount: -Math.abs(deduct),
-                description: 'خصم من السوق'
+                description: 'خصم نقاط'
               }]);
 
               setParticipants((prev: any[]) => prev.map(p => (p.id === selectedParticipantForModal.id || p.id === participantUuid) ? { ...p, points: newPoints } : p));
