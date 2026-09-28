@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useFestivalStore } from '../../store/useFestivalStore';
 import { toast } from 'sonner';
@@ -9,9 +9,15 @@ export interface RoleGuardProps {
 }
 
 export function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
-  const { isAuthenticated, currentServant, isInitialized } = useFestivalStore();
+  const { isAuthenticated, currentServant, isInitialized, logout } = useFestivalStore();
   const location = useLocation();
   const toastShownRef = useRef(false);
+
+  useEffect(() => {
+    if (isAuthenticated && currentServant?.status === 'pending') {
+      if (logout) logout();
+    }
+  }, [isAuthenticated, currentServant, logout]);
 
   if (!isInitialized) {
     return (
@@ -26,6 +32,14 @@ export function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (currentServant?.status === 'pending') {
+    if (!toastShownRef.current) {
+      toast.error('حسابك لا يزال قيد المراجعة، يرجى انتظار موافقة أمين الخدمة.');
+      toastShownRef.current = true;
+    }
+    return <Navigate replace to="/login"/>;
   }
 
   if (allowedRoles && allowedRoles.length > 0) {

@@ -154,6 +154,15 @@ export const useFestivalStore = create<FestivalState>((set, get) => ({
           .single();
 
         if (!error && servantData) {
+          if (servantData.status === 'pending') {
+            await supabase.auth.signOut();
+            set({
+              isAuthenticated: false,
+              currentServant: null,
+            });
+            return;
+          }
+
           set({
             currentServant: servantData,
             isAuthenticated: true,
