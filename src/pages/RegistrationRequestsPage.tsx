@@ -73,10 +73,7 @@ export function RegistrationRequestsPage({ onBack, onViewProfile }: Registration
   const handleReject = async (id: string) => {
     if (!confirm('هل أنت متأكد من رفض وحذف هذا الطلب؟')) return;
     try {
-      const { error } = await supabase
-        .from('servants')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.rpc('delete_servant_completely', { target_user_id: id });
       
       if (error) throw error;
       toast.success('تم رفض الطلب');
