@@ -24,7 +24,7 @@ Silently scan and read the following critical files and directories to map the c
 Generate a highly technical, beautifully formatted Markdown file containing the following exact sections. Retain the existing Troubleshooting and Changelog sections from the current document.
 
 1. **Project Idea & Concept**
-   - Provide an executive summary of Aribsalin as a Church Festival & Sunday School Management System.
+   - Provide an executive summary of Church Management System.
    - Detail the core business problems solved (e.g., QR check-in bottlenecks, duplicate attendance fraud, Smart ID generation).
 
 2. **Tech Stack & Tooling**
