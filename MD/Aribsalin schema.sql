@@ -1,7 +1,5 @@
--- WARNING: This schema is for context only and is not meant to be run.
--- Table order and constraints may not be valid for execution.
-
-CREATE TABLE public.participants (
+-- 1. إنشاء الجداول الأساسية المستقلة (بأمان)
+CREATE TABLE IF NOT EXISTS public.participants (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   full_name text,
   gender text,
@@ -21,18 +19,8 @@ CREATE TABLE public.participants (
   participant_id text UNIQUE,
   CONSTRAINT participants_pkey PRIMARY KEY (id)
 );
-CREATE TABLE public.attendance_logs (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  participant_id uuid NOT NULL,
-  scanned_at timestamp with time zone DEFAULT now(),
-  servant_id uuid,
-  attendance_date date DEFAULT CURRENT_DATE,
-  meeting_type text DEFAULT 'class'::text CHECK (meeting_type = ANY (ARRAY['class'::text, 'liturgy'::text, 'communion'::text, 'confession'::text])),
-  CONSTRAINT attendance_logs_pkey PRIMARY KEY (id),
-  CONSTRAINT attendance_logs_participant_id_fkey FOREIGN KEY (participant_id) REFERENCES public.participants(id),
-  CONSTRAINT attendance_logs_servant_id_fkey FOREIGN KEY (servant_id) REFERENCES public.servants(id)
-);
-CREATE TABLE public.servants (
+
+CREATE TABLE IF NOT EXISTS public.servants (
   created_at timestamp with time zone DEFAULT now(),
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   full_name text,
@@ -53,7 +41,8 @@ CREATE TABLE public.servants (
   CONSTRAINT servants_pkey PRIMARY KEY (id),
   CONSTRAINT servants_auth_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
-CREATE TABLE public.areas (
+
+CREATE TABLE IF NOT EXISTS public.areas (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   name character varying NOT NULL UNIQUE,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
@@ -62,7 +51,21 @@ CREATE TABLE public.areas (
   ask_building_details boolean DEFAULT false,
   CONSTRAINT areas_pkey PRIMARY KEY (id)
 );
-CREATE TABLE public.points_transactions (
+
+-- 2. إنشاء الجداول المعتمدة (بأمان)
+CREATE TABLE IF NOT EXISTS public.attendance_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  participant_id uuid NOT NULL,
+  scanned_at timestamp with time zone DEFAULT now(),
+  servant_id uuid,
+  attendance_date date DEFAULT CURRENT_DATE,
+  meeting_type text DEFAULT 'class'::text CHECK (meeting_type = ANY (ARRAY['class'::text, 'liturgy'::text, 'communion'::text, 'confession'::text])),
+  CONSTRAINT attendance_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT attendance_logs_participant_id_fkey FOREIGN KEY (participant_id) REFERENCES public.participants(id),
+  CONSTRAINT attendance_logs_servant_id_fkey FOREIGN KEY (servant_id) REFERENCES public.servants(id)
+);
+
+CREATE TABLE IF NOT EXISTS public.points_transactions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   participant_id uuid,
   servant_id uuid,
@@ -74,7 +77,8 @@ CREATE TABLE public.points_transactions (
   CONSTRAINT points_transactions_participant_id_fkey FOREIGN KEY (participant_id) REFERENCES public.participants(id),
   CONSTRAINT points_transactions_servant_id_fkey FOREIGN KEY (servant_id) REFERENCES public.servants(id)
 );
-CREATE TABLE public.financial_transactions (
+
+CREATE TABLE IF NOT EXISTS public.financial_transactions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   type text,
   title text,
@@ -88,7 +92,8 @@ CREATE TABLE public.financial_transactions (
   CONSTRAINT financial_transactions_pkey PRIMARY KEY (id),
   CONSTRAINT financial_transactions_servant_id_fkey FOREIGN KEY (servant_id) REFERENCES public.servants(id)
 );
-CREATE TABLE public.servant_attendance_logs (
+
+CREATE TABLE IF NOT EXISTS public.servant_attendance_logs (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   servant_id uuid NOT NULL,
   scanned_by uuid,
@@ -99,3 +104,19 @@ CREATE TABLE public.servant_attendance_logs (
   CONSTRAINT servant_attendance_logs_servant_id_fkey FOREIGN KEY (servant_id) REFERENCES public.servants(id),
   CONSTRAINT servant_attendance_logs_scanned_by_fkey FOREIGN KEY (scanned_by) REFERENCES public.servants(id)
 );
+
+-- 3. دالة الـ RPC
+CREATE OR REPLACE FUNCTION public.delete_servant_completely(target_user_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  DELETE FROM public.servant_attendance_logs WHERE servant_id = target_user_id OR scanned_by = target_user_id;
+  UPDATE public.attendance_logs SET servant_id = NULL WHERE servant_id = target_user_id;
+  UPDATE public.points_transactions SET servant_id = NULL WHERE servant_id = target_user_id;
+  UPDATE public.financial_transactions SET servant_id = NULL WHERE servant_id = target_user_id;
+  DELETE FROM public.servants WHERE id = target_user_id;
+  DELETE FROM auth.users WHERE id = target_user_id;
+END;
+$$;
