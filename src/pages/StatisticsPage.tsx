@@ -4,6 +4,7 @@ import { ArrowRight, Users, Calendar, TrendingUp, Award, BarChart3 } from 'lucid
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Participant } from '../types';
 import { useFestivalStore } from '../store/useFestivalStore';
+import { tenantConfig, resolveStageKey } from '../config/tenant';
 
 interface StatisticsPageProps {
   onBack?: () => void;
@@ -12,60 +13,8 @@ interface StatisticsPageProps {
   currentServant?: any;
 }
 
-const CLASS_LABELS: Record<string, string> = {
-  'kg': 'حضانة',
-  'primary_12': 'ابتدائي (الأول والثاني)',
-  'primary_34': 'ابتدائي (الثالث والرابع)',
-  'primary_56': 'ابتدائي (الخامس والسادس)',
-  'preparatory': 'إعدادي',
-  'secondary': 'ثانوي',
-  'university_graduate': 'جامعيين وخريجين',
-  'other': 'أخرى'
-};
+const CLASS_LABELS = tenantConfig.CLASS_LABELS;
 
-const getParticipantClass = (stage: string, year: string) => {
-  const s = String(stage || '').toLowerCase();
-  const y = String(year || '').toLowerCase();
-
-  if (s.includes('حضانة') || s === 'kg') return 'kg';
-  
-  if (s.includes('ابتدائي') || s === 'primary') {
-    if (y.includes('أول') || y.includes('ثاني') || y.includes('1') || y.includes('2')) return 'primary_12';
-    if (y.includes('ثالث') || y.includes('رابع') || y.includes('3') || y.includes('4')) return 'primary_34';
-    if (y.includes('خامس') || y.includes('سادس') || y.includes('5') || y.includes('6')) return 'primary_56';
-    return 'primary_12';
-  }
-
-  if (s.includes('إعدادي') || s === 'preparatory') return 'preparatory';
-  if (s.includes('ثانوي') || s === 'secondary') return 'secondary';
-  if (s.includes('جامعي') || s.includes('خريج') || s === 'university' || s === 'graduate') return 'university_graduate';
- 
-  return 'other';
-};
-
-const getStageKey = (dbStage: string, academicYear?: string) => {
-  const s = (dbStage || '').toLowerCase().trim();
-  if (!s || s === 'empty') return 'other';
-
-  if (['kg', 'primary_12', 'primary_34', 'primary_56', 'preparatory', 'secondary', 'university_graduate'].includes(s)) {
-    return s;
-  }
-
-  if (s.includes('حضانة') || s.includes('kg')) return 'kg';
-  if (s.includes('إعدادي') || s.includes('preparatory')) return 'preparatory';
-  if (s.includes('ثانوي') || s.includes('secondary')) return 'secondary';
-  if (s.includes('جامعي') || s.includes('university') || s.includes('خريج') || s.includes('graduate') || s.includes('university_graduate')) return 'university_graduate';
-  
-  if (s.includes('ابتدائي') || s.includes('primary')) {
-    const y = (academicYear || '').toLowerCase();
-    if (s.includes('1') || s.includes('2') || s.includes('أول') || s.includes('ثاني') || y.includes('1') || y.includes('2') || y.includes('أول') || y.includes('ثاني')) return 'primary_12';
-    if (s.includes('3') || s.includes('4') || s.includes('ثالث') || s.includes('رابع') || y.includes('3') || y.includes('4') || y.includes('ثالث') || y.includes('رابع')) return 'primary_34';
-    if (s.includes('5') || s.includes('6') || s.includes('خامس') || s.includes('سادس') || y.includes('5') || y.includes('6') || y.includes('خامس') || y.includes('سادس')) return 'primary_56';
-    return 'primary_12';
-  }
-
-  return 'other';
-};
 
 export function StatisticsPage({
   onBack,
@@ -93,11 +42,11 @@ export function StatisticsPage({
   const totalDays = propsTotalDays !== undefined ? propsTotalDays : calculatedTotalDays;
 
   const isSupervisor = currentServant?.role === 'supervisor';
-  const supervisorStageKey = isSupervisor ? getStageKey(currentServant.class_stage || '') : null;
+  const supervisorStageKey = isSupervisor ? resolveStageKey(currentServant.class_stage || '') : null;
 
   // 1. Filter participants strictly for supervisors
   const filteredParticipants = isSupervisor
-    ? participants.filter(p => getStageKey(p.data?.educationStage || '', p.data?.educationYear || '') === supervisorStageKey)
+    ? participants.filter(p => resolveStageKey(p.data?.educationStage || '', p.data?.educationYear || '') === supervisorStageKey)
     : participants;
 
   // 2. Recalculate total days for the specific class (so averages are correct)
@@ -152,7 +101,7 @@ export function StatisticsPage({
         const pdata: any = (p as any).data || {};
         const stage = String(pdata['educational_stage'] || pdata.educationStage || '');
         const year = String(pdata['academic_year'] || pdata.educationYear || '');
-        const classKey = getParticipantClass(stage, year);
+        const classKey = resolveStageKey(stage, year);
         return {
           id: p.id,
           name: p.name || pdata.fullName || 'بدون اسم',
@@ -178,7 +127,7 @@ export function StatisticsPage({
       const pdata: any = (p as any).data || {};
       const rawStage = String(pdata['educational_stage'] || pdata.educationStage || '');
       const rawYear = String(pdata['academic_year'] || pdata.educationYear || '');
-      const stageKey = getParticipantClass(rawStage, rawYear);
+      const stageKey = resolveStageKey(rawStage, rawYear);
       const gender = String(pdata.gender || '').trim().toLowerCase();
 
       if (!stageMap[stageKey]) {
@@ -533,7 +482,7 @@ export function StatisticsPage({
           const stageParticipants = filteredParticipants.filter(
             p => {
               const pdata: any = (p as any).data || {};
-              return getParticipantClass(
+              return resolveStageKey(
                 pdata['educational_stage'] || pdata.educationStage || '',
                 pdata['academic_year'] || pdata.educationYear || ''
               ) === stageKey;

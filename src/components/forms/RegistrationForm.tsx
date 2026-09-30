@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { uploadProfileImage } from '../../lib/uploadHelper';
 import { toast } from 'sonner';
 import { SmartAddressInput } from '../shared/SmartAddressInput';
+import { educationStages, educationYears, generateSmartIdPrefix } from '../../config/tenant';
 
 interface RegistrationFormProps {
   onBack: () => void;
@@ -12,46 +13,6 @@ interface RegistrationFormProps {
   editData?: any | null;
   clearEdit?: () => void;
 }
-
-const educationStages = {
-  'kg': 'حضانة',
-  'primary': 'ابتدائي',
-  'preparatory': 'إعدادي',
-  'secondary': 'ثانوي',
-  'university': 'جامعي',
-  'graduate': 'خريجين'
-};
-
-const educationYears = {
-  'kg': ['Baby Class', 'KG1', 'KG2'],
-  'primary': [
-    'الصف الأول الابتدائي',
-    'الصف الثاني الابتدائي',
-    'الصف الثالث الابتدائي',
-    'الصف الرابع الابتدائي',
-    'الصف الخامس الابتدائي',
-    'الصف السادس الابتدائي'
-  ],
-  'preparatory': [
-    'الصف الأول الإعدادي',
-    'الصف الثاني الإعدادي',
-    'الصف الثالث الإعدادي'
-  ],
-  'secondary': [
-    'الصف الأول الثانوي',
-    'الصف الثاني الثانوي',
-    'الصف الثالث الثانوي'
-  ],
-  'university': [
-    'الفرقة الأولى',
-    'الفرقة الثانية',
-    'الفرقة الثالثة',
-    'الفرقة الرابعة',
-    'الفرقة الخامسة',
-    'الفرقة السادسة',
-    'الفرقة السابعة'
-  ]
-};
 
 export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: RegistrationFormProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -135,46 +96,7 @@ export function RegistrationForm({ onBack, onSubmit, editData, clearEdit }: Regi
   }, [photoPreview]);
 
   const generateParticipantSmartId = async (stage: string, year: string) => {
-    let stageChar = 'X';
-    if (stage === 'kg') stageChar = 'K';
-    else if (stage === 'primary') stageChar = 'P';
-    else if (stage === 'preparatory') stageChar = 'Y';
-    else if (stage === 'secondary') stageChar = 'S';
-    else if (stage === 'university' || stage === 'graduate') stageChar = 'G';
-
-    let yearChar = '0';
-    if (stage === 'kg') {
-      if (year === 'Baby Class') yearChar = '0';
-      else if (year === 'KG1') yearChar = '1';
-      else if (year === 'KG2') yearChar = '2';
-    } else if (stage === 'primary') {
-      if (year === 'الصف الأول الابتدائي') yearChar = '1';
-      else if (year === 'الصف الثاني الابتدائي') yearChar = '2';
-      else if (year === 'الصف الثالث الابتدائي') yearChar = '3';
-      else if (year === 'الصف الرابع الابتدائي') yearChar = '4';
-      else if (year === 'الصف الخامس الابتدائي') yearChar = '5';
-      else if (year === 'الصف السادس الابتدائي') yearChar = '6';
-    } else if (stage === 'preparatory') {
-      if (year === 'الصف الأول الإعدادي') yearChar = '1';
-      else if (year === 'الصف الثاني الإعدادي') yearChar = '2';
-      else if (year === 'الصف الثالث الإعدادي') yearChar = '3';
-    } else if (stage === 'secondary') {
-      if (year === 'الصف الأول الثانوي') yearChar = '1';
-      else if (year === 'الصف الثاني الثانوي') yearChar = '2';
-      else if (year === 'الصف الثالث الثانوي') yearChar = '3';
-    } else if (stage === 'university') {
-      if (year === 'الفرقة الأولى') yearChar = '1';
-      else if (year === 'الفرقة الثانية') yearChar = '2';
-      else if (year === 'الفرقة الثالثة') yearChar = '3';
-      else if (year === 'الفرقة الرابعة') yearChar = '4';
-      else if (year === 'الفرقة الخامسة') yearChar = '5';
-      else if (year === 'الفرقة السادسة') yearChar = '6';
-      else if (year === 'الفرقة السابعة') yearChar = '7';
-    } else if (stage === 'graduate') {
-      yearChar = '0';
-    }
-
-    const prefix = `${stageChar}${yearChar}`;
+    const prefix = generateSmartIdPrefix(stage, year);
 
     const { data, error } = await supabase
       .from('participants')

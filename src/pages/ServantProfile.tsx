@@ -7,6 +7,7 @@ import { IDCard } from '../components/shared/IDCard';
 import { useFestivalStore } from '../store/useFestivalStore';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
+import { tenantConfig } from '../config/tenant';
 
 interface ServantProfileProps {
   servantId?: string;
@@ -20,24 +21,8 @@ const roleLabels: Record<string, string> = {
   'developer': 'مطور النظام'
 };
 
-const servingStages: Record<string, string> = {
-  'kg': 'حضانة',
-  'primary_12': 'ابتدائي (الأول والثاني)',
-  'primary_34': 'ابتدائي (الثالث والرابع)',
-  'primary_56': 'ابتدائي (الخامس والسادس)',
-  'preparatory': 'إعدادي',
-  'secondary': 'ثانوي',
-  'university_graduate': 'جامعي وخريجين'
-};
-
-const educationStages: Record<string, string> = {
-  'kg': 'حضانة',
-  'primary': 'ابتدائي',
-  'preparatory': 'إعدادي',
-  'secondary': 'ثانوي',
-  'university': 'جامعي',
-  'graduate': 'خريجين'
-};
+const servingStages: Record<string, string> = tenantConfig.servingStages;
+const educationStages: Record<string, string> = tenantConfig.educationStages;
 
 export function ServantProfile({ servantId: propsServantId, onBack }: ServantProfileProps = {}) {
   const navigate = useNavigate();

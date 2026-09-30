@@ -4,33 +4,11 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { IDCard } from '../shared/IDCard';
 import { Participant } from '../../types';
+import { tenantConfig, resolveStageKey } from '../../config/tenant';
 
-const CLASSES = [
-  { id: 'kg', label: 'حضانة' },
-  { id: 'primary_12', label: 'ابتدائي (الأول والثاني)' },
-  { id: 'primary_34', label: 'ابتدائي (الثالث والرابع)' },
-  { id: 'primary_56', label: 'ابتدائي (الخامس والسادس)' },
-  { id: 'preparatory', label: 'إعدادي' },
-  { id: 'secondary', label: 'ثانوي' },
-  { id: 'university_graduate', label: 'جامعي وخريجين' },
-  { id: 'other', label: 'أخرى' }
-];
-
-const getStageKey = (stageStr: string, yearStr: string) => {
-  const s = String(stageStr || '').toLowerCase();
-  const y = String(yearStr || '').toLowerCase();
-  if (s.includes('حضانة') || s === 'kg') return 'kg';
-  if (s.includes('إعدادي') || s === 'preparatory') return 'preparatory';
-  if (s.includes('ثانوي') || s === 'secondary') return 'secondary';
-  if (s === 'university' || s === 'graduate' || s.includes('جامع') || s.includes('خريج')) return 'university_graduate';
-  if (s === 'primary' || s.includes('ابتدائي')) {
-    if (y.includes('اول') || y.includes('أول') || y.includes('ثاني') || y.includes('1') || y.includes('2')) return 'primary_12';
-    if (y.includes('ثالع') || y.includes('ثالث') || y.includes('رابع') || y.includes('3') || y.includes('4')) return 'primary_34';
-    if (y.includes('خامس') || y.includes('سادس') || y.includes('5') || y.includes('6')) return 'primary_56';
-    return 'primary_12';
-  }
-  return 'other';
-};
+const CLASSES = Object.entries(tenantConfig.CLASS_LABELS)
+  .filter(([id]) => id !== 'other')
+  .map(([id, label]) => ({ id, label }));
 
 interface BulkModalProps {
   participants: Participant[];
@@ -59,7 +37,7 @@ export function BulkIDDownloadModal({ participants, onClose }: BulkModalProps) {
     const targets = participants.filter((p: any) => {
        const stage = p.data?.educationStage || p.data?.educational_stage || '';
        const year = p.data?.educationYear || p.data?.academic_year || '';
-       const key = getStageKey(stage, year);
+       const key = resolveStageKey(stage, year);
        return selectedClasses.includes(key);
     });
 

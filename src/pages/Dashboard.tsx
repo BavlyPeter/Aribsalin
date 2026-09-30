@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, CheckSquare, ShoppingBag, UserPlus, Plus, FileText, Wallet, BarChart3, LogOut, User, UserCheck, BookOpen, Download, MapPin } from 'lucide-react';
-import churchLogo from '../assets/images/church logo.png';
-import serviceLogo from '../assets/images/service logo.png';
+import { tenantConfig } from '../config/tenant';
 import { BulkIDDownloadModal } from '../components/modals/BulkIDDownloadModal';
 import { useFestivalStore } from '../store/useFestivalStore';
 
@@ -48,15 +47,7 @@ export function Dashboard({
     'developer': 'مطور النظام'
   };
 
-  const stageLabels: Record<string, string> = {
-    'kg': 'حضانة',
-    'primary_12': 'ابتدائي (الصف الأول والثاني)',
-    'primary_34': 'ابتدائي (الصف الثالث والرابع)',
-    'primary_56': 'ابتدائي (الصف الخامس والسادس)',
-    'preparatory': 'إعدادي',
-    'secondary': 'ثانوي',
-    'university_graduate': 'جامعيين وخريجين'
-  };
+  const stageLabels: Record<string, string> = tenantConfig.servingStages;
 
   const servant = currentServant || { full_name: 'خادم تجريبي', gender: 'male', role: 'supervisor', class_stage: 'primary_34' };
   const title = servant.gender === 'male' ? 'باصون' : 'تاسوني';
@@ -71,8 +62,8 @@ export function Dashboard({
       {/* Header with Logos */}
       <div className="bg-card border-b-2 border-primary/20 py-4 px-4 sticky top-0 z-10 shadow-sm">
         <div className="flex items-center justify-between">
-          <img src={churchLogo} alt="Church Logo" className="w-14 h-14 object-contain" />
-          <img src={serviceLogo} alt="service Logo" className="h-14 object-contain" />
+          <img src={tenantConfig.churchLogo} alt={tenantConfig.churchName} className="w-14 h-14 object-contain" />
+          <img src={tenantConfig.serviceLogo} alt={tenantConfig.serviceName} className="h-14 object-contain" />
           <div className="w-14" /> {/* Spacer for centering */}
         </div>
       </div>

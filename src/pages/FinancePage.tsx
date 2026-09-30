@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Plus, TrendingUp, TrendingDown, DollarSign, Calendar, User, FileText, Edit, Trash2 } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { stageLabels } from '../app/utils/stageHelpers';
+import { tenantConfig } from '../config/tenant';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 
@@ -23,8 +23,7 @@ interface FinancePageProps {
 
 const educationStages = [
   { value: 'all', label: 'جميع المراحل' },
-  // expand stageLabels (includes primary_12 / primary_34 / primary_56)
-  ...Object.entries(stageLabels).map(([value, label]) => ({ value, label }))
+  ...Object.entries(tenantConfig.CLASS_LABELS).map(([value, label]) => ({ value, label }))
 ];
 
 export function FinancePage({ onBack }: FinancePageProps = {}) {

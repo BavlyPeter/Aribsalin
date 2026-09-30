@@ -4,6 +4,7 @@ import { ArrowRight, Trash2, Calendar, BookOpen, AlertCircle, Users, Church, Che
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import { useFestivalStore } from '../store/useFestivalStore';
+import { tenantConfig, resolveStageKey } from '../config/tenant';
 
 export type EventTab = 'class' | 'liturgy' | 'service_meeting';
 
@@ -25,44 +26,9 @@ interface SessionsManagementPageProps {
   onBack?: () => void;
 }
 
-const CLASS_LABELS: Record<string, string> = {
-  'supervisors': 'أمناء الخدمة والمسؤولين',
-  'kg': 'حضانة',
-  'primary_12': 'ابتدائي (الأول والثاني)',
-  'primary_34': 'ابتدائي (الثالث والرابع)',
-  'primary_56': 'ابتدائي (الخامس والسادس)',
-  'primary': 'ابتدائي (عام)',
-  'preparatory': 'إعدادي',
-  'secondary': 'ثانوي',
-  'university_graduate': 'جامعي وخريجين',
-  'other': 'أخرى'
-};
+const CLASS_LABELS: Record<string, string> = tenantConfig.CLASS_LABELS;
 
 const STAGE_ORDER = Object.keys(CLASS_LABELS);
-
-const getStageKey = (stageStr: string, yearStr: string = '') => {
-  const s = String(stageStr || '').toLowerCase().trim();
-  const y = String(yearStr || '').toLowerCase().trim();
-
-  if (s === 'supervisors' || s.includes('أمين') || s.includes('امين')) return 'supervisors';
-  if (['kg', 'primary_12', 'primary_34', 'primary_56', 'preparatory', 'secondary', 'university_graduate'].includes(s)) {
-    return s;
-  }
-
-  if (s.includes('حضانة') || s.includes('kg')) return 'kg';
-  if (s.includes('إعدادي') || s.includes('preparatory')) return 'preparatory';
-  if (s.includes('ثانوي') || s.includes('secondary')) return 'secondary';
-  if (s.includes('جامع') || s.includes('university') || s.includes('خريج') || s.includes('graduate')) return 'university_graduate';
-
-  if (s.includes('ابتدائي') || s.includes('primary')) {
-    if (y.includes('اول') || y.includes('أول') || y.includes('ثاني') || y.includes('1') || y.includes('2') || s.includes('1') || s.includes('2')) return 'primary_12';
-    if (y.includes('ثالث') || y.includes('رابع') || y.includes('3') || y.includes('4') || s.includes('3') || s.includes('4')) return 'primary_34';
-    if (y.includes('خامس') || y.includes('سادس') || y.includes('5') || y.includes('6') || s.includes('5') || s.includes('6')) return 'primary_56';
-    return 'primary';
-  }
-
-  return 'other';
-};
 
 // Internal reusable component for rendering an attendee across all views
 interface AttendeeCardProps {
@@ -173,7 +139,7 @@ export function SessionsManagementPage({ onBack }: SessionsManagementPageProps =
 
         servantLogsData?.forEach((log: any) => {
           const s = log.servants;
-          const stageKey = s?.role === 'admin' ? 'supervisors' : getStageKey(s?.class_stage || '', '');
+          const stageKey = s?.role === 'admin' ? 'supervisors' : resolveStageKey(s?.class_stage || '', '');
           mappedLogs.push({
             logId: log.id,
             date: log.attendance_date,
@@ -234,7 +200,7 @@ export function SessionsManagementPage({ onBack }: SessionsManagementPageProps =
           const p = log.participants;
           const stageStr = p?.educational_stage || p?.class_or_job || '';
           const yearStr = p?.academic_year || '';
-          const stageKey = getStageKey(stageStr, yearStr);
+          const stageKey = resolveStageKey(stageStr, yearStr);
 
           mappedLogs.push({
             logId: log.id,
@@ -253,7 +219,7 @@ export function SessionsManagementPage({ onBack }: SessionsManagementPageProps =
         // Map servant logs
         servantLogsData?.forEach((log: any) => {
           const s = log.servants;
-          const stageKey = s?.role === 'admin' ? 'supervisors' : getStageKey(s?.class_stage || '', '');
+          const stageKey = s?.role === 'admin' ? 'supervisors' : resolveStageKey(s?.class_stage || '', '');
 
           mappedLogs.push({
             logId: log.id,

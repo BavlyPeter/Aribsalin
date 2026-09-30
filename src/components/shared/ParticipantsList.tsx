@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 import { normalizeArabicText } from '../../utils/textUtils';
+import { tenantConfig, resolveStageKey } from '../../config/tenant';
 
 interface Participant {
   id: string;
@@ -36,36 +37,9 @@ interface ParticipantsListProps {
   onManualAttendance?: (participantId: string, date: string) => void;
 }
 
-const CLASSES = [
-  { id: 'kg', label: 'حضانة' },
-  { id: 'primary_12', label: 'ابتدائي (الأول والثاني)' },
-  { id: 'primary_34', label: 'ابتدائي (الثالث والرابع)' },
-  { id: 'primary_56', label: 'ابتدائي (الخامس والسادس)' },
-  { id: 'preparatory', label: 'إعدادي' },
-  { id: 'secondary', label: 'ثانوي' },
-  { id: 'university', label: 'جامعي' },
-  { id: 'graduate', label: 'خريجين' }
-];
-
-// Helper to map DB stage/year to our specific classes
-const getParticipantClass = (stage: string, year: string) => {
-  if (!stage) return '';
-  const s = stage.toLowerCase();
-  if (s === 'kg' || s === 'حضانة') return 'kg';
-  if (s === 'preparatory' || s === 'إعدادي') return 'preparatory';
-  if (s === 'secondary' || s === 'ثانوي') return 'secondary';
-  if (s === 'university' || s === 'جامعي') return 'university';
-  if (s === 'graduate' || s === 'خريجين') return 'graduate';
-
-  if (s === 'primary' || s === 'ابتدائي') {
-    if (!year) return 'primary_12';
-    if (year.includes('الأول') || year.includes('الثاني') || year.includes('1') || year.includes('2')) return 'primary_12';
-    if (year.includes('الثالث') || year.includes('الرابع') || year.includes('3') || year.includes('4')) return 'primary_34';
-    if (year.includes('الخامس') || year.includes('السادس') || year.includes('5') || year.includes('6')) return 'primary_56';
-    return 'primary_12';
-  }
-  return stage;
-};
+const CLASSES = Object.entries(tenantConfig.CLASS_LABELS)
+  .filter(([id]) => id !== 'other')
+  .map(([id, label]) => ({ id, label }));
 
 export function ParticipantsList({ 
   participants, 
@@ -129,24 +103,7 @@ export function ParticipantsList({
     // 4. Class / Stage Match
     let matchesClass = true;
     if (filterClass) {
-      let calculatedClass = rawStage;
-      if (rawStage.includes('حضانة') || rawStage === 'kg') {
-        calculatedClass = 'kg';
-      } else if (rawStage.includes('إعدادي') || rawStage === 'preparatory') {
-        calculatedClass = 'preparatory';
-      } else if (rawStage.includes('ثانوي') || rawStage === 'secondary') {
-        calculatedClass = 'secondary';
-      } else if (rawStage.includes('جامعي') || rawStage.includes('خريج') || rawStage === 'university') {
-        calculatedClass = 'university';
-      } else if (rawStage.includes('ابتدائي') || rawStage === 'primary') {
-        if (rawYear.includes('أول') || rawYear.includes('ثاني') || rawYear.includes('1') || rawYear.includes('2')) {
-          calculatedClass = 'primary_12';
-        } else if (rawYear.includes('ثالث') || rawYear.includes('رابع') || rawYear.includes('3') || rawYear.includes('4')) {
-          calculatedClass = 'primary_34';
-        } else {
-          calculatedClass = 'primary_56';
-        }
-      }
+      const calculatedClass = resolveStageKey(rawStage, rawYear);
       matchesClass = (calculatedClass === filterClass);
     }
 

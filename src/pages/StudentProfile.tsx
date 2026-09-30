@@ -8,6 +8,7 @@ import { IDCard } from '../components/shared/IDCard';
 import { useFestivalStore } from '../store/useFestivalStore';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
+import { tenantConfig } from '../config/tenant';
 
 interface StudentProfileProps {
   student?: Participant;
@@ -543,7 +544,7 @@ export function StudentProfile({
               <School className="w-5 h-5 text-muted-foreground mt-0.5" />
               <div className="flex-1">
                 <div className="text-sm text-muted-foreground">المرحلة الدراسية</div>
-                <div className="font-medium">{student?.data?.educationStage || 'غير محدد'}</div>
+                <div className="font-medium">{tenantConfig.educationStages[student?.data?.educationStage] || student?.data?.educationStage || 'غير محدد'}</div>
               </div>
             </div>
 

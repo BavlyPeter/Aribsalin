@@ -5,6 +5,7 @@ import { StudentData } from '../types';
 import { supabase } from '../lib/supabase';
 import { useFestivalStore } from '../store/useFestivalStore';
 import { toast } from 'sonner';
+import { generateSmartIdPrefix } from '../config/tenant';
 
 export function RegistrationPage() {
   const navigate = useNavigate();
@@ -83,34 +84,7 @@ export function RegistrationPage() {
         if (error) throw error;
         toast.success('تم تحديث بيانات المشارك بنجاح');
       } else {
-        const s = String(data.educationStage || '').toLowerCase();
-        const y = String(data.educationYear || '').toLowerCase();
-        
-        let L = 'X';
-        if (s.includes('حضانة') || s === 'kg') L = 'K';
-        else if (s.includes('ابتدائي') || s.includes('primary')) L = 'P';
-        else if (s.includes('إعدادي') || s.includes('preparatory')) L = 'Y';
-        else if (s.includes('ثانوي') || s.includes('secondary')) L = 'S';
-        else if (s.includes('جامعي') || s.includes('university') || s.includes('خريج') || s.includes('graduate')) L = 'G';
-
-        let X = '1';
-        if (L === 'K') {
-          if (y.includes('baby') || y.includes('بيبي') || y.includes('0')) X = '0';
-          else if (y.includes('1') || y.includes('kg1') || y.includes('أول')) X = '1';
-          else if (y.includes('2') || y.includes('kg2') || y.includes('ثاني')) X = '2';
-        } else if (L === 'G' && (s.includes('خريج') || y.includes('خريج'))) {
-          X = '0';
-        } else {
-          if (y.includes('أول') || y.includes('1')) X = '1';
-          else if (y.includes('ثاني') || y.includes('2')) X = '2';
-          else if (y.includes('ثالث') || y.includes('3')) X = '3';
-          else if (y.includes('رابع') || y.includes('4')) X = '4';
-          else if (y.includes('خامس') || y.includes('5')) X = '5';
-          else if (y.includes('سادس') || y.includes('6')) X = '6';
-          else if (y.includes('خريج') || y.includes('0')) X = '0';
-        }
-
-        const prefix = `${L}${X}`;
+        const prefix = generateSmartIdPrefix(data.educationStage || '', data.educationYear || '');
 
         const { data: existingIds, error: fetchError } = await supabase
           .from('participants')

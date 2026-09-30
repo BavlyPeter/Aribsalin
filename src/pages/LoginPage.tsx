@@ -1,8 +1,7 @@
 import { FormEvent, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, ArrowLeft } from 'lucide-react';
-import churchLogo from '../assets/images/church logo.png';
-import serviceLogo from '../assets/images/service logo.png';
+import { tenantConfig } from '../config/tenant';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import { useFestivalStore } from '../store/useFestivalStore';
@@ -55,7 +54,7 @@ export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps = {}) 
       }
 
       // Construct the synthetic email using the resolved teacher_id
-      const email = `${finalTeacherId.toLowerCase()}@aribsalin.com`;
+      const email = `${finalTeacherId.toLowerCase()}@${tenantConfig.emailDomain}`;
 
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
@@ -111,9 +110,9 @@ export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps = {}) 
       <div className="bg-card border-b-2 border-primary/20 py-4 px-4 sticky top-0 z-10 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={churchLogo} alt="Church Logo" className="w-14 h-14 object-contain" />
+            <img src={tenantConfig.churchLogo} alt={tenantConfig.churchName} className="w-14 h-14 object-contain" />
           </div>
-            <img src={serviceLogo} alt="service Logo" className="h-14 object-contain" />
+            <img src={tenantConfig.serviceLogo} alt={tenantConfig.serviceName} className="h-14 object-contain" />
           <button
             onClick={() => navigate('/')}
             className="p-2 hover:bg-muted rounded-lg active:scale-95 transition-transform text-foreground"

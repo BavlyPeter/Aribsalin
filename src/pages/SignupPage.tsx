@@ -6,52 +6,14 @@ import { supabase } from '../lib/supabase';
 import { uploadProfileImage } from '../lib/uploadHelper';
 import { toast } from 'sonner';
 import { useFestivalStore } from '../store/useFestivalStore';
-import churchLogo from '../assets/images/church logo.png';
-import serviceLogo from '../assets/images/service logo.png';
 import { SmartAddressInput } from '../components/shared/SmartAddressInput';
-
-interface SignupPageProps {
-  onSignup?: (data: TeacherData) => void;
-  onBack?: () => void;
-}
-
-interface SignupPageWithEditProps extends SignupPageProps {
-  editData?: any | null;
-  clearEdit?: () => void;
-}
-
-const educationStages = {
-  'secondary': 'ثانوي',
-  'university': 'جامعي',
-  'graduate': 'خريجين'
-};
-
-const servingStages = {
-  'kg': 'حضانة',
-  'primary_12': 'ابتدائي (الأول والثاني)',
-  'primary_34': 'ابتدائي (الثالث والرابع)',
-  'primary_56': 'ابتدائي (الخامس والسادس)',
-  'preparatory': 'إعدادي',
-  'secondary': 'ثانوي',
-  'university_graduate': 'جامعي وخريجين'
-};
-
-const educationYears = {
-  'secondary': [
-    'الصف الأول الثانوي',
-    'الصف الثاني الثانوي',
-    'الصف الثالث الثانوي'
-  ],
-  'university': [
-    'الفرقة الأولى',
-    'الفرقة الثانية',
-    'الفرقة الثالثة',
-    'الفرقة الرابعة',
-    'الفرقة الخامسة',
-    'الفرقة السادسة',
-    'الفرقة السابعة'
-  ]
-};
+import {
+  tenantConfig,
+  servantEducationStages as educationStages,
+  servingStages,
+  educationYears,
+  generateSmartIdPrefix
+} from '../config/tenant';
 
 export function SignupPage({ onSignup, onBack, editData: propsEditData, clearEdit }: Partial<SignupPageWithEditProps> = {}) {
   const navigate = useNavigate();
@@ -164,48 +126,6 @@ export function SignupPage({ onSignup, onBack, editData: propsEditData, clearEdi
     };
   }, [photoPreview]);
 
-  const generateSmartId = async (role: string, stage: string) => {
-    let prefix = '';
-    let sliceIndex = 0;
-
-    if (role === 'admin') {
-      prefix = 'A';
-      sliceIndex = 1;
-    } else {
-      const roleChar = role === 'supervisor' ? 'S' : 'N';
-
-      let stageChars = 'X0';
-      if (stage === 'kg') stageChars = 'K0';
-      else if (stage === 'primary_12') stageChars = 'P1';
-      else if (stage === 'primary_34') stageChars = 'P3';
-      else if (stage === 'primary_56') stageChars = 'P5';
-      else if (stage === 'preparatory') stageChars = 'Y0';
-      else if (stage === 'secondary') stageChars = 'S0';
-      else if (stage === 'university_graduate') stageChars = 'G0';
-
-      prefix = `${roleChar}${stageChars}`;
-      sliceIndex = 3;
-    }
-
-    const { data, error } = await supabase
-      .from('servants')
-      .select('teacher_id')
-      .ilike('teacher_id', `${prefix}%`);
-
-    if (error) throw error;
-
-    let nextNum = 1;
-    if (data && data.length > 0) {
-      const existingNums = data
-        .map(d => parseInt(d.teacher_id.slice(sliceIndex)))
-        .filter(n => !isNaN(n));
-      if (existingNums.length > 0) {
-        nextNum = Math.max(...existingNums) + 1;
-      }
-    }
-
-    return `${prefix}${String(nextNum).padStart(2, '0')}`;
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -256,23 +176,12 @@ export function SignupPage({ onSignup, onBack, editData: propsEditData, clearEdi
         // Determine Role, Stage, and Class for Prefix
         let prefix = '';
         if (formData.role === 'admin') {
-          prefix = 'A'; // Admins just get A + YZ
+          prefix = 'A'; // Admins get a simple 'A' prefix
         } else {
           const R = formData.role === 'supervisor' ? 'S' : 'N';
-
-          let L = 'X';
-          let X = '0';
-          const stage = formData.classStage || '';
-
-          if (stage === 'kg') { L = 'K'; X = '0'; }
-          else if (stage === 'primary_12') { L = 'P'; X = '1'; }
-          else if (stage === 'primary_34') { L = 'P'; X = '3'; }
-          else if (stage === 'primary_56') { L = 'P'; X = '5'; }
-          else if (stage === 'preparatory') { L = 'Y'; X = '0'; }
-          else if (stage === 'secondary') { L = 'S'; X = '0'; }
-          else if (stage === 'university_graduate') { L = 'G'; X = '0'; }
-
-          prefix = `${R}${L}${X}`;
+          // Generate the stage specific part dynamically using the config
+          const stagePrefix = generateSmartIdPrefix(formData.classStage || '', '');
+          prefix = `${R}${stagePrefix}`;
         }
 
         // Gap-Filling Algorithm specific to the Prefix
@@ -330,7 +239,7 @@ export function SignupPage({ onSignup, onBack, editData: propsEditData, clearEdi
         toast.success('تم تحديث بيانات الخادم بنجاح');
       } else {
         // 1. Create Supabase Auth User with a dummy email based on the generated Smart ID
-        const dummyEmail = `${finalTeacherId.toLowerCase()}@aribsalin.com`;
+        const dummyEmail = `${finalTeacherId.toLowerCase()}@${tenantConfig.emailDomain}`;
         const defaultPassword = formData.password || '123456'; // Ensure a password exists
 
         const { data: authData, error: authError } = await supabase.auth.signUp({

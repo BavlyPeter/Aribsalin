@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 import { useFestivalStore } from '../store/useFestivalStore';
+import { tenantConfig, resolveStageKey } from '../config/tenant';
 
 interface Teacher {
   id: string;
@@ -27,17 +28,7 @@ interface TeachersPageProps {
   onViewProfile?: (id: string) => void;
 }
 
-const servingStages: Record<string, string> = {
-  supervisors: 'أمناء الخدمة والمسؤولين',
-  kg: 'حضانة',
-  primary_12: 'ابتدائي (الأول والثاني)',
-  primary_34: 'ابتدائي (الثالث والرابع)',
-  primary_56: 'ابتدائي (الخامس والسادس)',
-  preparatory: 'إعدادي',
-  secondary: 'ثانوي',
-  university_graduate: 'جامعي وخريجين',
-  other: 'غير محدد / أخرى'
-};
+const servingStages: Record<string, string> = tenantConfig.servingClasses;
 
 export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProps = {}) {
   const navigate = useNavigate();
@@ -71,32 +62,6 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
   const [isLoading, setIsLoading] = useState(true);
 
   const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
-
-  // Helper to map DB stage values to our ClassData keys
-  const getStageKey = (dbStage: string) => {
-    const s = (dbStage || '').toLowerCase().trim();
-    if (!s || s === 'empty') return 'other';
-
-    // 1. Check for exact DB matches with our keys
-    if (['kg', 'primary_12', 'primary_34', 'primary_56', 'preparatory', 'secondary', 'university_graduate'].includes(s)) {
-      return s;
-    }
-
-    // 2. Fallback text-based matching for Arabic/English keywords
-    if (s.includes('حضانة') || s.includes('kg')) return 'kg';
-    if (s.includes('إعدادي') || s.includes('preparatory')) return 'preparatory';
-    if (s.includes('ثانوي') || s.includes('secondary')) return 'secondary';
-    if (s.includes('جامعي') || s.includes('university') || s.includes('خريج') || s.includes('graduate')) return 'university_graduate';
-    
-    if (s.includes('ابتدائي') || s.includes('primary')) {
-      if (s.includes('1') || s.includes('2') || s.includes('أول') || s.includes('ثاني')) return 'primary_12';
-      if (s.includes('3') || s.includes('4') || s.includes('ثالث') || s.includes('رابع')) return 'primary_34';
-      if (s.includes('5') || s.includes('6') || s.includes('خامس') || s.includes('سادس')) return 'primary_56';
-      return 'primary_12'; // default fallback for primary
-    }
-
-    return 'other';
-  };
 
   useEffect(() => {
     fetchServants();
@@ -133,7 +98,7 @@ export function TeachersPage({ onBack, onEdit, onViewProfile }: TeachersPageProp
           grouped['supervisors'].teachers.push(teacherObj);
         } else {
           const stage = servant.class_stage || servant.classStage || 'other';
-          const stageKey = getStageKey(stage);
+          const stageKey = resolveStageKey(stage);
           if (grouped[stageKey]) {
             grouped[stageKey].teachers.push(teacherObj);
           } else {

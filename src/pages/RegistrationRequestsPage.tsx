@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, X, User, Shield, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
+import { tenantConfig } from '../config/tenant';
 
 interface RegistrationRequestsPageProps {
   onBack?: () => void;
@@ -23,15 +24,7 @@ export function RegistrationRequestsPage({ onBack, onViewProfile }: Registration
     'admin': 'أمين خدمة'
   };
 
-  const servingStages: Record<string, string> = {
-    'kg': 'حضانة',
-    'primary_12': 'ابتدائي (الأول والثاني)',
-    'primary_34': 'ابتدائي (الثالث والرابع)',
-    'primary_56': 'ابتدائي (الخامس والسادس)',
-    'preparatory': 'إعدادي',
-    'secondary': 'ثانوي',
-    'university_graduate': 'جامعي وخريجين'
-  };
+  const servingStages: Record<string, string> = tenantConfig.servingStages;
 
   useEffect(() => {
     fetchRequests();

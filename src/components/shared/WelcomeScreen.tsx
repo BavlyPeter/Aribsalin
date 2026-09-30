@@ -1,4 +1,5 @@
 import { AlignCenter, X } from 'lucide-react';
+import { tenantConfig } from '../../config/tenant';
 
 interface WelcomeScreenProps {
   onClose: () => void;
@@ -21,7 +22,7 @@ export function WelcomeScreen({ onClose }: WelcomeScreenProps) {
             <div className="w-24 h-24 bg-primary rounded-full mx-auto flex items-center justify-center shadow-lg mb-4">
               <span className="text-5xl text-primary-foreground">†</span>
             </div>
-            <h2 className="text-2xl mb-2" style={{ color: 'var(--primary)' }}>اريبصالين</h2>
+            <h2 className="text-2xl mb-2" style={{ color: 'var(--primary)' }}>{tenantConfig.serviceName}</h2>
             <p className="text-muted-foreground">نظام إدارةالخدمة</p>
           </div>
 

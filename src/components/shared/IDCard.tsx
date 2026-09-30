@@ -1,6 +1,5 @@
 import { QRCodeSVG } from 'qrcode.react';
-import churchLogo from '../../assets/images/church logo.png';
-import serviceLogo from '../../assets/images/service logo.png';
+import { tenantConfig } from '../../config/tenant';
 
 interface IDCardProps {
   student?: any;
@@ -16,27 +15,11 @@ const roleLabels: Record<string, string> = {
 };
 
 const stageLabelsMap: Record<string, string> = {
-  'kg': 'حضانة',
-  'primary_12': 'ابتدائي (الأول والثاني)',
-  'primary_34': 'ابتدائي (الثالث والرابع)',
-  'primary_56': 'ابتدائي (الخامس والسادس)',
-  'preparatory': 'إعدادي',
-  'secondary': 'ثانوي',
-  'university_graduate': 'جامعي وخريجين',
-  'university': 'جامعي',
-  'graduate': 'خريجين',
-  'primary': 'ابتدائي',
-  'supervisors': 'الخدام والمشرفين'
+  ...tenantConfig.educationStages,
+  ...tenantConfig.CLASS_LABELS
 };
 
-const educationStageLabels: Record<string, string> = {
-  'kg': 'حضانة',
-  'primary': 'ابتدائي',
-  'preparatory': 'إعدادي',
-  'secondary': 'ثانوي',
-  'university': 'جامعي',
-  'graduate': 'خريجين'
-};
+const educationStageLabels: Record<string, string> = tenantConfig.educationStages;
 
 export function IDCard({ student, servant, data }: IDCardProps) {
   const target = servant || student || data;
@@ -63,7 +46,6 @@ export function IDCard({ student, servant, data }: IDCardProps) {
     const rawStage = target.class_stage || target.classStage || target.data?.class_stage || target.data?.classStage || '';
     const stageText = stageLabelsMap[rawStage] || rawStage || '';
 
-    // e.g. "أمين فصل - ابتدائي"
     subtitleLine1 = [roleText, stageText].filter(Boolean).join(' - ');
   } else {
     const rawStage = target.data?.educationStage || target.educationStage || target.educational_stage || '';
@@ -87,10 +69,10 @@ export function IDCard({ student, servant, data }: IDCardProps) {
         style={{ background: 'linear-gradient(135deg, #8B1538 0%, #C9A961 100%)' }}
       >
         {/* Church Logo - Upper Right */}
-        <img src={churchLogo} alt="Church Logo" className="absolute top-3 right-2 w-21 h-14 object-contain" />
+        <img src={tenantConfig.churchLogo} alt={tenantConfig.churchName} className="absolute top-3 right-2 w-21 h-14 object-contain" />
 
         {/* service Logo - Center */}
-        <img src={serviceLogo} alt="service Logo" className="absolute top-3 left-1/2 transform -translate-x-1/2 h-14 object-contain" />
+        <img src={tenantConfig.serviceLogo} alt={tenantConfig.serviceName} className="absolute top-3 left-1/2 transform -translate-x-1/2 h-14 object-contain" />
       </div>
 
       {/* Content Wrapper */}
