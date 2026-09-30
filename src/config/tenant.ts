@@ -314,3 +314,17 @@ export const {
 export { CLASS_LABELS, smartIdMapping };
 
 export default tenantConfig;
+
+
+
+// to take updates to onother copies
+// # 1. اسحب التحديثات من المشروع الأساسي (Aribsalin)
+// git fetch upstream
+
+// # 2. ادمج التحديثات مع كود الكنيسة الحالي
+// git merge upstream/main
+
+// # (إذا حدث أي Conflict في ملف tenant.ts، اختار الإبقاء على ملف الكنيسة الحالي)
+
+// # 3. ارفع التحديثات لنسخة الكنيسة على جيت هاب
+// git push origin main
