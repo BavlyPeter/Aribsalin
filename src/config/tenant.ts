@@ -50,7 +50,7 @@ const CLASS_LABELS: Record<string, string> = {
   primary: 'ابتدائي (عام)',
   preparatory: 'إعدادي',
   secondary: 'ثانوي',
-  university_graduate: 'جامعي وخريجين',
+  university_graduate: 'جامعين وخريجين',
   other: 'أخرى'
 };
 
@@ -128,7 +128,7 @@ export const tenantConfig: TenantConfig = {
     primary: 'ابتدائي',
     preparatory: 'إعدادي',
     secondary: 'ثانوي',
-    university: 'جامعي',
+    university: 'جامعين',
     graduate: 'خريجين'
   },
   servantEducationStages: {
@@ -177,7 +177,7 @@ export const tenantConfig: TenantConfig = {
     primary_56: 'ابتدائي (الخامس والسادس)',
     preparatory: 'إعدادي',
     secondary: 'ثانوي',
-    university_graduate: 'جامعي وخريجين'
+    university_graduate: 'جامعين وخريجين'
   },
   CLASS_LABELS,
   classLabels: CLASS_LABELS,
