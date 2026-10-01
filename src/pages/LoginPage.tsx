@@ -112,7 +112,7 @@ export function LoginPage({ onLogin, onNavigateToSignup }: LoginPageProps = {}) 
           <div className="flex items-center gap-3">
             <img src={tenantConfig.churchLogo} alt={tenantConfig.churchName} className="w-14 h-14 object-contain" />
           </div>
-            <img src={tenantConfig.serviceLogo} alt={tenantConfig.serviceName} className="h-14 object-contain" />
+            {/* <img src={tenantConfig.serviceLogo} alt={tenantConfig.serviceName} className="h-14 object-contain" /> */}
           <button
             onClick={() => navigate('/')}
             className="p-2 hover:bg-muted rounded-lg active:scale-95 transition-transform text-foreground"

@@ -29,7 +29,7 @@ export function RoleSelectionPage({ onSelectRole }: RoleSelectionPageProps = {})
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="flex flex-col items-center mb-12 space-y-6">
         <img src={tenantConfig.churchLogo} alt={tenantConfig.churchName} className="w-24 h-24 object-contain shadow-lg rounded-full" />
-        <img src={tenantConfig.serviceLogo} alt={tenantConfig.serviceName} className="h-16 object-contain" />
+        {/* <img src={tenantConfig.serviceLogo} alt={tenantConfig.serviceName} className="h-16 object-contain" /> */}
         <p className="text-muted-foreground text-center">مرحباً بك في نظام إدارة {tenantConfig.serviceName}</p>
       </div>
       <h2 className="text-2xl font-bold mb-8 text-foreground">من أنت؟</h2>

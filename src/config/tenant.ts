@@ -117,9 +117,9 @@ const smartIdMapping: SmartIdMapping = {
 };
 
 export const tenantConfig: TenantConfig = {
-  churchName: 'كنيسة الشهيد العظيم مارمينا والبابا كيرلس السادس بأسوان',
-  serviceName: 'أريبصالين',
-  emailDomain: 'aribsalin.com',
+  churchName: 'كنيسة السيدة العذراء والقديس الابا بيشوى بالصداقه الجديده',
+  serviceName: 'خدمة التربية الكنسية',
+  emailDomain: 'avabishoy.com',
   churchLogo,
   serviceLogo,
   smartIdMapping,
