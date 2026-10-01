@@ -72,7 +72,7 @@ export function IDCard({ student, servant, data }: IDCardProps) {
         <img src={tenantConfig.churchLogo} alt={tenantConfig.churchName} className="absolute top-3 right-2 w-21 h-14 object-contain" />
 
         {/* service Logo - Center */}
-        <img src={tenantConfig.serviceLogo} alt={tenantConfig.serviceName} className="absolute top-3 left-1/2 transform -translate-x-1/2 h-14 object-contain" />
+        {/* <img src={tenantConfig.serviceLogo} alt={tenantConfig.serviceName} className="absolute top-3 left-1/2 transform -translate-x-1/2 h-14 object-contain" /> */}
       </div>
 
       {/* Content Wrapper */}
