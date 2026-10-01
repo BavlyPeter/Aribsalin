@@ -119,7 +119,7 @@ const smartIdMapping: SmartIdMapping = {
 export const tenantConfig: TenantConfig = {
   churchName: 'كنيسة الشهيد العظيم مارمينا والبابا كيرلس السادس بأسوان',
   serviceName: 'أريبصالين',
-  emailDomain: 'aribsalin.com',
+  emailDomain: 'avabishoy.com',
   churchLogo,
   serviceLogo,
   smartIdMapping,
