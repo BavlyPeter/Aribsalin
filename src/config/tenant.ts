@@ -9,16 +9,7 @@ export type EducationStageKey =
   | 'university'
   | 'graduate';
 
-export type ServingStageKey =
-  | 'supervisors'
-  | 'kg'
-  | 'primary_12'
-  | 'primary_34'
-  | 'primary_56'
-  | 'preparatory'
-  | 'secondary'
-  | 'university_graduate'
-  | 'other';
+export type ServingStageKey = 'supervisors' | 'kg' | 'primary_1' | 'primary_2' | 'primary_3' | 'primary_4' | 'primary_5' | 'primary_6' | 'preparatory' | 'secondary' | 'university_graduate' | 'other';
 
 export interface SmartIdMapping {
   stages: Record<string, string>;
@@ -44,20 +35,28 @@ export interface TenantConfig {
 const CLASS_LABELS: Record<string, string> = {
   supervisors: 'أمناء الخدمة والمسؤولين',
   kg: 'حضانة',
-  primary_12: 'ابتدائي (الأول والثاني)',
-  primary_34: 'ابتدائي (الثالث والرابع)',
-  primary_56: 'ابتدائي (الخامس والسادس)',
-  primary: 'ابتدائي (عام)',
+  primary_1: 'أولى ابتدائي',
+  primary_2: 'تانية ابتدائي',
+  primary_3: 'تالتة ابتدائي',
+  primary_4: 'رابعة ابتدائي',
+  primary_5: 'خامسة ابتدائي',
+  primary_6: 'سادسة ابتدائي',
   preparatory: 'إعدادي',
   secondary: 'ثانوي',
-  university_graduate: 'جامعين وخريجين',
-  other: 'أخرى'
+  university_graduate: 'جامعيين وخريجين',
+  other: 'غير محدد / أخرى'
 };
 
 const smartIdMapping: SmartIdMapping = {
   stages: {
     kg: 'K',
     primary: 'P',
+    primary_1: 'P',
+    primary_2: 'P',
+    primary_3: 'P',
+    primary_4: 'P',
+    primary_5: 'P',
+    primary_6: 'P',
     primary_12: 'P',
     primary_34: 'P',
     primary_56: 'P',
@@ -79,6 +78,30 @@ const smartIdMapping: SmartIdMapping = {
       'kg2': '2',
       '2': '2',
       '': '0'
+    },
+    primary_1: {
+      '': '1',
+      default: '1'
+    },
+    primary_2: {
+      '': '2',
+      default: '2'
+    },
+    primary_3: {
+      '': '3',
+      default: '3'
+    },
+    primary_4: {
+      '': '4',
+      default: '4'
+    },
+    primary_5: {
+      '': '5',
+      default: '5'
+    },
+    primary_6: {
+      '': '6',
+      default: '6'
     },
     primary_12: {
       '': '1',
@@ -171,13 +194,18 @@ export const tenantConfig: TenantConfig = {
     ]
   },
   servingStages: {
-    kg: 'حضانة',
-    primary_12: 'ابتدائي (الأول والثاني)',
-    primary_34: 'ابتدائي (الثالث والرابع)',
-    primary_56: 'ابتدائي (الخامس والسادس)',
-    preparatory: 'إعدادي',
-    secondary: 'ثانوي',
-    university_graduate: 'جامعين وخريجين'
+    'supervisors': 'أمناء الخدمة والمسؤولين',
+    'kg': 'حضانة',
+    'primary_1': 'أولى ابتدائي',
+    'primary_2': 'تانية ابتدائي',
+    'primary_3': 'تالتة ابتدائي',
+    'primary_4': 'رابعة ابتدائي',
+    'primary_5': 'خامسة ابتدائي',
+    'primary_6': 'سادسة ابتدائي',
+    'preparatory': 'إعدادي',
+    'secondary': 'ثانوي',
+    'university_graduate': 'جامعيين وخريجين',
+    'other': 'غير محدد / أخرى'
   },
   CLASS_LABELS,
   classLabels: CLASS_LABELS,
@@ -198,14 +226,13 @@ export function resolveStageKey(stageStr: string, yearStr: string = ''): string 
   }
 
   // Exact match with known keys
-  const knownKeys = Object.keys(tenantConfig.servingClasses || tenantConfig.CLASS_LABELS).filter(k => k !== 'other');
+  const knownKeys = Object.keys(tenantConfig.servingClasses || tenantConfig.CLASS_LABELS || tenantConfig.servingStages).filter(k => k !== 'other');
   if (knownKeys.includes(s)) {
     if (s === 'primary') {
-      if (y.includes('1') || y.includes('2') || y.includes('اول') || y.includes('أول') || y.includes('ثاني') || y.includes('ثانى')) return 'primary_12';
-      if (y.includes('3') || y.includes('4') || y.includes('ثالث') || y.includes('رابع')) return 'primary_34';
-      if (y.includes('5') || y.includes('6') || y.includes('خامس') || y.includes('سادس')) return 'primary_56';
+      // Defer to matchedStage === 'primary' block below
+    } else {
+      return s;
     }
-    return s;
   }
 
   // Keyword-based matching
@@ -214,17 +241,40 @@ export function resolveStageKey(stageStr: string, yearStr: string = ''): string 
   if (s.includes('ثانوي') || s.includes('secondary')) return 'secondary';
   if (s.includes('جامع') || s.includes('university') || s.includes('خريج') || s.includes('graduate')) return 'university_graduate';
 
+  let matchedStage = '';
   if (s.includes('ابتدائي') || s.includes('primary')) {
-    if (y.includes('1') || y.includes('2') || y.includes('اول') || y.includes('أول') || y.includes('ثاني') || y.includes('ثانى') || s.includes('1') || s.includes('2') || s.includes('اول') || s.includes('أول') || s.includes('ثاني') || s.includes('ثانى')) {
-      return 'primary_12';
+    matchedStage = 'primary';
+  }
+
+  // Inside the `if (matchedStage === 'primary')` block:
+  if (matchedStage === 'primary') {
+    const primaryYears = tenantConfig.educationYears?.primary || [];
+    const yearIndex = primaryYears.findIndex(item => item.toLowerCase().trim() === y);
+
+    if (yearIndex === -1) {
+       if (y.includes('1') || y.includes('اول') || y.includes('أول')) return 'primary_1';
+       if (y.includes('2') || y.includes('ثاني') || y.includes('تاني')) return 'primary_2';
+       if (y.includes('3') || y.includes('ثالث') || y.includes('تالت')) return 'primary_3';
+       if (y.includes('4') || y.includes('رابع')) return 'primary_4';
+       if (y.includes('5') || y.includes('خامس')) return 'primary_5';
+       if (y.includes('6') || y.includes('سادس')) return 'primary_6';
+       
+       if (s.includes('1') || s.includes('اول') || s.includes('أول')) return 'primary_1';
+       if (s.includes('2') || s.includes('ثاني') || s.includes('تاني')) return 'primary_2';
+       if (s.includes('3') || s.includes('ثالث') || s.includes('تالت')) return 'primary_3';
+       if (s.includes('4') || s.includes('رابع')) return 'primary_4';
+       if (s.includes('5') || s.includes('خامس')) return 'primary_5';
+       if (s.includes('6') || s.includes('سادس')) return 'primary_6';
+       
+       return 'other';
     }
-    if (y.includes('3') || y.includes('4') || y.includes('ثالث') || y.includes('رابع') || s.includes('3') || s.includes('4') || s.includes('ثالث') || s.includes('رابع')) {
-      return 'primary_34';
-    }
-    if (y.includes('5') || y.includes('6') || y.includes('خامس') || y.includes('سادس') || s.includes('5') || s.includes('6') || s.includes('خامس') || s.includes('سادس')) {
-      return 'primary_56';
-    }
-    return tenantConfig.CLASS_LABELS['primary'] ? 'primary' : 'primary_12';
+
+    if (yearIndex === 0) return 'primary_1';
+    if (yearIndex === 1) return 'primary_2';
+    if (yearIndex === 2) return 'primary_3';
+    if (yearIndex === 3) return 'primary_4';
+    if (yearIndex === 4) return 'primary_5';
+    if (yearIndex === 5) return 'primary_6';
   }
 
   return 'other';
@@ -237,6 +287,7 @@ export function generateSmartIdPrefix(stage: string, year: string = ''): string 
   const s = String(stage || '').toLowerCase().trim();
   const y = String(year || '').trim();
   const normY = y.toLowerCase();
+  const stageKey = s;
 
   // 1. Resolve Stage character
   let stageChar = smartIdMapping.stages[s];
@@ -249,20 +300,49 @@ export function generateSmartIdPrefix(stage: string, year: string = ''): string 
     else stageChar = 'X';
   }
 
-  // If no academic year is provided (e.g. for servant registration by classStage)
-  if (!y) {
+  // 2. Resolve Year character
+  let yearChar = '1';
+
+  if (stageKey !== 'other' && stageKey !== 'graduate' && tenantConfig.smartIdMapping.years[stageKey]) {
+      if (tenantConfig.smartIdMapping.years[stageKey][year]) {
+         yearChar = tenantConfig.smartIdMapping.years[stageKey][year];
+      } else {
+         const yearMatch = year.match(/\d/);
+         const stageMatch = stage.match(/\d/);
+         if (yearMatch) yearChar = yearMatch[0];
+         else if (stageMatch) yearChar = stageMatch[0];
+         else {
+           const canonicalStageKey = Object.keys(smartIdMapping.stages).find(k => smartIdMapping.stages[k] === stageChar) || s;
+           const stageYears = tenantConfig.educationYears[canonicalStageKey] || tenantConfig.educationYears[s] || [];
+           const indexInArray = stageYears.findIndex(item => item.toLowerCase() === normY);
+
+           if (indexInArray !== -1) {
+             yearChar = String(indexInArray + 1);
+           } else if (normY.includes('اول') || normY.includes('أول')) yearChar = '1';
+           else if (normY.includes('ثاني') || normY.includes('ثانى')) yearChar = '2';
+           else if (normY.includes('ثالث')) yearChar = '3';
+           else if (normY.includes('رابع')) yearChar = '4';
+           else if (normY.includes('خامس')) yearChar = '5';
+           else if (normY.includes('سادس')) yearChar = '6';
+           else if (normY.includes('سابع')) yearChar = '7';
+           else if (normY.includes('خريج')) yearChar = '0';
+           else if (!y && tenantConfig.smartIdMapping.years[stageKey].default !== undefined) {
+             yearChar = tenantConfig.smartIdMapping.years[stageKey].default;
+           } else {
+             yearChar = '1';
+           }
+         }
+      }
+  } else if (!y) {
+    const stageMatch = stage.match(/\d/);
+    if (stageMatch) return `${stageChar}${stageMatch[0]}`;
     if (smartIdMapping.years[s]?.[normY] !== undefined) return `${stageChar}${smartIdMapping.years[s][normY]}`;
     if (smartIdMapping.years[s]?.default !== undefined) return `${stageChar}${smartIdMapping.years[s].default}`;
     if (s.includes('34') || s.includes('3')) return `${stageChar}3`;
     if (s.includes('56') || s.includes('5')) return `${stageChar}5`;
     if (s.includes('12') || s.includes('1')) return `${stageChar}1`;
     return `${stageChar}0`;
-  }
-
-  // 2. Resolve Year character
-  let yearChar = '1';
-
-  if (s === 'graduate' || stageChar === 'G' && (s.includes('graduate') || normY.includes('graduate') || normY === '0' || normY.includes('خريج'))) {
+  } else if (s === 'graduate' || stageChar === 'G' && (s.includes('graduate') || normY.includes('graduate') || normY === '0' || normY.includes('خريج'))) {
     yearChar = '0';
   } else if (smartIdMapping.years[s]?.[normY]) {
     yearChar = smartIdMapping.years[s][normY];
@@ -314,40 +394,3 @@ export const {
 export { CLASS_LABELS, smartIdMapping };
 
 export default tenantConfig;
-
-
-
-
-/*
-
-
-# 1. اعمل استنساخ للمشروع الأصلي بتاعك في فولدر جديد باسم الكنيسة
-git clone https://github.com/your-username/Aribsalin.git st-george-system
-
-# 2. ادخل جوه الفولدر الجديد
-cd st-george-system
-
-# 3. غيّر اسم الرابط الأصلي من origin إلى upstream (عشان يبقى ده المصدر اللي هنسحب منه التحديثات بعدين)
-git remote rename origin upstream
-
-# 4. اربط الفولدر ده بالمستودع الجديد اللي لسه عامله للكنيسة التانية كـ origin
-git remote add origin https://github.com/your-username/st-george-system.git
-
-# 5. ارفع الملفات للمستودع الجديد
-git push -u origin main
-
-
-
-
-*/
-// to take updates to onother copies
-// # 1. اسحب التحديثات من المشروع الأساسي (Aribsalin)
-// git fetch upstream
-
-// # 2. ادمج التحديثات مع كود الكنيسة الحالي
-// git merge upstream/main
-
-// # (إذا حدث أي Conflict في ملف tenant.ts، اختار الإبقاء على ملف الكنيسة الحالي)
-
-// # 3. ارفع التحديثات لنسخة الكنيسة على جيت هاب
-// git push origin main
