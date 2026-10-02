@@ -10,18 +10,15 @@ export type EducationStageKey =
   | 'graduate';
 
 export type ServingStageKey =
- |'supervisors' 
- | 'kg' 
- | 'primary_1' 
- | 'primary_2' 
- | 'primary_3' 
- | 'primary_4' 
- | 'primary_5' 
- | 'primary_6' 
- | 'preparatory' 
- | 'secondary' 
- | 'university_graduate' 
- | 'other';
+  | 'supervisors'
+  | 'kg'
+  | 'primary_12'
+  | 'primary_34'
+  | 'primary_56'
+  | 'preparatory'
+  | 'secondary'
+  | 'university_graduate'
+  | 'other';
 
 export interface SmartIdMapping {
   stages: Record<string, string>;
@@ -47,28 +44,20 @@ export interface TenantConfig {
 const CLASS_LABELS: Record<string, string> = {
   supervisors: 'أمناء الخدمة والمسؤولين',
   kg: 'حضانة',
-  primary_1: 'أولى ابتدائي',
-  primary_2: 'تانية ابتدائي',
-  primary_3: 'تالتة ابتدائي',
-  primary_4: 'رابعة ابتدائي',
-  primary_5: 'خامسة ابتدائي',
-  primary_6: 'سادسة ابتدائي',
+  primary_12: 'ابتدائي (الأول والثاني)',
+  primary_34: 'ابتدائي (الثالث والرابع)',
+  primary_56: 'ابتدائي (الخامس والسادس)',
+  primary: 'ابتدائي (عام)',
   preparatory: 'إعدادي',
   secondary: 'ثانوي',
-  university_graduate: 'جامعيين وخريجين',
-  other: 'غير محدد / أخرى'
+  university_graduate: 'جامعين وخريجين',
+  other: 'أخرى'
 };
 
 const smartIdMapping: SmartIdMapping = {
   stages: {
     kg: 'K',
     primary: 'P',
-    primary_1: 'P',
-    primary_2: 'P',
-    primary_3: 'P',
-    primary_4: 'P',
-    primary_5: 'P',
-    primary_6: 'P',
     primary_12: 'P',
     primary_34: 'P',
     primary_56: 'P',
@@ -90,30 +79,6 @@ const smartIdMapping: SmartIdMapping = {
       'kg2': '2',
       '2': '2',
       '': '0'
-    },
-    primary_1: {
-      '': '1',
-      default: '1'
-    },
-    primary_2: {
-      '': '2',
-      default: '2'
-    },
-    primary_3: {
-      '': '3',
-      default: '3'
-    },
-    primary_4: {
-      '': '4',
-      default: '4'
-    },
-    primary_5: {
-      '': '5',
-      default: '5'
-    },
-    primary_6: {
-      '': '6',
-      default: '6'
     },
     primary_12: {
       '': '1',
@@ -152,9 +117,9 @@ const smartIdMapping: SmartIdMapping = {
 };
 
 export const tenantConfig: TenantConfig = {
-  churchName: 'كنيسة السيدة العذراء والقديس الابا بيشوى بالصداقه الجديده',
-  serviceName: 'خدمة التربية الكنسية',
-  emailDomain: 'avabishoy.com',
+  churchName: 'كنيسة الشهيد العظيم مارمينا العجايبي والقديس البابا كيرلس السادس باسوان',
+  serviceName: 'اريبصالين',
+  emailDomain: 'aribsalin.com',
   churchLogo,
   serviceLogo,
   smartIdMapping,
@@ -206,17 +171,13 @@ export const tenantConfig: TenantConfig = {
     ]
   },
   servingStages: {
-    // 'supervisors': 'أمناء الخدمة والمسؤولين',
-    'kg': 'حضانة',
-    'primary_1': 'أولى ابتدائي',
-    'primary_2': 'تانية ابتدائي',
-    'primary_3': 'تالتة ابتدائي',
-    'primary_4': 'رابعة ابتدائي',
-    'primary_5': 'خامسة ابتدائي',
-    'primary_6': 'سادسة ابتدائي',
-    'preparatory': 'إعدادي',
-    'secondary': 'ثانوي',
-    'university_graduate': 'جامعيين وخريجين'
+    kg: 'حضانة',
+    primary_12: 'ابتدائي (الأول والثاني)',
+    primary_34: 'ابتدائي (الثالث والرابع)',
+    primary_56: 'ابتدائي (الخامس والسادس)',
+    preparatory: 'إعدادي',
+    secondary: 'ثانوي',
+    university_graduate: 'جامعين وخريجين'
   },
   CLASS_LABELS,
   classLabels: CLASS_LABELS,
@@ -353,3 +314,40 @@ export const {
 export { CLASS_LABELS, smartIdMapping };
 
 export default tenantConfig;
+
+
+
+
+/*
+
+
+# 1. اعمل استنساخ للمشروع الأصلي بتاعك في فولدر جديد باسم الكنيسة
+git clone https://github.com/your-username/Aribsalin.git st-george-system
+
+# 2. ادخل جوه الفولدر الجديد
+cd st-george-system
+
+# 3. غيّر اسم الرابط الأصلي من origin إلى upstream (عشان يبقى ده المصدر اللي هنسحب منه التحديثات بعدين)
+git remote rename origin upstream
+
+# 4. اربط الفولدر ده بالمستودع الجديد اللي لسه عامله للكنيسة التانية كـ origin
+git remote add origin https://github.com/your-username/st-george-system.git
+
+# 5. ارفع الملفات للمستودع الجديد
+git push -u origin main
+
+
+
+
+*/
+// to take updates to onother copies
+// # 1. اسحب التحديثات من المشروع الأساسي (Aribsalin)
+// git fetch upstream
+
+// # 2. ادمج التحديثات مع كود الكنيسة الحالي
+// git merge upstream/main
+
+// # (إذا حدث أي Conflict في ملف tenant.ts، اختار الإبقاء على ملف الكنيسة الحالي)
+
+// # 3. ارفع التحديثات لنسخة الكنيسة على جيت هاب
+// git push origin main
